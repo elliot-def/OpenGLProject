@@ -1,46 +1,31 @@
 #include "MenuManager.h"
+#include "MainMenu.h"
+#include "PauseMenu.h"
+#include "OptionsMenu.h"
 #include "TextRenderer.h"
 #include "ShaderManager.h"
 #include "Game.h"
-#include "Rectangle.h"
+#include "TextureManager.h"
+#include "InputManager.h"
+#include "Renderer.h"
+#include "constants.h"
+#include <chrono>
 
-MenuManager::MenuManager(Game* game, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager) : m_game(game), m_textRenderers(textRenderers), m_shaderManager(shaderManager), m_currentState(STATE_MENU), m_previousState(STATE_MENU) {
+MenuManager::MenuManager(Game* game, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, TextureManager* textureManager, ShaderManager* shaderManager) :
+    m_game(game), m_renderer(renderer), m_inputManager(nullptr), m_textRenderers(textRenderers), m_textureManager(textureManager), m_shaderManager(shaderManager), m_currentState(STATE_MENU), m_previousState(STATE_MENU) {
     initMenus();
 }
 
-void MenuManager::initMenus() {
-    // Menu principal
-    m_mainMenu = Menu(m_textRenderers, m_shaderManager, Constants::WINDOW_TITLE, true);
-    m_mainMenu.addItem("Jouer", Constants::WINDOW_WIDTH / 2, 700, 200, 50, [this]() {
-        m_game->changeState(STATE_PLAYING);
-        });
-    m_mainMenu.addItem("Options", Constants::WINDOW_WIDTH / 2, 800, 200, 50, [this]() {
-        m_game->changeState(STATE_OPTIONS);
-        });
-    m_mainMenu.addItem("Quitter", Constants::WINDOW_WIDTH / 2, 900, 200, 50, [this]() {
-        m_game->stop();
-        });
-	
-    // Menu pause (avec overlay)
-    m_pauseMenu = Menu(m_textRenderers, m_shaderManager, "Pause", false);
-    m_pauseMenu.addItem("Reprendre", Constants::WINDOW_WIDTH / 2, 160, 200, 50, [this]() {
-        m_game->changeState(STATE_PLAYING);
-    });
-    m_pauseMenu.addItem("Menu Principal", Constants::WINDOW_WIDTH / 2, 230, 200, 50, [this]() {
-        m_game->changeState(STATE_MENU);
-    });
-    m_pauseMenu.addItem("Quitter", Constants::WINDOW_WIDTH / 2, 300, 200, 50, [this]() {
-        m_game->stop();
-    });
+MenuManager::~MenuManager() {
+    delete m_mainMenu;
+    delete m_pauseMenu;
+    delete m_optionsMenu;
+}
 
-    // Menu options
-    m_optionsMenu = Menu(m_textRenderers, m_shaderManager, "Options", false);
-    m_optionsMenu.addItem("Son: ON", Constants::WINDOW_WIDTH / 2, 160, 200, 50, [this]() {
-        std::cout << "Toggle son" << std::endl;
-    });
-    m_optionsMenu.addItem("Retour", Constants::WINDOW_WIDTH / 2, 230, 200, 50, [this]() {
-        m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU);
-    });
+void MenuManager::initMenus() {
+    m_mainMenu = new MainMenu(m_game, m_renderer, m_textRenderers, m_shaderManager);
+    m_pauseMenu = new PauseMenu(m_game, m_textRenderers, m_shaderManager);
+    m_optionsMenu = new OptionsMenu(m_game, m_previousState, m_textRenderers, m_shaderManager);
 }
 
 void MenuManager::changeState(GameState newState) {
@@ -60,7 +45,7 @@ std::string MenuManager::stateToString(GameState state) {
 
 
 
-Menu& MenuManager::getCurrentMenu() {
+Menu* MenuManager::getCurrentMenu() {
     switch (m_currentState) {
     case STATE_MENU:
         return m_mainMenu;
@@ -76,18 +61,36 @@ Menu& MenuManager::getCurrentMenu() {
 }
 
 void MenuManager::updateHover(double mouseX, double mouseY) {
-    getCurrentMenu().updateHover(mouseX, mouseY);
+    getCurrentMenu()->updateHover(mouseX, mouseY);
 }
 
 void MenuManager::handleClick(double mouseX, double mouseY) {
-    getCurrentMenu().handleClick(mouseX, mouseY);
+    getCurrentMenu()->handleClick(mouseX, mouseY);
+}
+
+void MenuManager::update() {
+    if (m_currentState == STATE_MENU) {
+        auto lastInput = m_inputManager->getLastUpdateTime();
+        auto now = std::chrono::system_clock::now();
+        auto sec = std::chrono::duration<float>(now - lastInput).count();
+
+        m_mainMenu->update(sec > Constants::MAINMENU_AFK_THRESHOLD);
+    }
+    else if (m_currentState == STATE_PAUSED) {
+        m_pauseMenu->update();
+    }
+    else if (m_currentState == STATE_OPTIONS) {
+        m_optionsMenu->update();
+    }
+    
+    
 }
 
 void MenuManager::draw() {
     if (m_currentState != STATE_PLAYING) {
 		// Désactive le depth test pour le rendu 2D du menu
         glDisable(GL_DEPTH_TEST);
-        getCurrentMenu().draw();
+        getCurrentMenu()->draw();
         glEnable(GL_DEPTH_TEST);
     }
 }

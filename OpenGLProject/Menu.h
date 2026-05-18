@@ -9,10 +9,12 @@
 #include "constants.h"
 #include "Shape.h"
 
-class InputManager; // Déclaration anticipée
-class ShaderManager; // Déclaration anticipée
-class TextRenderer; // Déclaration anticipée
-class Shader; // Déclaration anticipée
+class InputManager;     // Déclaration anticipée
+class ShaderManager;    // Déclaration anticipée
+class TextRenderer;     // Déclaration anticipée
+class TextureManager;   // Déclaration anticipée
+class Shader;           // Déclaration anticipée
+class Game;           // Déclaration anticipée
 
 // Structure pour un élément de menu
 struct MenuItem {
@@ -32,10 +34,12 @@ struct MenuItem {
 
 // Classe Menu
 class Menu {
-private:
+protected:
     std::vector<std::unique_ptr<TextRenderer>>* m_textRenderers;
 	ShaderManager* m_shaderManager;
+    Game* m_game;
     std::vector<MenuItem> m_items;
+    std::map<int, Shape*> m_shapes;
     std::string m_title;
     float m_titleX, m_titleY, m_titleWidth, m_titleHeight;
     bool m_drawBackground;
@@ -43,19 +47,32 @@ private:
     void drawTextCentered(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);
 
 public:
-    Menu(std::vector<std::unique_ptr<TextRenderer>>* textRenderers = nullptr, ShaderManager* shaderManager = nullptr, const std::string& t = "", bool bg = true)
-        : m_textRenderers(textRenderers), m_shaderManager(shaderManager), m_title(t), m_titleX(Constants::MENU_TITLE_X), m_titleY(Constants::MENU_TITLE_Y), m_titleWidth(Constants::MENU_TITLE_W), m_titleHeight(Constants::MENU_TITLE_H), m_drawBackground(bg) {
+    Menu(Game* game, std::vector<std::unique_ptr<TextRenderer>>* textRenderers = nullptr, ShaderManager* shaderManager = nullptr, const std::string& t = "", bool bg = true)
+        : m_game(game), m_textRenderers(textRenderers), m_shaderManager(shaderManager), m_title(t), m_titleX(Constants::MENU_TITLE_X), m_titleY(Constants::MENU_TITLE_Y), m_titleWidth(Constants::MENU_TITLE_W), m_titleHeight(Constants::MENU_TITLE_H), m_drawBackground(bg) {
+    }
+
+    ~Menu() {
+        for (auto& pair : m_shapes) {
+            delete pair.second;
+        }
+        m_shapes.clear();
     }
 
     void addItem(const std::string& text, float x = Constants::WINDOW_WIDTH / 2, float y = Constants::WINDOW_HEIGHT / 2, float width = 100, float height = 30, std::function<void()> callback = {}) {
         m_items.emplace_back(text, x, y, width, height, callback);
     }
 
+    void addShape(int id, Shape* shape) {
+        m_shapes.emplace(id, shape);
+    }
+
     void clear() {
         m_items.clear();
+        m_shapes.clear();   
     }
 
     std::vector<MenuItem> getItems() { return m_items; }
+
     void setSelectedItem(int index) { 
         for (auto& item : m_items) {
             item.isHovered = false;
@@ -89,12 +106,7 @@ public:
         return false;
     }
 
-    void update(InputManager* inputManager) {
-        // Logique de mise à jour du menu si nécessaire
-	    
-    }
+    virtual void update() {};
 
     void draw();
-
-    void drawBackground();
 };

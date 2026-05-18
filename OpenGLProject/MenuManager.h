@@ -7,15 +7,23 @@ class Game;
 class TextRenderer;
 class InputManager;
 class ShaderManager;
+class TextureManager;
+class MainMenu;
+class PauseMenu;
+class OptionsMenu;
+class Renderer;
 
 class MenuManager{
 private:
 	Game* m_game; // Pointeur vers le jeu principal
     std::vector<std::unique_ptr<TextRenderer>>* m_textRenderers;
     ShaderManager* m_shaderManager;
-    Menu m_mainMenu;
-    Menu m_pauseMenu;
-    Menu m_optionsMenu;
+    Renderer* m_renderer;
+    TextureManager* m_textureManager;
+    InputManager* m_inputManager;
+    MainMenu* m_mainMenu;
+    PauseMenu* m_pauseMenu;
+    OptionsMenu* m_optionsMenu;
     GameState m_currentState = STATE_MENU;
     GameState m_previousState;
 
@@ -23,14 +31,16 @@ private:
 
     std::string stateToString(GameState state);
 public:
-    MenuManager(Game* game, std::vector<std::unique_ptr<TextRenderer>>* textManagers, ShaderManager* shaderManager);
+    MenuManager(Game* game, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textManagers, TextureManager* textureManager, ShaderManager* shaderManager);
+    ~MenuManager();
 
-    Menu& getCurrentMenu();
+    Menu* getCurrentMenu();
+    void setInputManager(InputManager* inputManager) { m_inputManager = inputManager; };
 
     void updateHover(double mouseX, double mouseY);
-
     void handleClick(double mouseX, double mouseY);
 
+    void update();
     void draw();
 
     void changeState(GameState newState);

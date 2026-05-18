@@ -21,7 +21,7 @@ void Rectangle::draw() {
         .scale(glm::vec3(m_size.x, m_size.y, 1.0f));             // 3. Taille
 
     // Envoyer au shader
-    m_shader->setTransformation("transform", &trans);
+    m_shader->setTransformation("model", &trans);
     m_shader->setupMatrices2D();
     m_shader->setVec3("color", m_color);
 

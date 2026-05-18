@@ -70,8 +70,11 @@
     <Filter Include="Fichiers de ressources\shaders\shape">
       <UniqueIdentifier>{06845dbe-d9a4-4f47-86d2-8e3f34f44b33}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Fichiers de ressources\shaders\shape\roundedTriangle">
-      <UniqueIdentifier>{7034bbe0-100a-4064-9eb6-d484bdd456b5}</UniqueIdentifier>
+    <Filter Include="Fichiers de ressources\shaders\image">
+      <UniqueIdentifier>{d71ac3fc-37f0-4719-96fe-04237c8d3575}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers de ressources\shaders\image\gradient">
+      <UniqueIdentifier>{4de3b241-8a61-42e0-b7b5-0871eb97cdc4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -199,6 +202,24 @@
       <Filter>Fichiers sources\Menu</Filter>
     </ClCompile>
     <ClCompile Include="Triangle.cpp">
+      <Filter>Fichiers sources\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="Image.cpp">
+      <Filter>Fichiers sources\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="PauseMenu.cpp">
+      <Filter>Fichiers sources\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="OptionsMenu.cpp">
+      <Filter>Fichiers sources\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="MainMenu.cpp">
+      <Filter>Fichiers sources\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="DVDShape.h">
+      <Filter>Fichiers d%27en-tête\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="DVDShape.cpp">
       <Filter>Fichiers sources\Shape</Filter>
     </ClCompile>
   </ItemGroup>
@@ -341,6 +362,18 @@
     <ClInclude Include="Triangle.h">
       <Filter>Fichiers d%27en-tête\Shape</Filter>
     </ClInclude>
+    <ClInclude Include="Image.h">
+      <Filter>Fichiers d%27en-tête\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="PauseMenu.h">
+      <Filter>Fichiers d%27en-tête\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="OptionsMenu.h">
+      <Filter>Fichiers d%27en-tête\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="MainMenu.h">
+      <Filter>Fichiers d%27en-tête\Menu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\cube\cube.frag">
@@ -385,11 +418,11 @@
     <None Include="res\shaders\shape\shape.vert">
       <Filter>Fichiers de ressources\shaders\shape</Filter>
     </None>
-    <None Include="res\shaders\shape\roundedTriangle\roundedTriangle.frag">
-      <Filter>Fichiers de ressources\shaders\shape\roundedTriangle</Filter>
+    <None Include="res\shaders\image\image.frag">
+      <Filter>Fichiers de ressources\shaders\image</Filter>
     </None>
-    <None Include="res\shaders\shape\roundedTriangle\roundedTriangle.vert">
-      <Filter>Fichiers de ressources\shaders\shape\roundedTriangle</Filter>
+    <None Include="res\shaders\image\image.vert">
+      <Filter>Fichiers de ressources\shaders\image</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

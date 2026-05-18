@@ -43,6 +43,7 @@ public:
     void update() const;
     void setCursorCaptured(bool shouldCapture);
     void setWindowIcon(const char* iconPath);
+    void setCustomCursor(const char* cursorPath);
     
     // Getters
     GLFWwindow* getGLFWwindow() const; // Retourne le pointeur GLFW

@@ -33,12 +33,13 @@ public:
 
     // Retourne un pointeur vers une touche a partir de son nom
     Key* getKey(const std::string& name);
+	std::chrono::system_clock::time_point getLastUpdateTime() { return m_lastUpdateTime; };
+    InputContext getContext() { return m_context; };
+
+    void setContext(InputContext context) { m_context = context; };
 
     // Methode appelee chaque frame pour mettre a jour l'etat de toutes les touches
     void update();
-
-    void setContext(InputContext context) { m_context = context; };
-    InputContext getContext() { return m_context; };
 
 private:
     std::unordered_map<std::string, Key*> m_keys; // Contient toutes les touches accessibles par leur nom
@@ -49,6 +50,9 @@ private:
     Game* m_game;                   // Pointeur vers le jeu
 	MenuManager* m_menuManager;     // Pointeur vers le menu manager
     Window* m_window;               // Pointeur vers la fenetre
+
+    std::chrono::system_clock::time_point m_lastUpdateTime;
+    void resetLastUpdateTime() { m_lastUpdateTime = std::chrono::system_clock::now(); };
 
     // Charge et initialise toutes les touches du jeu
     void loadKeys();
