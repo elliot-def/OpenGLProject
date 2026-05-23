@@ -73,7 +73,7 @@
     <Filter Include="Fichiers de ressources\shaders\image">
       <UniqueIdentifier>{d71ac3fc-37f0-4719-96fe-04237c8d3575}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Fichiers de ressources\shaders\image\gradient">
+    <Filter Include="Fichiers de ressources\shaders\image\masque">
       <UniqueIdentifier>{4de3b241-8a61-42e0-b7b5-0871eb97cdc4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -216,10 +216,7 @@
     <ClCompile Include="MainMenu.cpp">
       <Filter>Fichiers sources\Menu</Filter>
     </ClCompile>
-    <ClCompile Include="DVDShape.h">
-      <Filter>Fichiers d%27en-tête\Shape</Filter>
-    </ClCompile>
-    <ClCompile Include="DVDShape.cpp">
+    <ClCompile Include="MaskShape.cpp">
       <Filter>Fichiers sources\Shape</Filter>
     </ClCompile>
   </ItemGroup>
@@ -374,6 +371,9 @@
     <ClInclude Include="MainMenu.h">
       <Filter>Fichiers d%27en-tête\Menu</Filter>
     </ClInclude>
+    <ClInclude Include="MaskShape.h">
+      <Filter>Fichiers d%27en-tête\Shape</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\cube\cube.frag">
@@ -423,6 +423,12 @@
     </None>
     <None Include="res\shaders\image\image.vert">
       <Filter>Fichiers de ressources\shaders\image</Filter>
+    </None>
+    <None Include="res\shaders\image\gradient\masque.frag">
+      <Filter>Fichiers de ressources\shaders\image\masque</Filter>
+    </None>
+    <None Include="res\shaders\image\gradient\masque.vert">
+      <Filter>Fichiers de ressources\shaders\image\masque</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

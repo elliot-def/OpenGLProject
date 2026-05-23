@@ -1,12 +1,12 @@
 #pragma once
-#include "Shape.h"
+#include "Image.h"
 #include <vector>
 #include <glm/glm.hpp>
 
 
 class Renderer;
 
-class DVDShape : public Shape {
+class DVDShape : public Image {
 public:
     DVDShape(Shader* shader, Renderer* renderer, float startX = 100.0f, float startY = 100.0f, float width = 120.0f, float height = 44.0f, float vx = 2.5f, float vy = 2.0f);
 

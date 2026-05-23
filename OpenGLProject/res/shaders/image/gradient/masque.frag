@@ -4,9 +4,9 @@ out vec4 FragColor;
 
 uniform sampler2D image;
 uniform float opacity;
-uniform vec3 customColor;
+uniform vec3 color;
 
 void main() {
     vec4 texColor = texture(image, TexCoord);
-    FragColor = vec4(customColor * texColor.a, texColor.a * opacity);
+    FragColor = vec4(color, texColor.a * opacity);
 }

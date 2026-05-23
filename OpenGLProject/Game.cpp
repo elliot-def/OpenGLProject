@@ -88,10 +88,14 @@ void Game::run() {
         case STATE_MENU:
         case STATE_OPTIONS:
         case STATE_PAUSED:
+            // UPDATE
             m_inputManager->update();
             m_menuManager->update();
+            
             m_renderer->clear();
+            // DRAW
             m_menuManager->draw();
+
             m_window->update();
             break;
         case STATE_PLAYING:

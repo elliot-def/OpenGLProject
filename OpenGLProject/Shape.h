@@ -16,12 +16,14 @@ public:
 	virtual void draw() = 0;
 
 	bool getIsVisible() { return m_isVisible; }
+	glm::vec3 getPosition() { return m_position; }
+	glm::vec2 getSize() { return m_size; }
 
     void setPosition(float x, float y);
     void setSize(float width, float height);
     void setColor(float r, float g, float b);
     void setRotation(float angle);
-    void setIsVisible(bool visible) { m_isVisible = true; }
+    void setIsVisible(bool visible) { m_isVisible = visible; }
 
 
 protected:

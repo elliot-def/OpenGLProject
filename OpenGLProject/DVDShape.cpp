@@ -1,6 +1,7 @@
 #include "DVDShape.h"
 #include "Shader.h"
 #include "Mesh.h"
+#include "Image.h"
 #include "Renderer.h"
 #include <cstdlib>
 #include <ctime>
@@ -16,7 +17,7 @@ const std::vector<glm::vec3> DVDShape::s_colors = {
 };
 
 DVDShape::DVDShape(Shader* shader, Renderer* renderer, float startX, float startY, float width, float height, float vx, float vy)
-    : Shape(shader, startX, startY, width, height), m_renderer(renderer), m_vx(vx), m_vy(vy), m_colorIndex(0) {
+    : Image(shader, "./res/textures/menu/dvd_logo.png", startX, startY, width, height), m_renderer(renderer), m_vx(vx), m_vy(vy), m_colorIndex(0) {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
     m_color = s_colors[0];
     setIsVisible(false);
@@ -82,16 +83,6 @@ void DVDShape::pickNewColor() {
 
 void DVDShape::draw() {
     if (m_isVisible) {
-        m_shader->use();
-
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, m_position);
-        model = glm::scale(model, glm::vec3(m_size, 1.0f));
-
-        m_shader->setMat4("model", model);
-        m_shader->setupMatrices2D();
-        m_shader->setVec3("color", m_color);
-
-        m_mesh->draw();
+        Image::draw();
     }
 }

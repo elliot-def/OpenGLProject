@@ -47,9 +47,9 @@ bool Mouse::update(InputContext context, double xpos, double ypos) {
     auto it = m_handleMovement.find(context);
     if (it != m_handleMovement.end() && it->second) {
         if ((m_xpos != xpos) or (m_ypos != ypos)) {
-			m_xpos = xpos;
-			m_ypos = ypos;
             it->second(xpos, ypos);
+            m_xpos = xpos;
+            m_ypos = ypos;
 			actionPerformed = true;
         }
     }
