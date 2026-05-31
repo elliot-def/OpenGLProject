@@ -33,23 +33,19 @@ public:
     bool getStatus() const { return m_isPressed; }          // Retourne si la touche est actuellement appuyee
 
     void onPress(InputContext context) {
-        if (!m_isPressed) {
-            m_isPressed = true; // Change l'etat pour indiquer que la touche est appuyee
-            auto it = m_contextOnPress.find(context);
-            if (it != m_contextOnPress.end() && it->second) {
-                it->second(); // Exécuter l'action
-            }
+        m_isPressed = true; // Change l'etat pour indiquer que la touche est appuyee
+        auto it = m_contextOnPress.find(context);
+        if (it != m_contextOnPress.end() && it->second) {
+            it->second(); // Exécuter l'action
         }
     }
 
     // Methode appelee lorsque la touche est relachee
     void onRelease(InputContext context) {
-        if (m_isPressed) {
-            m_isPressed = false; // Change l'etat pour indiquer que la touche est relachee
-            auto it = m_contextOnRelease.find(context);
-            if (it != m_contextOnRelease.end() && it->second) {
-                it->second();
-            }
+        m_isPressed = false; // Change l'etat pour indiquer que la touche est relachee
+        auto it = m_contextOnRelease.find(context);
+        if (it != m_contextOnRelease.end() && it->second) {
+            it->second();
         }
     }
 

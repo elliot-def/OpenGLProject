@@ -15,10 +15,16 @@ public:
     virtual void setupBuffers() = 0;
 	virtual void draw() = 0;
 
+	bool getIsVisible() { return m_isVisible; }
+	glm::vec3 getPosition() { return m_position; }
+	glm::vec2 getSize() { return m_size; }
+
     void setPosition(float x, float y);
     void setSize(float width, float height);
     void setColor(float r, float g, float b);
     void setRotation(float angle);
+    void setIsVisible(bool visible) { m_isVisible = visible; }
+
 
 protected:
     Mesh* m_mesh;
@@ -27,5 +33,7 @@ protected:
     glm::vec3 m_color;
     glm::vec2 m_size;
     float m_rotation;
+
+    bool m_isVisible = true;
 };
 

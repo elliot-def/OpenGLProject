@@ -2,6 +2,7 @@
 #include "TextRenderer.h"
 #include "ShaderManager.h"
 #include "MenuManager.h"
+#include "TextureManager.h"
 #include "Rectangle.h"
 #include "Triangle.h"
 
@@ -32,21 +33,14 @@ void Menu::draw() {
         float centerY = item.y + item.height / 2.0f;
 
         if (item.isHovered) {
-			Triangle* leftIndicator = new Triangle(m_shaderManager->getShader("shape"), item.x - 20, item.y + item.height / 4.0f, 10, 10, Colors::LINEN);
-			Triangle* rightIndicator = new Triangle(m_shaderManager->getShader("shape"), item.x + item.width + 20, item.y + item.height / 4.0f, 10, 10, Colors::LINEN);
-			leftIndicator->setRotation(-90.0f);
-            leftIndicator->setSize(Constants::MENU_TITLE_Y/4,Constants::MENU_TITLE_Y/4);
-			leftIndicator->draw();
-            delete leftIndicator;
-            rightIndicator->setRotation(90.0f);
-            rightIndicator->setSize(Constants::MENU_TITLE_Y/4,Constants::MENU_TITLE_Y/4);
-            rightIndicator->draw();
-            delete rightIndicator;
-            drawTextCentered(item.text, centerX, centerY, 0, Colors::LINEN);
+            drawTextCentered(item.text, centerX, centerY, 0, Colors::TOMATO_JAM);
         }
         else {
-            drawTextCentered(item.text, centerX, centerY);
+            drawTextCentered(item.text, centerX, centerY, 0, Colors::LINEN);
 
         }
+    }
+    for (const auto& shape : m_shapes) {
+        shape.second->draw();
     }
 }

@@ -44,23 +44,29 @@ void InputManager::loadKeys() {
 }
 
 void InputManager::update() {
-
+	bool actionPerformed = false;
 	// Mouse movement & keys
 	double xpos, ypos;
 	glfwGetCursorPos(m_window->getGLFWwindow(), &xpos, &ypos);
-	m_mouse->update(m_context, xpos, ypos);
-
+	actionPerformed |= m_mouse->update(m_context, xpos, ypos);
 	// Key states
 	for (const auto& pair : m_keys) {
 		Key* key = pair.second;
 		int state = glfwGetKey(glfwGetCurrentContext(), key->getKey());
 		bool wasPressed = key->getStatus();
-		key->ifPressed(m_context);
 		if (state == GLFW_PRESS) {
+			key->ifPressed(m_context);
+			actionPerformed = true;
+		}
+		if (state == GLFW_PRESS && !wasPressed) {
 			key->onPress(m_context);
 		}
-		else if (state == GLFW_RELEASE) {
+		else if (state == GLFW_RELEASE && wasPressed) {
 			key->onRelease(m_context);
 		}
+	}
+
+	if(actionPerformed) {
+		resetLastUpdateTime();
 	}
 }

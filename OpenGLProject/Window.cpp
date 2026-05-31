@@ -111,6 +111,7 @@ bool Window::init() {
 
     setWindowIcon("./res/textures/logo.jpeg");
 
+	setCustomCursor("./res/textures/menu/cursor.png");
 
     return true;
 }
@@ -140,4 +141,32 @@ void Window::setWindowIcon(const char* iconPath) {
     stbi_image_free(pixels);
 
     printf("Icône définie avec succès (%dx%d)\n", width, height);
+}
+
+void Window::setCustomCursor(const char* cursorPath) {
+    int cursor_width, cursor_height, cursor_channels;
+    unsigned char* cursor_pixels = stbi_load(cursorPath, &cursor_width, &cursor_height, &cursor_channels, 4);
+    if (cursor_pixels) {
+        // Construire une GLFWimage à partir des données chargées par stb_image
+        GLFWimage cursor_image{};
+        cursor_image.width = cursor_width;
+        cursor_image.height = cursor_height;
+        cursor_image.pixels = cursor_pixels;
+
+        GLFWcursor* cursor = glfwCreateCursor(&cursor_image, 0, 0);
+        if (cursor) {
+            glfwSetCursor(m_window, cursor);
+            // Note: vous pouvez conserver le pointeur `cursor` si vous voulez le détruire plus tard avec glfwDestroyCursor
+        }
+        else {
+            printf("Erreur: Impossible de créer le curseur GLFW\n");
+        }
+
+        // glfwCreateCursor copie les données, on peut donc libérer l'image chargée
+        stbi_image_free(cursor_pixels);
+    }
+    else {
+        printf("Erreur: Impossible de charger l'image du curseur ./res/textures/menu/cursor.png\n");
+    }
+
 }

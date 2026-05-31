@@ -9,7 +9,7 @@
 #include <memory>
 
 #include "configKeys.h" // Contient la sensibilite par defaut de la souris
-#include "LeftClick.h" // Contient la sensibilite par defaut de la souris
+#include "LeftClick.h"
 
 class Player;
 
@@ -22,7 +22,7 @@ public:
 
     // Methode pour gerer le mouvement de la souris
     // xpos, ypos : position actuelle de la souris
-    void update(InputContext context, double xpos, double ypos);
+    bool update(InputContext context, double xpos, double ypos);
 
 	void setContext(InputContext context) { m_context = context; };
 	InputContext getContext() { return m_context; };
