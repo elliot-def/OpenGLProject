@@ -145,6 +145,7 @@
     <ClCompile Include="Crouch.cpp" />
     <ClCompile Include="Cube.cpp" />
     <ClCompile Include="Direction.cpp" />
+    <ClCompile Include="DVDShape.cpp" />
     <ClCompile Include="Escape.cpp" />
     <ClCompile Include="Flashlight.cpp" />
     <ClCompile Include="Forward.cpp" />
@@ -198,6 +199,7 @@
     <ClInclude Include="Crouch.h" />
     <ClInclude Include="Cube.h" />
     <ClInclude Include="Direction.h" />
+    <ClInclude Include="DVDShape.h" />
     <ClInclude Include="Escape.h" />
     <ClInclude Include="Flashlight.h" />
     <ClInclude Include="Forward.h" />
@@ -249,10 +251,10 @@
     <None Include="res\shaders\cube\lightsource\lightsource.vert" />
     <None Include="res\shaders\cube\severallights\severallights.frag" />
     <None Include="res\shaders\cube\severallights\severallights.vert" />
-    <None Include="res\shaders\image\gradient\masque.frag" />
-    <None Include="res\shaders\image\gradient\masque.vert" />
     <None Include="res\shaders\image\image.frag" />
     <None Include="res\shaders\image\image.vert" />
+    <None Include="res\shaders\image\masque\masque.frag" />
+    <None Include="res\shaders\image\masque\masque.vert" />
     <None Include="res\shaders\mask\mask.frag" />
     <None Include="res\shaders\mask\mask.vert" />
     <None Include="res\shaders\model\model.frag" />

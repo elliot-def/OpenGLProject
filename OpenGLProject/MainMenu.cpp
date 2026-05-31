@@ -15,7 +15,7 @@ MainMenu::MainMenu(Game* game, Renderer* renderer, std::vector<std::unique_ptr<T
         m_game->stop();
         });
     // Dans la classe qui instancie le menu :
-    auto* dvd = new MaskShape(m_shaderManager->getShader("image"), m_renderer, 100.0f, 100.0f, 100.0f, 50.0f, 200.0f, 180.0f);
+    auto* dvd = new DVDShape(m_shaderManager->getShader("image/masque"), m_renderer, 100.0f, 100.0f, 330.0f, 195.0f, 200.0f, 180.0f);
     addShape(0, dvd);
 }
 
@@ -36,7 +36,7 @@ void MainMenu::update(bool isAFK) {
         if (it == m_shapes.end()) return;
         if (!m_shapes[0]->getIsVisible()) return;
 
-        MaskShape* dvd = static_cast<MaskShape*>(it->second);
+        DVDShape* dvd = static_cast<DVDShape*>(it->second);
         dvd->setIsVisible(false);
         dvd->setPosition(static_cast<float>(std::rand() % (Constants::WINDOW_WIDTH - static_cast<int>(dvd->getSize().x))),
                          static_cast<float>(std::rand() % (Constants::WINDOW_HEIGHT - static_cast<int>(dvd->getSize().y))));

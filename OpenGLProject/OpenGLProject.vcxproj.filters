@@ -219,6 +219,9 @@
     <ClCompile Include="MaskShape.cpp">
       <Filter>Fichiers sources\Shape</Filter>
     </ClCompile>
+    <ClCompile Include="DVDShape.cpp">
+      <Filter>Fichiers sources\Shape</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h">
@@ -374,6 +377,9 @@
     <ClInclude Include="MaskShape.h">
       <Filter>Fichiers d%27en-tête\Shape</Filter>
     </ClInclude>
+    <ClInclude Include="DVDShape.h">
+      <Filter>Fichiers d%27en-tête\Shape</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\cube\cube.frag">
@@ -424,10 +430,10 @@
     <None Include="res\shaders\image\image.vert">
       <Filter>Fichiers de ressources\shaders\image</Filter>
     </None>
-    <None Include="res\shaders\image\gradient\masque.frag">
+    <None Include="res\shaders\image\masque\masque.frag">
       <Filter>Fichiers de ressources\shaders\image\masque</Filter>
     </None>
-    <None Include="res\shaders\image\gradient\masque.vert">
+    <None Include="res\shaders\image\masque\masque.vert">
       <Filter>Fichiers de ressources\shaders\image\masque</Filter>
     </None>
   </ItemGroup>

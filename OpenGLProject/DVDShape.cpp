@@ -21,7 +21,7 @@ DVDShape::DVDShape(Shader* shader, Renderer* renderer, float startX, float start
     std::srand(static_cast<unsigned>(std::time(nullptr)));
     m_color = s_colors[0];
     setIsVisible(false);
-    setupBuffers();
+    //setupBuffers();
 }
 
 void DVDShape::setupBuffers() {
@@ -35,8 +35,8 @@ void DVDShape::setupBuffers() {
 
     std::vector<unsigned int> indices = { 0, 1, 2, 0, 2, 3 };
 
-    // 0b0111 => POSITION + NORMAL + COLOR (selon l'enum VertexAttribute)
-    m_mesh = new Mesh(vertices, indices, 0b0111);
+    // 0b1001 => POSITION + COLOR (selon l'enum VertexAttribute)
+    m_mesh = new Mesh(vertices, indices, 0b1001);
 }
 
 void DVDShape::update(float screenWidth, float screenHeight) {
@@ -82,7 +82,9 @@ void DVDShape::pickNewColor() {
 }
 
 void DVDShape::draw() {
-    if (m_isVisible) {
-        Image::draw();
-    }
+    if (!m_isVisible) return;
+    m_shader->use();
+    m_shader->setVec3("color", m_color);
+    m_shader->setFloat("opacity", 1.0f);
+    Image::draw();
 }

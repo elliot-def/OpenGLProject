@@ -50,7 +50,7 @@ namespace Constants {
     inline constexpr float MENU_TITLE_Y = 300.0f;
     inline constexpr float MENU_TITLE_W = 600.0f;
 	inline constexpr float MENU_TITLE_H = 150.0f;
-	inline constexpr float MAINMENU_AFK_THRESHOLD = 5.0f; // Time in seconds before considering the player as AFK in the main menu
+	inline constexpr float MAINMENU_AFK_THRESHOLD = 60.0f; // Time in seconds before considering the player as AFK in the main menu
 }
 
 namespace Materials {

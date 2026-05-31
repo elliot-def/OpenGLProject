@@ -89,6 +89,8 @@ void MenuManager::update() {
 void MenuManager::draw() {
     if (m_currentState != STATE_PLAYING) {
 		// Désactive le depth test pour le rendu 2D du menu
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glDisable(GL_DEPTH_TEST);
         getCurrentMenu()->draw();
         glEnable(GL_DEPTH_TEST);
