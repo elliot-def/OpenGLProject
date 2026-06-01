@@ -180,6 +180,8 @@
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Right.cpp" />
     <ClCompile Include="Shader.cpp" />
+    <ClCompile Include="Sound.cpp" />
+    <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="Spotlight.cpp" />
     <ClCompile Include="Sprint.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
@@ -234,6 +236,8 @@
     <ClInclude Include="Right.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderManager.h" />
+    <ClInclude Include="Sound.h" />
+    <ClInclude Include="SoundManager.h" />
     <ClInclude Include="Spotlight.h" />
     <ClInclude Include="Sprint.h" />
     <ClInclude Include="TextRenderer.h" />

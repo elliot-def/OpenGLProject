@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "gamestate.h"
+#include "SoundManager.h"
 
 // Déclarations anticipées
 class Window;
@@ -42,6 +43,7 @@ private:
     std::unique_ptr<Player> m_player;
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<LightManager> m_lightManager;
+    std::unique_ptr<SoundManager> m_soundManager;
     std::unique_ptr<Socket> m_socket;
     std::unique_ptr<MenuManager> m_menuManager;
     std::unique_ptr<std::vector<std::unique_ptr<TextRenderer>>> m_textRenderers;

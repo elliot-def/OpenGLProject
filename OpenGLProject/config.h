@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 
 #include "Mesh.h"
+#include "Sound.h"
 #include "Vertex.h"
 #include "Shader.h"
 #include "Window.h"

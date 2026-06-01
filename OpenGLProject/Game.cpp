@@ -21,12 +21,14 @@ void Game::initialize() {
     m_camera         = std::make_unique<Camera>();
     m_socket         = std::make_unique<Socket>();
     m_textureManager = std::make_unique<TextureManager>();
+    m_soundManager = std::make_unique<SoundManager>();
     m_shaderManager  = std::make_unique<ShaderManager>(m_camera.get());
     m_player         = std::make_unique<Player>(m_renderer.get());
     m_lightManager   = std::make_unique<LightManager>(m_renderer.get(), m_player.get());
     m_textRenderers  = std::make_unique<std::vector<std::unique_ptr<TextRenderer>>>();
     m_menuManager    = std::make_unique<MenuManager>(this, m_renderer.get(), m_textRenderers.get(), m_textureManager.get(), m_shaderManager.get());
     m_inputManager   = std::make_unique<InputManager>(this, m_menuManager.get(), m_window.get(), m_player.get());
+
     m_menuManager->setInputManager(m_inputManager.get());
 
     m_textRenderers->emplace_back(std::make_unique<TextRenderer>(m_shaderManager.get()));
@@ -43,6 +45,10 @@ void Game::initialize() {
     Shader* lightShader    = m_shaderManager->getShader("cube/lightsource");
 
 	std::vector<Texture*> crateTextures = { containerTexture };
+
+	m_soundManager->setMasterVolume(Constants::DEFAULT_MASTER_VOLUME); // Volume maître à 20%
+    Sound* son = m_soundManager->load("son", "./res/sounds/on&on.wav", true, 1.0f, 1.0f);
+	son->play();
 
     // Lumière 1 - Rouge forte
     m_lightManager->addPointLight(new LightSource(
@@ -79,6 +85,8 @@ void Game::initialize() {
 
     glGetString(GL_VERSION) ? std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl
         : throw std::runtime_error("Impossible de récupérer la version OpenGL");
+
+
 }
 
 void Game::run() {
@@ -129,6 +137,9 @@ void Game::update() {
         alphacube->update();
     }
     m_lightManager->update();
+
+    m_soundManager->setListenerTransform(m_camera->getPosition(), m_camera->getFront(), m_camera->getUp());
+    m_soundManager->update();
 }
 
 void Game::draw() {
