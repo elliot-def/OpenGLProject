@@ -3,6 +3,8 @@
 #include "ShaderManager.h"
 #include "MenuManager.h"
 #include "TextureManager.h"
+#include "Sound.h"
+#include "SoundManager.h"
 #include "Rectangle.h"
 #include "Triangle.h"
 
@@ -43,4 +45,25 @@ void Menu::draw() {
     for (const auto& shape : m_shapes) {
         shape.second->draw();
     }
+}
+
+bool Menu::handleClick(double mouseX, double mouseY) {
+    //printf("mouseX = %f ; mouseY = %f\n", mouseX, mouseY);
+    /*
+    if (m_items == std::vector<MenuItem>()) {
+        printf("Aucun item dans le menu");
+        return false;
+    }*/
+
+    for (auto& item : m_items) {
+        if (item.contains(mouseX, mouseY) && item.callback) {
+            item.callback();
+            Sound* clickSound = m_soundManager->get("menu_click_sound");
+            if (clickSound) {
+                clickSound->play();
+            }
+            return true;
+        }
+    }
+    return false;
 }

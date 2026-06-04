@@ -8,6 +8,7 @@ class TextRenderer;
 class InputManager;
 class ShaderManager;
 class TextureManager;
+class SoundManager;
 class MainMenu;
 class PauseMenu;
 class OptionsMenu;
@@ -20,6 +21,7 @@ private:
     ShaderManager* m_shaderManager;
     Renderer* m_renderer;
     TextureManager* m_textureManager;
+    SoundManager* m_soundManager;
     InputManager* m_inputManager;
     MainMenu* m_mainMenu;
     PauseMenu* m_pauseMenu;
@@ -31,7 +33,7 @@ private:
 
     std::string stateToString(GameState state);
 public:
-    MenuManager(Game* game, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textManagers, TextureManager* textureManager, ShaderManager* shaderManager);
+    MenuManager(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textManagers, TextureManager* textureManager, ShaderManager* shaderManager);
     ~MenuManager();
 
     Menu* getCurrentMenu();

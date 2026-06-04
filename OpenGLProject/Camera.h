@@ -22,6 +22,8 @@ public:
 
     // Position actuelle de la caméra
 	inline glm::vec3 getPosition() const { return m_position; } 
+	inline glm::vec3 getFront() const { return m_front; } 
+	inline glm::vec3 getUp() const { return m_upVector; } 
 
     // Met à jour la position et la direction de la caméra en suivant une entité
     // entity : objet à suivre (ex : le joueur)

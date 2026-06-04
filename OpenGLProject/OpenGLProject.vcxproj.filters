@@ -76,6 +76,12 @@
     <Filter Include="Fichiers de ressources\shaders\image\masque">
       <UniqueIdentifier>{4de3b241-8a61-42e0-b7b5-0871eb97cdc4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Fichiers d%27en-tête\Sound">
+      <UniqueIdentifier>{c8379479-9052-4c1c-95a1-1eadd9baa61a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers sources\Sound">
+      <UniqueIdentifier>{9f6d2717-049f-4ac3-8e80-a47f5a574ea3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -221,6 +227,12 @@
     </ClCompile>
     <ClCompile Include="DVDShape.cpp">
       <Filter>Fichiers sources\Shape</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundManager.cpp">
+      <Filter>Fichiers sources\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="Sound.cpp">
+      <Filter>Fichiers sources\Sound</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -379,6 +391,12 @@
     </ClInclude>
     <ClInclude Include="DVDShape.h">
       <Filter>Fichiers d%27en-tête\Shape</Filter>
+    </ClInclude>
+    <ClInclude Include="Sound.h">
+      <Filter>Fichiers d%27en-tête\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundManager.h">
+      <Filter>Fichiers d%27en-tête\Sound</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
