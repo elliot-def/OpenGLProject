@@ -26,12 +26,15 @@ MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, s
     catch (const std::exception& e) {
         std::cerr << "[MainMenu] " << e.what() << std::endl;
     }
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound1", "./res/sounds/menu/atmo-horror-ghost-birds-03.wav", false, 3.0f, 1.0f));
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound2", "./res/sounds/menu/atmo-horror-ghost-birds-02.wav", false, 3.0f, 1.0f));
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound3", "./res/sounds/menu/atmo-horror-ghost-birds-01.wav", false, 3.0f, 1.0f));
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound4", "./res/sounds/menu/musical-horror-swelling-dungeon-01.wav", false, 3.0f, 1.0f));
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound5", "./res/sounds/menu/musical-horror-silence-investigation-01.wav", false, 3.0f, 1.0f));
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound6", "./res/sounds/menu/creature-humanoid-fishman-grunt-02.wav", false, 3.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound1", "./res/sounds/menu/atmo-horror-ghost-birds-03.wav", false, 2.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound2", "./res/sounds/menu/atmo-horror-ghost-birds-02.wav", false, 2.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound3", "./res/sounds/menu/atmo-horror-ghost-birds-01.wav", false, 2.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound4", "./res/sounds/menu/musical-horror-swelling-dungeon-01.wav", false, 2.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound5", "./res/sounds/menu/musical-horror-silence-investigation-01.wav", false, 2.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound6", "./res/sounds/menu/creature-humanoid-fishman-grunt-02.wav", false, 2.0f, 1.0f));
+
+    m_clickSound = m_soundManager->load("menu_click_sound", "./res/sounds/menu/ui-click-generic-plastic-01.wav", false, 6.0f, 1.0f);
+
     addShape(0, dvd);
 }
 
@@ -51,11 +54,9 @@ MainMenu::~MainMenu() {
 
 void MainMenu::update(bool isAFK) {
     auto now = std::chrono::system_clock::now();
-    printf("[MainMenu] Time since last weird sound: %.2f seconds\n", std::chrono::duration<float>(now - m_lastWeirdSoundPlayed).count());
     if (std::chrono::duration<float>(now - m_lastWeirdSoundPlayed).count() > Constants::WEIRD_SOUND_INTERVAL) {
         Sound* weirdSound = m_weirdSounds[std::rand() % m_weirdSounds.size()];
         weirdSound->play();
-        printf("[MainMenu] Played weird sound: %s\n", weirdSound->getFilePath().c_str());
         m_lastWeirdSoundPlayed = now;
     }
 

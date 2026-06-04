@@ -22,4 +22,5 @@ private:
 
 	std::chrono::time_point<std::chrono::system_clock> m_lastWeirdSoundPlayed = std::chrono::system_clock::now();;
 	std::vector<Sound*> m_weirdSounds;
+	Sound* m_clickSound;
 };

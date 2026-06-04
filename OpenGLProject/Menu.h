@@ -15,6 +15,7 @@ class ShaderManager;    // Déclaration anticipée
 class TextRenderer;     // Déclaration anticipée
 class TextureManager;   // Déclaration anticipée
 class Shader;           // Déclaration anticipée
+class Sound;           // Déclaration anticipée
 class Game;             // Déclaration anticipée
 
 // Structure pour un élément de menu
@@ -91,22 +92,7 @@ public:
         }
     }
 
-    bool handleClick(double mouseX, double mouseY) {
-        //printf("mouseX = %f ; mouseY = %f\n", mouseX, mouseY);
-        /*
-        if (m_items == std::vector<MenuItem>()) {
-            printf("Aucun item dans le menu");
-            return false;
-        }*/
-
-        for (auto& item : m_items) {
-            if (item.contains(mouseX, mouseY) && item.callback) {
-                item.callback();
-                return true;
-            }
-        }
-        return false;
-    }
+    bool handleClick(double mouseX, double mouseY);
 
     virtual void update() {};
 
