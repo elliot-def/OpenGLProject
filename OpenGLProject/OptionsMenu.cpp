@@ -3,8 +3,8 @@
 #include "constants.h"
 #include <iostream>
 
-OptionsMenu::OptionsMenu(Game* game, GameState& previousState, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager)
-    : Menu(game, textRenderers, shaderManager, "Options", false)
+OptionsMenu::OptionsMenu(Game* game, SoundManager* soundManager, GameState& previousState, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager)
+    : Menu(game, soundManager, textRenderers, shaderManager, "Options", false)
 {
     addItem("Son: ON", Constants::WINDOW_WIDTH / 2, 160, 200, 50, []() {
         std::cout << "Toggle son" << std::endl;

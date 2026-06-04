@@ -6,14 +6,17 @@
 #include "ShaderManager.h"
 #include "Game.h"
 #include "TextureManager.h"
+#include "SoundManager.h"
+#include "Sound.h"
 #include "InputManager.h"
 #include "Renderer.h"
 #include "constants.h"
 #include <chrono>
 
-MenuManager::MenuManager(Game* game, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, TextureManager* textureManager, ShaderManager* shaderManager) :
-    m_game(game), m_renderer(renderer), m_inputManager(nullptr), m_textRenderers(textRenderers), m_textureManager(textureManager), m_shaderManager(shaderManager), m_currentState(STATE_MENU), m_previousState(STATE_MENU) {
+MenuManager::MenuManager(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, TextureManager* textureManager, ShaderManager* shaderManager) :
+    m_game(game), m_soundManager(soundManager), m_renderer(renderer), m_inputManager(nullptr), m_textRenderers(textRenderers), m_textureManager(textureManager), m_shaderManager(shaderManager), m_currentState(STATE_MENU), m_previousState(STATE_MENU) {
     initMenus();
+	changeState(STATE_MENU);
 }
 
 MenuManager::~MenuManager() {
@@ -23,14 +26,23 @@ MenuManager::~MenuManager() {
 }
 
 void MenuManager::initMenus() {
-    m_mainMenu = new MainMenu(m_game, m_renderer, m_textRenderers, m_shaderManager);
-    m_pauseMenu = new PauseMenu(m_game, m_textRenderers, m_shaderManager);
-    m_optionsMenu = new OptionsMenu(m_game, m_previousState, m_textRenderers, m_shaderManager);
+    m_mainMenu = new MainMenu(m_game, m_soundManager, m_renderer, m_textRenderers, m_shaderManager);
+    m_pauseMenu = new PauseMenu(m_game, m_soundManager, m_textRenderers, m_shaderManager);
+    m_optionsMenu = new OptionsMenu(m_game, m_soundManager, m_previousState, m_textRenderers, m_shaderManager);
 }
 
 void MenuManager::changeState(GameState newState) {
     m_previousState = m_currentState;
     m_currentState = newState;
+    if (newState == STATE_MENU) {
+		Sound* menuMusic = m_soundManager->get("menu_music");
+        if (menuMusic) {
+            menuMusic->play();
+        }
+    }
+	else if (newState == STATE_PLAYING) {
+        m_soundManager->stopAll();
+	}
 }
 
 std::string MenuManager::stateToString(GameState state) {
@@ -71,6 +83,7 @@ void MenuManager::handleClick(double mouseX, double mouseY) {
 void MenuManager::update() {
     if (m_currentState == STATE_MENU) {
         auto lastInput = m_inputManager->getLastUpdateTime();
+
         auto now = std::chrono::system_clock::now();
         auto sec = std::chrono::duration<float>(now - lastInput).count();
 

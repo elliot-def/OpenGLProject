@@ -8,5 +8,5 @@ class TextRenderer;
 
 class OptionsMenu : public Menu {
 public:
-    OptionsMenu(Game* game, GameState& previousState, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager);
+    OptionsMenu(Game* game, SoundManager* soundManager, GameState& previousState, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager);
 };
