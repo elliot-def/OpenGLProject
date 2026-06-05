@@ -2,6 +2,7 @@
 
 struct GLFWwindow; // Déclaration anticipée pour éviter d'inclure GLFW ici
 
+class SoundManager; // Déclaration anticipée pour éviter d'inclure SoundManager ici
 /**
  * @class Window
  * @brief Gère la création et l'utilisation d'une fenêtre OpenGL via GLFW
@@ -20,13 +21,11 @@ class Window {
 public:
     /**
      * @brief Constructeur
-     * @param width Largeur de la fenêtre
-     * @param height Hauteur de la fenêtre
-     * @param title Titre de la fenêtre
+     * @param soundManager Pointeur vers le gestionnaire de son
      *
      * Crée la fenêtre et initialise GLFW
      */
-    Window(int width, int height, const char* title);
+    Window(SoundManager* soundManager);
 
     /**
      * @brief Destructeur
@@ -56,6 +55,7 @@ private:
     int m_height;           // Hauteur
     const char* m_title;    // Titre
     GLFWwindow* m_window;   // Pointeur vers la fenêtre GLFW
+    SoundManager* m_soundManager; // Pointeur vers le gestionnaire de son
 
     void pollEvents() const;  // Récupère les événements (clavier, souris)
     void swapBuffers() const; // Échange les buffers pour le rendu

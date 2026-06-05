@@ -2,14 +2,24 @@
 #include <cstdlib>
 
 #include "Window.h"
+#include "SoundManager.h"
 #include "constants.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb/stb_image.h>
 
-Window::Window(int width, int height, const char* title)
-    : m_width(width), m_height(height), m_title(title), m_window(nullptr) {
+// fonction static / libre (au niveau fichier)
+static void GLFWWindowFocusCallback(GLFWwindow* window, int focused)
+{
+    // récupère le SoundManager attaché à la fenêtre
+    SoundManager* sm = static_cast<SoundManager*>(glfwGetWindowUserPointer(window));
+    if (sm) {
+        sm->window_focus_callback(window, focused);
+    }
+}
+
+Window::Window(SoundManager* soundManager) : m_soundManager(soundManager), m_width(Constants::WINDOW_WIDTH), m_height(Constants::WINDOW_HEIGHT), m_title(Constants::WINDOW_TITLE), m_window(nullptr) {
     if (!init()) {
         std::cerr << "Failed to initialize Window\n";
         std::exit(EXIT_FAILURE);
@@ -113,9 +123,14 @@ bool Window::init() {
 
 	setCustomCursor("./res/textures/menu/cursor.png");
 
+    // attacher le pointeur de l'instance SoundManager à la fenêtre
+    glfwSetWindowUserPointer(m_window, m_soundManager);
+
+    // enregistrer le callback (fonction ayant la bonne signature et convention)
+    glfwSetWindowFocusCallback(m_window, GLFWWindowFocusCallback);
+
     return true;
 }
-
 
 // Fonction pour charger et définir l'icône de la fenêtre
 void Window::setWindowIcon(const char* iconPath) {

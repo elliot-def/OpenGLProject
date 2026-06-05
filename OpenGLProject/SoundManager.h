@@ -8,6 +8,8 @@
 #include <AL/alc.h>
 
 class Sound;
+
+struct GLFWwindow;
 struct ALCdevice_struct;
 struct ALCcontext_struct;
 
@@ -122,7 +124,9 @@ public:
      * @brief Active/désactive le son (mute = gain listener à 0, sans oublier la valeur)
      */
     void setMute(bool mute);
-    bool isMuted() const { return m_muted; }
+    bool isMuted() const { return m_isMuted; }
+
+    void window_focus_callback(GLFWwindow* window, int focused);
 
     // ─── Listener (caméra / joueur) ───────────────────────────────────────────
 
@@ -211,7 +215,7 @@ private:
     std::vector<unsigned int> m_effectSlots;   // Auxiliary effect slots EFX
 
     float m_masterVolume = 1.0f;
-    bool  m_muted = false;
+    bool  m_isMuted = false;
     bool  m_efxAvailable = false;
 
     // Dernier effect slot actif (pour applyReverbToAll)

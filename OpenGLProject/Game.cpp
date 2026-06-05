@@ -16,12 +16,12 @@ Game::~Game() {
 }
 
 void Game::initialize() {
-    m_window         = std::make_unique<Window>(Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT, Constants::WINDOW_TITLE);
+    m_soundManager   = std::make_unique<SoundManager>();
+    m_window         = std::make_unique<Window>(m_soundManager.get());
     m_renderer       = std::make_unique<Renderer>();
     m_camera         = std::make_unique<Camera>();
     m_socket         = std::make_unique<Socket>();
     m_textureManager = std::make_unique<TextureManager>();
-    m_soundManager   = std::make_unique<SoundManager>();
     m_shaderManager  = std::make_unique<ShaderManager>(m_camera.get());
     m_player         = std::make_unique<Player>(m_renderer.get());
     m_lightManager   = std::make_unique<LightManager>(m_renderer.get(), m_player.get());

@@ -3,6 +3,8 @@
 #include "SoundManager.h"
 #include "Sound.h"
 
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -142,7 +144,7 @@ Sound* SoundManager::get(const std::string& name) {
 
 void SoundManager::setMasterVolume(float volume) {
     m_masterVolume = volume;
-    if (!m_muted)
+    if (!m_isMuted)
         alListenerf(AL_GAIN, volume);
 }
 
@@ -164,8 +166,17 @@ void SoundManager::stopAll() {
 }
 
 void SoundManager::setMute(bool mute) {
-    m_muted = mute;
+    m_isMuted = mute;
     alListenerf(AL_GAIN, mute ? 0.0f : m_masterVolume);
+}
+
+void SoundManager::window_focus_callback(GLFWwindow* window, int focused) {
+    if (focused) {
+        resumeAll();
+    }
+    else {
+        pauseAll();
+    }
 }
 
 // ─── Listener ────────────────────────────────────────────────────────────────
