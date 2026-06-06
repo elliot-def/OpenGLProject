@@ -35,6 +35,7 @@ void MenuManager::changeState(GameState newState) {
     m_previousState = m_currentState;
     m_currentState = newState;
     if (newState == STATE_MENU) {
+		m_mainMenu->resetWeirdSoundPlayedTime();
 		Sound* menuMusic = m_soundManager->get("menu_music");
         if (menuMusic) {
             menuMusic->play();

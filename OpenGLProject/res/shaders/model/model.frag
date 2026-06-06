@@ -97,7 +97,9 @@ vec3 calcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec
     return ambient + diffuse + specular;
 }
 
+
 void main() {
+   
     vec3 norm        = normalize(Normal);
     vec3 viewDir     = normalize(viewPos - FragPos);
     vec3 diffuseTex  = texture(texture_diffuse,  TexCoords).rgb;

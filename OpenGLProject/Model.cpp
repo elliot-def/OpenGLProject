@@ -236,8 +236,28 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
         auto diffuse = loadMaterialTextures(material, aiTextureType_DIFFUSE);
         auto specular = loadMaterialTextures(material, aiTextureType_SPECULAR);
-        textureIDs.insert(textureIDs.end(), diffuse.begin(), diffuse.end());
-        textureIDs.insert(textureIDs.end(), specular.begin(), specular.end());
+
+        // 1. Si aucune diffuse, on met un fallback (ex: texture blanche ou debug)
+        if (diffuse.empty()) {
+            // Optionnel : tu peux lui assigner une texture par défaut si vide
+        }
+        else {
+            textureIDs.push_back(diffuse[0]);
+        }
+
+        // 2. CORRECTION : Si aucune spéculaire n'est trouvée, on génère/affecte un ID de texture noire
+        if (specular.empty()) {
+            unsigned int blackTextureID;
+            glGenTextures(1, &blackTextureID);
+            glBindTexture(GL_TEXTURE_2D, blackTextureID);
+            unsigned char blackPixel[] = { 10, 10, 10, 255 }; // Gris très sombre (faible spécularité par défaut)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, blackPixel);
+
+            textureIDs.push_back(blackTextureID);
+        }
+        else {
+            textureIDs.push_back(specular[0]);
+        }
     }
 
     // Binder la texture diffuse avant de créer le mesh (si ton Mesh::draw() utilise l'unité 0)
@@ -245,8 +265,11 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, textureIDs[0]);
     }
+    unsigned int mask = (unsigned int)VertexAttribute::POSITION |
+        (unsigned int)VertexAttribute::NORMAL |
+        (unsigned int)VertexAttribute::TEXCOORD;
 
-    return new Mesh(vertices, indices, 0b1101, textureIDs);
+    return new Mesh(vertices, indices, mask, textureIDs);
 }
 
 std::vector<unsigned int> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type) {

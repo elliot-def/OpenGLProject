@@ -4,7 +4,7 @@
 * TODO:
 *   Collision (Hitbox)
 *   Multi
-*   Son (fonction pour mute quand plus le focus glfwSetCursorEnterCallback(window, cursor_enter_callback);)
+*   3D Models roughness
 */
 
 int main() {

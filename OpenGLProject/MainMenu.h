@@ -16,6 +16,7 @@ public:
 	~MainMenu();
 	
 	void update(bool isAFK);
+	void resetWeirdSoundPlayedTime();
 private:
 	glm::vec3 m_colorDVDLogo;
 	Renderer* m_renderer;

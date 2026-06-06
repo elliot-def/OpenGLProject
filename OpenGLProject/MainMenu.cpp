@@ -82,3 +82,7 @@ void MainMenu::update(bool isAFK) {
             static_cast<float>(std::rand() % (Constants::WINDOW_HEIGHT - static_cast<int>(dvd->getSize().y))));
     }
 }
+
+void MainMenu::resetWeirdSoundPlayedTime() {
+	m_lastWeirdSoundPlayed = std::chrono::system_clock::now();
+}

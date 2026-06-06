@@ -71,13 +71,18 @@ void Mesh::setupMesh(unsigned int attributesMask = 0b0101) {
 }
 
 void Mesh::draw() const {
-    if (!m_textureIDs.empty()) {
+    // On s'assure d'avoir au moins la diffuse
+    if (m_textureIDs.size() >= 2) {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, m_textureIDs[0]); // diffuse
-    }
-    if (m_textureIDs.size() > 1) {
+        glBindTexture(GL_TEXTURE_2D, m_textureIDs[0]); // Diffuse toujours au slot 0
+
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, m_textureIDs[1]); // specular
+        glBindTexture(GL_TEXTURE_2D, m_textureIDs[1]); // Spéculaire (vraie ou fallback noire) au slot 1
+    }
+    else if (!m_textureIDs.empty()) {
+        // Sécurité si un vieux mesh n'a qu'une seule texture
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_textureIDs[0]);
     }
 
     glBindVertexArray(m_vao);
