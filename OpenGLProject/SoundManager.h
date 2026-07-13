@@ -125,6 +125,7 @@ public:
      */
     void setMute(bool mute);
     bool isMuted() const { return m_isMuted; }
+    void toggleMute();
 
     void window_focus_callback(GLFWwindow* window, int focused);
 

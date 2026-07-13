@@ -170,6 +170,11 @@ void SoundManager::setMute(bool mute) {
     alListenerf(AL_GAIN, mute ? 0.0f : m_masterVolume);
 }
 
+void SoundManager::toggleMute() {
+    m_isMuted = !m_isMuted;
+    alListenerf(AL_GAIN, m_isMuted ? 0.0f : m_masterVolume);
+}
+
 void SoundManager::window_focus_callback(GLFWwindow* window, int focused) {
     if (focused) {
         resumeAll();
