@@ -1,5 +1,8 @@
 #pragma once
 
+#define NOMINMAX
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <vector>
 #include <memory>
 
@@ -9,6 +12,7 @@
 // Déclarations anticipées
 class Window;
 class Renderer;
+class CollisionManager;
 class TextureManager;
 class ShaderManager;
 class InputManager;
@@ -37,6 +41,7 @@ private:
 
     std::unique_ptr<Window> m_window;
     std::unique_ptr<Renderer> m_renderer;
+    std::unique_ptr<CollisionManager> m_collisionManager;
     std::unique_ptr<TextureManager> m_textureManager;
     std::unique_ptr<ShaderManager> m_shaderManager;
     std::unique_ptr<InputManager> m_inputManager;

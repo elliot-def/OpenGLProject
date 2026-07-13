@@ -8,6 +8,13 @@ Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>&
     : m_vertices(vertices), m_indices(indices), m_textureIDs(textureIDs) {
     // Rien à faire ici : les IDs seront initialisés dans load()
     setupMesh(attributesMask);
+
+    for (const auto& v : m_vertices) {
+        glm::vec3 p = v.getPositions();
+        m_aabbMin = glm::min(m_aabbMin, p);
+        m_aabbMax = glm::max(m_aabbMax, p);
+    }
+
 }
 
 Mesh::~Mesh() {

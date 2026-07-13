@@ -24,8 +24,8 @@ struct BoundingBox {
     BoundingBox() : min(FLT_MAX), max(-FLT_MAX) {}
 
     void expand(const glm::vec3& point) {
-        min = glm::min(min, point);
-        max = glm::max(max, point);
+        min = (glm::min)(min, point);
+        max = (glm::max)(max, point);
     }
 
     glm::vec3 getCenter() const {
@@ -68,6 +68,8 @@ public:
 
     // Dessine la bounding box (pour debug)
     void drawBoundingBox(Shader& shader);
+
+    const std::vector<Mesh*>& getMeshes() const { return m_meshes; }
 
     // Getters pour les hitbox
     const BoundingBox& getBoundingBox() const { return m_boundingBox; }

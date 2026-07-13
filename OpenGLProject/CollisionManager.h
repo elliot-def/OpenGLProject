@@ -1,172 +1,183 @@
 #pragma once
 
+#define NOMINMAX
+#include <Windows.h>
+
+#include <glm/glm.hpp>
 #include <vector>
-#include <functional>
-#include "Model.h"
-#include "ModelEntity.h"
-#include "Entity.h"
+#include <string>
+#include <unordered_map>
+#include <limits>
 
-class ModelEntity;
+class Mesh;
 
-// Structure pour stocker les informations de collision
-struct CollisionInfo {
-    ModelEntity* entityA;
-    ModelEntity* entityB;
-    glm::vec3 penetrationVector; // Vecteur de s�paration minimum
-    float penetrationDepth;
+// ─────────────────────────────────────────────────────────────────────────────
+// AABB (Axis-Aligned Bounding Box)
+// ─────────────────────────────────────────────────────────────────────────────
 
-    CollisionInfo() : entityA(nullptr), entityB(nullptr),
-        penetrationVector(0.0f), penetrationDepth(0.0f) {
+struct AABB {
+    glm::vec3 min{ (std::numeric_limits<float>::max)() };
+    glm::vec3 max{ -(std::numeric_limits<float>::max)() };
+
+    void expand(glm::vec3 p) {
+        min = glm::min(min, p);
+        max = glm::max(max, p);
+    }
+    void expand(const AABB& o) {
+        min = glm::min(min, o.min);
+        max = glm::max(max, o.max);
+    }
+
+    glm::vec3 center() const { return (min + max) * 0.5f; }
+    bool isValid() const { return min.x <= max.x && min.y <= max.y && min.z <= max.z; }
+
+    // Retourne le point de l'AABB le plus proche de p
+    glm::vec3 closestPoint(glm::vec3 p) const {
+        return glm::clamp(p, min, max);
+    }
+
+    bool intersectsSphere(glm::vec3 center, float radius) const {
+        glm::vec3 closest = glm::clamp(center, min, max);
+        return glm::length(center - closest) <= radius;
     }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Résultat d'un test de collision sphère/AABB
+// ─────────────────────────────────────────────────────────────────────────────
+
+struct CollisionResult {
+    bool      hit = false;
+    glm::vec3 normal = glm::vec3(0.0f);   // Normale de la surface touchée (world space)
+    float     penetration = 0.0f;              // Profondeur de pénétration
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Entrée de collider statique
+// ─────────────────────────────────────────────────────────────────────────────
+
+struct StaticBox {
+    std::string name;
+    AABB        aabb;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CollisionManager
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @class CollisionManager
+ *
+ * Système de collision basé sur des AABB.
+ *
+ * Deux catégories :
+ *  - Statiques  (carte, décor) : AABB construite une fois au chargement
+ *  - Dynamiques (ennemis, objets mobiles) : AABB mise à jour via updateDynamic()
+ *
+ * Usage :
+ * @code
+ * // --- Chargement ---
+ * collisionManager.addStaticMesh(cubeMesh, modelMatrix, "sol");
+ * collisionManager.addDynamicMesh("ennemi1", { enemyMesh }, enemyModelMatrix);
+ *
+ * // --- Chaque frame ---
+ * collisionManager.updateDynamic("ennemi1", { enemyMesh }, newModelMatrix);
+ *
+ * glm::vec3 newPos = collisionManager.resolvePlayerMovement(
+ *     playerPos, desiredMovement, deltaTime);
+ * @endcode
+ */
 class CollisionManager {
 public:
+    static constexpr float DEFAULT_PLAYER_RADIUS = 0.2f;
+    static constexpr float DEFAULT_PLAYER_HEIGHT = 1.6f;
+    static constexpr float GRAVITY = -9.81f;
+
     CollisionManager() = default;
+    ~CollisionManager() = default;
 
-    // Enregistrer une entit� pour la d�tection de collision
-    void registerEntity(ModelEntity* entity) {
-        m_entities.push_back(entity);
-    }
+    // ── Enregistrement ───────────────────────────────────────────────────────
 
-    void unregisterEntity(ModelEntity* entity) {
-        m_entities.erase(
-            std::remove(m_entities.begin(), m_entities.end(), entity),
-            m_entities.end()
-        );
-    }
+    /**
+     * Ajoute un mesh statique. Calcule son AABB world-space et la stocke.
+     * @param mesh        Pointeur vers le Mesh OpenGL
+     * @param modelMatrix Transform world-space du mesh
+     * @param name        Identifiant debug (optionnel)
+     */
+    void addStaticMesh(const Mesh* mesh,
+        const glm::mat4& modelMatrix,
+        const std::string& name = "");
 
-    // V�rifier toutes les collisions
-    std::vector<CollisionInfo> checkCollisions() {
-        std::vector<CollisionInfo> collisions;
+    /**
+     * Ajoute un ou plusieurs meshes dynamiques sous une clé commune.
+     * L'AABB englobante de tous les sous-meshes est calculée immédiatement.
+     */
+    void addDynamicMesh(const std::string& key,
+        const std::vector<Mesh*>& meshes,
+        const glm::mat4& modelMatrix);
 
-        for (size_t i = 0; i < m_entities.size(); i++) {
-            for (size_t j = i + 1; j < m_entities.size(); j++) {
-                CollisionInfo info;
-                if (checkCollision(m_entities[i], m_entities[j], info)) {
-                    collisions.push_back(info);
-                }
-            }
-        }
+    /**
+     * Met à jour l'AABB d'un groupe de meshes dynamiques.
+     * Appeler chaque frame si l'objet a bougé.
+     */
+    void updateDynamic(const std::string& key,
+        const std::vector<Mesh*>& meshes,
+        const glm::mat4& modelMatrix);
 
-        return collisions;
-    }
+    void removeDynamic(const std::string& key);
+    void clear();
 
-    // V�rifier collision entre deux entit�s sp�cifiques
-    bool checkCollision(ModelEntity* entityA, ModelEntity* entityB,
-        CollisionInfo& outInfo) {
-        // Test rapide avec les sph�res
-        BoundingSphere sphereA = entityA->getModel()->getTransformedBoundingSphere(
-            entityA->getModelMatrix());
-        BoundingSphere sphereB = entityB->getModel()->getTransformedBoundingSphere(
-            entityB->getModelMatrix());
+    // ── Résolution mouvement joueur ──────────────────────────────────────────
 
-        if (!sphereA.intersects(sphereB)) {
-            return false;
-        }
+    /**
+     * @brief Résout le mouvement du joueur avec sliding et gravité.
+     *
+     * Le joueur est modélisé comme une capsule (2 sphères) pour gérer
+     * correctement les marches et les pentes.
+     *
+     * @param currentPos      Centre bas de la capsule (pieds du joueur)
+     * @param desiredMovement Déplacement voulu ce frame (hors gravité)
+     * @param deltaTime       Temps écoulé en secondes
+     * @param radius          Rayon de la sphère de la capsule
+     * @param height          Hauteur totale de la capsule
+     * @return                Nouvelle position du joueur
+     */
+    glm::vec3 resolvePlayerMovement(glm::vec3 currentPos,
+        glm::vec3 desiredMovement,
+        float     deltaTime,
+        float     radius = DEFAULT_PLAYER_RADIUS,
+        float     height = DEFAULT_PLAYER_HEIGHT);
 
-        // Test pr�cis avec les boxes
-        BoundingBox boxA = entityA->getWorldBoundingBox();
-        BoundingBox boxB = entityB->getWorldBoundingBox();
+    void  setVerticalVelocity(float vy) { m_verticalVelocity = vy; }
+    float getVerticalVelocity()  const { return m_verticalVelocity; }
+    bool  isGrounded()           const { return m_isGrounded; }
 
-        if (!boxA.intersects(boxB)) {
-            return false;
-        }
+    // ── Debug ────────────────────────────────────────────────────────────────
 
-        // Calculer les informations de collision
-        outInfo.entityA = entityA;
-        outInfo.entityB = entityB;
-        calculatePenetration(boxA, boxB, outInfo);
-
-        return true;
-    }
-
-    // R�soudre une collision en s�parant les entit�s
-    void resolveCollision(const CollisionInfo& info, bool moveA = true, bool moveB = true) {
-        if (!moveA && !moveB) return;
-
-        glm::vec3 separation = info.penetrationVector * info.penetrationDepth;
-
-        if (moveA && moveB) {
-            // Les deux bougent
-            info.entityA->setPosition(info.entityA->getPosition() - separation * 0.5f);
-            info.entityB->setPosition(info.entityB->getPosition() + separation * 0.5f);
-        }
-        else if (moveA) {
-            // Seulement A bouge
-            info.entityA->setPosition(info.entityA->getPosition() - separation);
-        }
-        else {
-            // Seulement B bouge
-            info.entityB->setPosition(info.entityB->getPosition() + separation);
-        }
-    }
-
-    // Raycast contre toutes les entit�s
-    ModelEntity* raycast(const glm::vec3& origin, const glm::vec3& direction,
-        float maxDistance, float& outDistance) {
-        ModelEntity* closest = nullptr;
-        float closestDist = maxDistance;
-
-        for (auto* entity : m_entities) {
-            float dist;
-            if (entity->raycast(origin, direction, dist)) {
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closest = entity;
-                }
-            }
-        }
-
-        outDistance = closestDist;
-        return closest;
-    }
-
-    // Trouver toutes les entit�s dans un rayon
-    std::vector<ModelEntity*> findEntitiesInRadius(const glm::vec3& center,
-        float radius) {
-        std::vector<ModelEntity*> result;
-
-        for (auto* entity : m_entities) {
-            BoundingSphere sphere = entity->getModel()->getTransformedBoundingSphere(
-                entity->getModelMatrix());
-
-            float distance = glm::length(sphere.center - center);
-            if (distance < radius + sphere.radius) {
-                result.push_back(entity);
-            }
-        }
-
-        return result;
-    }
+    void printInfo() const;
 
 private:
-    std::vector<ModelEntity*> m_entities;
+    std::vector<StaticBox>                     m_staticBoxes;
+    std::unordered_map<std::string, AABB>      m_dynamicBoxes;
 
-    void calculatePenetration(const BoundingBox& boxA, const BoundingBox& boxB,
-        CollisionInfo& outInfo) {
-        glm::vec3 centerA = boxA.getCenter();
-        glm::vec3 centerB = boxB.getCenter();
-        glm::vec3 delta = centerB - centerA;
+    float m_verticalVelocity = 0.0f;
+    bool  m_isGrounded = false;
 
-        // Calculer la p�n�tration sur chaque axe
-        glm::vec3 sizeA = boxA.getSize() * 0.5f;
-        glm::vec3 sizeB = boxB.getSize() * 0.5f;
+    // Construit l'AABB world-space d'un ensemble de meshes
+    static AABB computeWorldAABB(const std::vector<Mesh*>& meshes,
+        const glm::mat4& modelMatrix);
 
-        glm::vec3 overlap = (sizeA + sizeB) - glm::abs(delta);
+    // Teste une sphère contre une AABB et retourne le résultat de collision
+    static CollisionResult testSphereAABB(glm::vec3 center,
+        float     radius,
+        const AABB& box);
 
-        // Trouver l'axe de p�n�tration minimum
-        if (overlap.x < overlap.y && overlap.x < overlap.z) {
-            outInfo.penetrationDepth = overlap.x;
-            outInfo.penetrationVector = glm::vec3(delta.x > 0 ? 1.0f : -1.0f, 0, 0);
-        }
-        else if (overlap.y < overlap.z) {
-            outInfo.penetrationDepth = overlap.y;
-            outInfo.penetrationVector = glm::vec3(0, delta.y > 0 ? 1.0f : -1.0f, 0);
-        }
-        else {
-            outInfo.penetrationDepth = overlap.z;
-            outInfo.penetrationVector = glm::vec3(0, 0, delta.z > 0 ? 1.0f : -1.0f);
-        }
-    }
+    // Teste une sphère contre tous les colliders (statiques + dynamiques)
+    CollisionResult testSphereAll(glm::vec3 center, float radius) const;
+
+    // Déplace une sphère en résolvant itérativement les contacts (sliding)
+    glm::vec3 sweepSphere(glm::vec3 start,
+        glm::vec3 movement,
+        float     radius,
+        int       maxIterations = 5) const;
 };

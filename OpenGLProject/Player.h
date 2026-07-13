@@ -4,13 +4,15 @@
 #include <iostream>
 #include "Entity.h"
 
+class CollisionManager;
+
 // Classe Player : représente le joueur dans le jeu
 // Hérite de Entity et gère le déplacement, la vue et le rendu
 class Player : public Entity {
 public:
     // Constructeur : prend un pointeur vers le moteur de rendu
     // Appelle le constructeur de la classe de base Entity
-    Player(Renderer* renderer) : Entity(renderer) {};
+    Player(CollisionManager* collisionManager, Renderer* renderer) : Entity(renderer), m_collisionManager(collisionManager) {};
 
     // Destructeur par défaut, aucune ressource supplémentaire à libérer
     ~Player() = default;
@@ -37,6 +39,7 @@ public:
 
     inline void setIsSprinting(bool isSprinting) { m_isSprinting = isSprinting; };
 private:
+    CollisionManager* m_collisionManager;
     bool m_isFlashlightEnabled = false;
     bool m_isSprinting = false;
 };

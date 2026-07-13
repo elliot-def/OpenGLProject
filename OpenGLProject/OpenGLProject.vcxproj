@@ -142,6 +142,7 @@
   <ItemGroup>
     <ClCompile Include="Backward.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CollisionManager.cpp" />
     <ClCompile Include="Crouch.cpp" />
     <ClCompile Include="Cube.cpp" />
     <ClCompile Include="Direction.cpp" />
@@ -248,7 +249,6 @@
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="model.vs" />
     <None Include="res\shaders\cube\cube.frag" />
     <None Include="res\shaders\cube\cube.vert" />
     <None Include="res\shaders\cube\lightsource\lightsource.frag" />
@@ -259,8 +259,6 @@
     <None Include="res\shaders\image\image.vert" />
     <None Include="res\shaders\image\masque\masque.frag" />
     <None Include="res\shaders\image\masque\masque.vert" />
-    <None Include="res\shaders\mask\mask.frag" />
-    <None Include="res\shaders\mask\mask.vert" />
     <None Include="res\shaders\model\model.frag" />
     <None Include="res\shaders\model\model.vert" />
     <None Include="res\shaders\shape\shape.frag" />

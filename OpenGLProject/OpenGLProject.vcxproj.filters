@@ -82,6 +82,24 @@
     <Filter Include="Fichiers sources\Sound">
       <UniqueIdentifier>{9f6d2717-049f-4ac3-8e80-a47f5a574ea3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Fichiers sources\Shape\2D">
+      <UniqueIdentifier>{bf74db0a-b576-4686-87c3-7bb41382b515}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers sources\Shape\3D">
+      <UniqueIdentifier>{f76d24dd-ca6b-49a0-95dd-043577e80c57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers d%27en-tête\Shape\2D">
+      <UniqueIdentifier>{a294675f-6e66-46e2-94e6-558ee84f3a6a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers d%27en-tête\Shape\3D">
+      <UniqueIdentifier>{438b4eaa-2964-49cb-a1e2-68f98e35c1a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers sources\Light">
+      <UniqueIdentifier>{934f1c87-20a1-42f5-818a-31a1bb504d50}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers d%27en-tête\Light">
+      <UniqueIdentifier>{b8d2935f-89f8-4671-b22c-13f01f2935df}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -109,9 +127,6 @@
       <Filter>Fichiers d%27en-tête</Filter>
     </ClCompile>
     <ClCompile Include="Camera.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Cube.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="Entity.cpp">
@@ -153,17 +168,8 @@
     <ClCompile Include="TextureManager.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="LightSource.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="LightManager.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
     <ClCompile Include="Flashlight.cpp">
       <Filter>Fichiers sources\Inputs</Filter>
-    </ClCompile>
-    <ClCompile Include="Spotlight.cpp">
-      <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="Model.cpp">
       <Filter>Fichiers sources</Filter>
@@ -192,12 +198,6 @@
     <ClCompile Include="ModelEntity.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="Rectangle.cpp">
-      <Filter>Fichiers sources\Shape</Filter>
-    </ClCompile>
-    <ClCompile Include="Shape.cpp">
-      <Filter>Fichiers sources\Shape</Filter>
-    </ClCompile>
     <ClCompile Include="Menu.cpp">
       <Filter>Fichiers sources\Menu</Filter>
     </ClCompile>
@@ -206,12 +206,6 @@
     </ClCompile>
     <ClCompile Include="TextRenderer.cpp">
       <Filter>Fichiers sources\Menu</Filter>
-    </ClCompile>
-    <ClCompile Include="Triangle.cpp">
-      <Filter>Fichiers sources\Shape</Filter>
-    </ClCompile>
-    <ClCompile Include="Image.cpp">
-      <Filter>Fichiers sources\Shape</Filter>
     </ClCompile>
     <ClCompile Include="PauseMenu.cpp">
       <Filter>Fichiers sources\Menu</Filter>
@@ -222,17 +216,44 @@
     <ClCompile Include="MainMenu.cpp">
       <Filter>Fichiers sources\Menu</Filter>
     </ClCompile>
-    <ClCompile Include="MaskShape.cpp">
-      <Filter>Fichiers sources\Shape</Filter>
-    </ClCompile>
-    <ClCompile Include="DVDShape.cpp">
-      <Filter>Fichiers sources\Shape</Filter>
-    </ClCompile>
     <ClCompile Include="SoundManager.cpp">
       <Filter>Fichiers sources\Sound</Filter>
     </ClCompile>
     <ClCompile Include="Sound.cpp">
       <Filter>Fichiers sources\Sound</Filter>
+    </ClCompile>
+    <ClCompile Include="Triangle.cpp">
+      <Filter>Fichiers sources\Shape\2D</Filter>
+    </ClCompile>
+    <ClCompile Include="DVDShape.cpp">
+      <Filter>Fichiers sources\Shape\2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Image.cpp">
+      <Filter>Fichiers sources\Shape\2D</Filter>
+    </ClCompile>
+    <ClCompile Include="MaskShape.cpp">
+      <Filter>Fichiers sources\Shape\2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Rectangle.cpp">
+      <Filter>Fichiers sources\Shape\2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Shape.cpp">
+      <Filter>Fichiers sources\Shape\2D</Filter>
+    </ClCompile>
+    <ClCompile Include="Cube.cpp">
+      <Filter>Fichiers sources\Shape\3D</Filter>
+    </ClCompile>
+    <ClCompile Include="LightSource.cpp">
+      <Filter>Fichiers sources\Light</Filter>
+    </ClCompile>
+    <ClCompile Include="LightManager.cpp">
+      <Filter>Fichiers sources\Light</Filter>
+    </ClCompile>
+    <ClCompile Include="Spotlight.cpp">
+      <Filter>Fichiers sources\Light</Filter>
+    </ClCompile>
+    <ClCompile Include="CollisionManager.cpp">
+      <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -264,9 +285,6 @@
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="Camera.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Cube.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="Entity.h">
@@ -317,17 +335,8 @@
     <ClInclude Include="Direction.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="LightSource.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="LightManager.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
     <ClInclude Include="Flashlight.h">
       <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Spotlight.h">
-      <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="Model.h">
       <Filter>Fichiers d%27en-tête</Filter>
@@ -356,12 +365,6 @@
     <ClInclude Include="CollisionManager.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="Rectangle.h">
-      <Filter>Fichiers d%27en-tête\Shape</Filter>
-    </ClInclude>
-    <ClInclude Include="Shape.h">
-      <Filter>Fichiers d%27en-tête\Shape</Filter>
-    </ClInclude>
     <ClInclude Include="Menu.h">
       <Filter>Fichiers d%27en-tête\Menu</Filter>
     </ClInclude>
@@ -370,12 +373,6 @@
     </ClInclude>
     <ClInclude Include="TextRenderer.h">
       <Filter>Fichiers d%27en-tête\Menu</Filter>
-    </ClInclude>
-    <ClInclude Include="Triangle.h">
-      <Filter>Fichiers d%27en-tête\Shape</Filter>
-    </ClInclude>
-    <ClInclude Include="Image.h">
-      <Filter>Fichiers d%27en-tête\Shape</Filter>
     </ClInclude>
     <ClInclude Include="PauseMenu.h">
       <Filter>Fichiers d%27en-tête\Menu</Filter>
@@ -386,17 +383,41 @@
     <ClInclude Include="MainMenu.h">
       <Filter>Fichiers d%27en-tête\Menu</Filter>
     </ClInclude>
-    <ClInclude Include="MaskShape.h">
-      <Filter>Fichiers d%27en-tête\Shape</Filter>
-    </ClInclude>
-    <ClInclude Include="DVDShape.h">
-      <Filter>Fichiers d%27en-tête\Shape</Filter>
-    </ClInclude>
     <ClInclude Include="Sound.h">
       <Filter>Fichiers d%27en-tête\Sound</Filter>
     </ClInclude>
     <ClInclude Include="SoundManager.h">
       <Filter>Fichiers d%27en-tête\Sound</Filter>
+    </ClInclude>
+    <ClInclude Include="DVDShape.h">
+      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
+    </ClInclude>
+    <ClInclude Include="Image.h">
+      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
+    </ClInclude>
+    <ClInclude Include="MaskShape.h">
+      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
+    </ClInclude>
+    <ClInclude Include="Rectangle.h">
+      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
+    </ClInclude>
+    <ClInclude Include="Shape.h">
+      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
+    </ClInclude>
+    <ClInclude Include="Triangle.h">
+      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
+    </ClInclude>
+    <ClInclude Include="Cube.h">
+      <Filter>Fichiers d%27en-tête\Shape\3D</Filter>
+    </ClInclude>
+    <ClInclude Include="LightSource.h">
+      <Filter>Fichiers d%27en-tête\Light</Filter>
+    </ClInclude>
+    <ClInclude Include="LightManager.h">
+      <Filter>Fichiers d%27en-tête\Light</Filter>
+    </ClInclude>
+    <ClInclude Include="Spotlight.h">
+      <Filter>Fichiers d%27en-tête\Light</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -427,15 +448,12 @@
     <None Include="res\shaders\text\text.vert">
       <Filter>Fichiers de ressources\shaders\text</Filter>
     </None>
-    <None Include="model.vs" />
     <None Include="res\shaders\model\model.frag">
       <Filter>Fichiers de ressources\shaders\model</Filter>
     </None>
     <None Include="res\shaders\model\model.vert">
       <Filter>Fichiers de ressources\shaders\model</Filter>
     </None>
-    <None Include="res\shaders\mask\mask.frag" />
-    <None Include="res\shaders\mask\mask.vert" />
     <None Include="res\shaders\shape\shape.frag">
       <Filter>Fichiers de ressources\shaders\shape</Filter>
     </None>

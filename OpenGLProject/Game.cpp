@@ -1,6 +1,7 @@
 #include "Game.h"
 #include "config.h"
 #include <vector>
+#include "CollisionManager.h"
 
 
 Game::Game() {
@@ -19,11 +20,12 @@ void Game::initialize() {
     m_soundManager   = std::make_unique<SoundManager>();
     m_window         = std::make_unique<Window>(m_soundManager.get());
     m_renderer       = std::make_unique<Renderer>();
+    m_collisionManager = std::make_unique<CollisionManager>();
     m_camera         = std::make_unique<Camera>();
     m_socket         = std::make_unique<Socket>();
     m_textureManager = std::make_unique<TextureManager>();
     m_shaderManager  = std::make_unique<ShaderManager>(m_camera.get());
-    m_player         = std::make_unique<Player>(m_renderer.get());
+    m_player         = std::make_unique<Player>(m_collisionManager.get(), m_renderer.get());
     m_lightManager   = std::make_unique<LightManager>(m_renderer.get(), m_player.get());
     m_textRenderers  = std::make_unique<std::vector<std::unique_ptr<TextRenderer>>>();
     m_menuManager    = std::make_unique<MenuManager>(this, m_soundManager.get(), m_renderer.get(), m_textRenderers.get(), m_textureManager.get(), m_shaderManager.get());
@@ -80,6 +82,12 @@ void Game::initialize() {
     m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0.5, 2), 1.0f, cubeShader, crateTextures, m_renderer.get(), m_lightManager.get(), m_player.get()));
 
 	m_modelEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(), "./res/models/backpack/backpack.obj", m_textureManager.get());
+
+
+    // Décor statique — une seule fois
+    m_collisionManager->addStaticMesh(m_cubes[0]->getMesh(), m_cubes[0]->getTransformation()->getMatrix(), "cube1");
+    m_collisionManager->addStaticMesh(m_cubes[1]->getMesh(), m_cubes[1]->getTransformation()->getMatrix(), "cube2");
+    m_collisionManager->addStaticMesh(m_cubes[2]->getMesh(), m_cubes[2]->getTransformation()->getMatrix(), "cube3");
 
     glGetString(GL_VERSION) ? std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl
         : throw std::runtime_error("Impossible de récupérer la version OpenGL");
@@ -138,6 +146,8 @@ void Game::update() {
 
     m_soundManager->setListenerTransform(m_camera->getPosition(), m_camera->getFront(), m_camera->getUp());
     m_soundManager->update();
+
+    m_collisionManager->updateDynamic("backpack", m_modelEntity->getModel()->getMeshes(), m_modelEntity->getModelMatrix());
 }
 
 void Game::draw() {

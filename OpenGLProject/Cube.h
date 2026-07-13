@@ -43,6 +43,8 @@ public:
 
 	inline glm::vec3 getCenter() const { return m_center; }
 
+	inline Mesh* getMesh() const { return m_mesh; }
+
 protected:
     Cube(glm::vec3 center, float edge, Shader* shader, Player* player);
 

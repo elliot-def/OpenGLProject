@@ -1,6 +1,9 @@
 #pragma once
 
 #include <vector>
+#include <glm/glm.hpp>
+#include <limits>
+
 #include "Vertex.h"   // Structure d'un sommet (position, couleur, UV)
 #include "Texture.h"  // Classe pour gerer les textures
 
@@ -60,6 +63,9 @@ public:
 	std::vector<Vertex> getVertices() const { return m_vertices; }
     std::vector<unsigned int> getIndices() const { return m_indices; }
 
+    glm::vec3 getLocalAABBMin() const { return m_aabbMin; }
+    glm::vec3 getLocalAABBMax() const { return m_aabbMax; }
+
 private:
     unsigned int m_vao = 0;      // Vertex Array Object
     unsigned int m_vbo = 0;      // Vertex Buffer Object
@@ -71,4 +77,7 @@ private:
     std::vector<unsigned int> m_textureIDs;
 
     void setupMesh(unsigned int attributesMask);
+
+    glm::vec3 m_aabbMin{ std::numeric_limits<float>::max() };
+    glm::vec3 m_aabbMax{ -std::numeric_limits<float>::max() };
 };

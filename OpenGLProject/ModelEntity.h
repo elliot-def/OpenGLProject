@@ -1,7 +1,9 @@
 #pragma once
 #include <string>
 #include <memory>
+
 #include "Entity.h"
+#include "Model.h"
 
 
 class Shader;
@@ -32,6 +34,7 @@ public:
     BoundingBox getWorldBoundingBox() const;
 
     Model* getModel() { return m_model.get(); }
+    const std::vector<Mesh*>& getMeshes() { return m_model.get()->getMeshes(); }
 
     glm::mat4 getModelMatrix() const;
 

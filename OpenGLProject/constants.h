@@ -109,5 +109,4 @@ namespace Colors {
 	inline constexpr const glm::vec3 TROPICAL_TEAL = glm::vec3(126/255.0f, 189/255.0f, 194/255.0f);  // #7EBDC2
 	inline constexpr const glm::vec3 VANILLA_CUSTARD = glm::vec3(243/255.0f, 223/255.0f, 162/255.0f);// #F3DFA2
 	inline constexpr const glm::vec3 LINEN = glm::vec3(239/255.0f, 230/255.0f, 221/255.0f);          // #EFE6DD
-
 }
