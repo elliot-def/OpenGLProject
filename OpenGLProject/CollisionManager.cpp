@@ -1,14 +1,11 @@
 #define NOMINMAX
 #define GLM_ENABLE_EXPERIMENTAL
-
 #include "CollisionManager.h"
 #include "Mesh.h"
-
 #include <algorithm>
 #include <iostream>
 #include <cmath>
 #include <string>
-
 #include <glm/glm.hpp>
 #include <glm/gtx/norm.hpp>
 
@@ -26,7 +23,6 @@ AABB CollisionManager::computeWorldAABB(const std::vector<Mesh*>& meshes,
         glm::vec3 lMax = mesh->getLocalAABBMax();
 
         // Transforme les 8 coins de l'AABB locale pour obtenir une AABB world correcte
-        // (une rotation peut intervertir min/max, donc on teste tous les coins)
         glm::vec3 corners[8] = {
             { lMin.x, lMin.y, lMin.z },
             { lMax.x, lMin.y, lMin.z },
@@ -157,112 +153,181 @@ CollisionResult CollisionManager::testSphereAll(glm::vec3 center, float radius) 
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// sweepSphere : déplace une sphère avec sliding itératif
+// sweepSphere : déplace une sphère avec sliding itératif et substepping anti-tunneling
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// sweepSphere : Déplacement avec glissement et gestion stricte des blocages
+// ─────────────────────────────────────────────────────────────────────────────
 glm::vec3 CollisionManager::sweepSphere(glm::vec3 start,
     glm::vec3 movement,
     float     radius,
     int       maxIterations) const
 {
     glm::vec3 pos = start;
+    float moveLength = glm::length(movement);
 
-    for (int iter = 0; iter < maxIterations; ++iter) {
-        if (glm::length2(movement) < 1e-8f) break;
+    if (moveLength < 1e-8f) return pos;
 
-        glm::vec3 target = pos + movement;
-        if (std::isnan(target.x) || std::isinf(target.x)) {
-            std::cerr << "[Collision] target NaN/Inf, pos=" << pos.x << "," << pos.y << "," << pos.z << std::endl;
-            break;
+    // Substepping adaptatif anti-tunneling
+    float maxStepLength = radius * 0.4f;
+    int substeps = 1;
+    if (moveLength > maxStepLength) {
+        substeps = static_cast<int>(std::ceil(moveLength / maxStepLength));
+    }
+
+    glm::vec3 subMovement = movement / static_cast<float>(substeps);
+
+    for (int step = 0; step < substeps; ++step) {
+        glm::vec3 remainingMove = subMovement;
+
+        for (int iter = 0; iter < maxIterations; ++iter) {
+            if (glm::length2(remainingMove) < 1e-8f) break;
+
+            glm::vec3 target = pos + remainingMove;
+            CollisionResult col = testSphereAll(target, radius);
+
+            if (!col.hit) {
+                pos = target;
+                break;
+            }
+
+            // 1. On recule immédiatement la sphère hors du cube (Dépénétration stricte)
+            // L'ajout d'un tout petit EPSILON évite que la virgule flottante ne la laisse "coller" au plan
+            pos = target + col.normal * (col.penetration + 1e-3f);
+
+            // 2. Glissement : On retire la partie du mouvement qui fonce dans le mur
+            float project = glm::dot(remainingMove, col.normal);
+            remainingMove = remainingMove - project * col.normal;
+
+            // Sécurité anti-rebond infini dans les coins étroits
+            if (project < 0.0f && glm::length2(remainingMove) < 1e-6f) {
+                break;
+            }
         }
-
-        CollisionResult col = testSphereAll(target, radius);
-        if (!col.hit) {
-            pos = target;
-            break;
-        }
-
-        // Dépénètre
-        target += col.normal * (col.penetration + 1e-3f);
-        
-
-        // Sliding : retire la composante normale du mouvement restant
-        movement = movement - glm::dot(movement, col.normal) * col.normal;
-
-        pos = target;
     }
 
     return pos;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// resolvePlayerMovement : capsule joueur = sphère basse + sphère haute
+// pushPlayerAway : Repousse activement le joueur s'il est chevauché par un cube
 // ─────────────────────────────────────────────────────────────────────────────
+glm::vec3 CollisionManager::pushPlayerAway(glm::vec3 currentPlayerPos) {
+    
+	float radius = Constants::DEFAULT_PLAYER_RADIUS;
+	float height = Constants::DEFAULT_PLAYER_HEIGHT;
+    
+    glm::vec3 pos = currentPlayerPos;
+    
+    glm::vec3 offsetBottom = glm::vec3(0.f, radius, 0.f);
+    glm::vec3 offsetMiddle = glm::vec3(0.f, height * 0.5f, 0.f);
+    glm::vec3 offsetTop = glm::vec3(0.f, height - radius, 0.f);
 
+    // On fait 3 passes rapides pour résoudre les chevauchements avec TOUS les objets (statiques & dynamiques)
+    for (int pass = 0; pass < 3; ++pass) {
+        // 1. Test aux pieds
+        CollisionResult colBot = testSphereAll(pos + offsetBottom, radius);
+        if (colBot.hit) {
+            // On applique une force de dépénétration immédiate sur la position globale
+            pos += colBot.normal * (colBot.penetration + 1e-3f);
+        }
+
+        // 2. Test au milieu
+        CollisionResult colMid = testSphereAll(pos + offsetMiddle, radius);
+        if (colMid.hit) {
+            pos += colMid.normal * (colMid.penetration + 1e-3f);
+        }
+
+        // 3. Test à la tête
+        CollisionResult colTop = testSphereAll(pos + offsetTop, radius);
+        if (colTop.hit) {
+            pos += colTop.normal * (colTop.penetration + 1e-3f);
+        }
+    }
+
+    return pos;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// resolvePlayerMovement : Résolution unifiée pour éviter le clipping dans les coins
+// ─────────────────────────────────────────────────────────────────────────────
 glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
     glm::vec3 desiredMovement,
     float     deltaTime,
+    bool      gravityEnabled,
     float     radius,
     float     height)
 {
-
     if (std::isnan(currentPos.x) || std::isinf(currentPos.x)) {
         std::cerr << "[Collision] Position NaN/Inf détectée !" << std::endl;
         return currentPos;
     }
 
-    // Centres des deux sphères de la capsule
-    auto sphereBottom = [&](glm::vec3 pos) { return pos + glm::vec3(0.f, radius, 0.f); };
-    auto sphereTop = [&](glm::vec3 pos) { return pos + glm::vec3(0.f, height - radius, 0.f); };
+    glm::vec3 offsetBottom = glm::vec3(0.f, radius, 0.f);
+    glm::vec3 offsetMiddle = glm::vec3(0.f, height * 0.5f, 0.f);
+    glm::vec3 offsetTop = glm::vec3(0.f, height - radius, 0.f);
 
     m_isGrounded = false;
 
-    // Gravité
-    //m_verticalVelocity += GRAVITY * deltaTime;
-    float verticalMove = m_verticalVelocity * deltaTime;
-
-    // ── Mouvement horizontal ──────────────────────────────────────────────────
+    // ── 1. MOUVEMENT HORIZONTAL ──────────────────────────────────────────────
     glm::vec3 horizontalMovement = glm::vec3(desiredMovement.x, 0.f, desiredMovement.z);
     glm::vec3 posAfterH = currentPos;
 
     if (glm::length2(horizontalMovement) > 1e-8f) {
-        // Sphère basse
-        glm::vec3 newBottom = sweepSphere(sphereBottom(currentPos), horizontalMovement, radius);
-        posAfterH = newBottom - glm::vec3(0.f, radius, 0.f);
+        glm::vec3 newBottom = sweepSphere(posAfterH + offsetBottom, horizontalMovement, radius);
+        posAfterH = newBottom - offsetBottom;
 
-        // Sphère haute (tête) — prend le résultat le plus conservateur
-        glm::vec3 newTop = sweepSphere(sphereTop(posAfterH), horizontalMovement, radius);
-        glm::vec3 posFromTop = newTop - glm::vec3(0.f, height - radius, 0.f);
+        for (int pass = 0; pass < 3; ++pass) {
+            CollisionResult colMid = testSphereAll(posAfterH + offsetMiddle, radius);
+            if (colMid.hit) posAfterH += colMid.normal * (colMid.penetration + 1e-3f);
 
-        if (glm::length2(posFromTop - currentPos) < glm::length2(posAfterH - currentPos)) {
-            posAfterH.x = posFromTop.x;
-            posAfterH.z = posFromTop.z;
+            CollisionResult colTop = testSphereAll(posAfterH + offsetTop, radius);
+            if (colTop.hit) posAfterH += colTop.normal * (colTop.penetration + 1e-3f);
+
+            CollisionResult colBot = testSphereAll(posAfterH + offsetBottom, radius);
+            if (colBot.hit) posAfterH += colBot.normal * (colBot.penetration + 1e-3f);
         }
     }
 
-    // ── Mouvement vertical ────────────────────────────────────────────────────
-    float     totalVertical = desiredMovement.y + verticalMove;
+    // ── 2. MOUVEMENT VERTICAL ────────────────────────────────────────────────
+    // On n'applique la chute automatique que si la gravité est activée pour le joueur
+    float verticalMove = gravityEnabled ? (m_verticalVelocity * deltaTime) : 0.0f;
+    float totalVertical = desiredMovement.y + verticalMove;
     glm::vec3 vertMove = glm::vec3(0.f, totalVertical, 0.f);
     glm::vec3 posAfterV = posAfterH;
 
-    // Sphère basse
-    glm::vec3 newBottom = sweepSphere(sphereBottom(posAfterH), vertMove, radius);
-    posAfterV = newBottom - glm::vec3(0.f, radius, 0.f);
+    if (std::abs(totalVertical) > 1e-8f) {
+        if (totalVertical < 0.f) {
+            glm::vec3 newBottom = sweepSphere(posAfterH + offsetBottom, vertMove, radius);
+            posAfterV = newBottom - offsetBottom;
+        }
+        else {
+            glm::vec3 newTop = sweepSphere(posAfterH + offsetTop, vertMove, radius);
+            posAfterV = newTop - offsetTop;
+        }
 
-    // Sphère haute — prend le résultat le plus haut (le plus restrictif vers le bas)
-    glm::vec3 newTop = sweepSphere(sphereTop(posAfterV), vertMove, radius);
-    glm::vec3 posFromTop = newTop - glm::vec3(0.f, height - radius, 0.f);
-    posAfterV.y = std::min(posAfterV.y, posFromTop.y);
+        CollisionResult colMid = testSphereAll(posAfterV + offsetMiddle, radius);
+        if (colMid.hit) {
+            posAfterV += colMid.normal * (colMid.penetration + 1e-3f);
+        }
+    }
 
-    // Détection sol / plafond
+    // ── 3. DÉTECTION SOL / PLAFOND ───────────────────────────────────────────
     float actualVertical = posAfterV.y - posAfterH.y;
 
-    if (totalVertical < -1e-3f && std::abs(actualVertical) < std::abs(totalVertical) * 0.5f) {
-        m_isGrounded = true;
-        m_verticalVelocity = 0.f;
+    if (gravityEnabled) {
+        if (totalVertical < -1e-3f && std::abs(actualVertical) < std::abs(totalVertical) * 0.5f) {
+            m_isGrounded = true;
+            m_verticalVelocity = 0.f;
+        }
+        if (totalVertical > 1e-3f && std::abs(actualVertical) < std::abs(totalVertical) * 0.5f) {
+            m_verticalVelocity = 0.f;
+        }
     }
-    if (totalVertical > 1e-3f && std::abs(actualVertical) < std::abs(totalVertical) * 0.5f) {
-        m_verticalVelocity = 0.f;
+    else {
+        m_isGrounded = false;
+        m_verticalVelocity = 0.f; // On s'assure qu'aucune vélocité ne s'accumule en volant
     }
 
     return posAfterV;
@@ -271,7 +336,6 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
 // ─────────────────────────────────────────────────────────────────────────────
 // Debug
 // ─────────────────────────────────────────────────────────────────────────────
-
 void CollisionManager::printInfo() const {
     std::cout << "=== CollisionManager (AABB) ===" << std::endl;
     std::cout << "  Statiques  : " << m_staticBoxes.size() << " boîte(s)" << std::endl;

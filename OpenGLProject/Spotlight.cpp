@@ -7,7 +7,7 @@
 Spotlight::Spotlight(Renderer* renderer,
 	glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular,
 	float constant, float linear, float quadratic,
-	float cutOff, float outerCutOff) : Entity(renderer) {
+	float cutOff, float outerCutOff) : Entity(renderer, nullptr) {
 
     m_ambient = ambient;
     m_diffuse = diffuse;
@@ -25,7 +25,7 @@ void Spotlight::update(glm::vec3 position, Direction* direction) {
 }
 
 void Spotlight::update(Player* player) {
-	m_position = player->getPosition();
+	m_position = player->getPosition() + Constants::PLAYER_EYE_HEIGHT;
 	m_direction = player->getDirection();
 }
 

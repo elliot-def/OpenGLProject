@@ -14,7 +14,6 @@ Shape::~Shape() {
     delete m_mesh;
 }
 
-
 void Shape::setPosition(float x, float y) {
     m_position = glm::vec3(x, y, 0.0f);
 }

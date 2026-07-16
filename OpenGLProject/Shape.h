@@ -16,9 +16,13 @@ public:
 	virtual void draw() = 0;
 
 	bool getIsVisible() { return m_isVisible; }
-	glm::vec3 getPosition() { return m_position; }
+	bool isPointInside(double px, double py) {
+		return (px >= m_position.x - m_size.x / 2 && px <= m_position.x + m_size.x / 2 &&
+				py >= m_position.y - m_size.y / 2 && py <= m_position.y + m_size.y / 2);
+	}
+    glm::vec3 getPosition() { return m_position; }
 	glm::vec2 getSize() { return m_size; }
-
+    
     void setPosition(float x, float y);
     void setSize(float width, float height);
     void setColor(float r, float g, float b);

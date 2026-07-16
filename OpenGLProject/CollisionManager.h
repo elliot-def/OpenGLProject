@@ -9,6 +9,8 @@
 #include <unordered_map>
 #include <limits>
 
+#include "Constants.h"
+
 class Mesh;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,10 +91,6 @@ struct StaticBox {
  */
 class CollisionManager {
 public:
-    static constexpr float DEFAULT_PLAYER_RADIUS = 0.2f;
-    static constexpr float DEFAULT_PLAYER_HEIGHT = 1.6f;
-    static constexpr float GRAVITY = -9.81f;
-
     CollisionManager() = default;
     ~CollisionManager() = default;
 
@@ -145,8 +143,11 @@ public:
     glm::vec3 resolvePlayerMovement(glm::vec3 currentPos,
         glm::vec3 desiredMovement,
         float     deltaTime,
-        float     radius = DEFAULT_PLAYER_RADIUS,
-        float     height = DEFAULT_PLAYER_HEIGHT);
+        bool      gravityEnabled,
+        float     radius = Constants::DEFAULT_PLAYER_RADIUS,
+        float     height = Constants::DEFAULT_PLAYER_HEIGHT);
+
+    glm::vec3 pushPlayerAway(glm::vec3 currentPlayerPos);
 
     void  setVerticalVelocity(float vy) { m_verticalVelocity = vy; }
     float getVerticalVelocity()  const { return m_verticalVelocity; }

@@ -100,6 +100,9 @@
     <Filter Include="Fichiers d%27en-tête\Light">
       <UniqueIdentifier>{b8d2935f-89f8-4671-b22c-13f01f2935df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Fichiers d%27en-tête\Menu\Input">
+      <UniqueIdentifier>{b6a8c891-0e5a-4f2a-89b6-fa120b008a2c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">

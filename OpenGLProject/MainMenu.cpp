@@ -34,6 +34,7 @@ MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, s
     m_weirdSounds.push_back(m_soundManager->load("weird_sound6", "./res/sounds/menu/creature-humanoid-fishman-grunt-02.wav", false, 2.0f, 1.0f));
 
     m_clickSound = m_soundManager->load("menu_click_sound", "./res/sounds/menu/ui-click-generic-plastic-01.wav", false, 6.0f, 1.0f);
+    //m_clickSound = m_soundManager->load("menu_click_sound", "./res/sounds/menu/Pokemon (A Button) - Sound Effect (HD).wav", false, 6.0f, 1.0f);
 
     addShape(0, dvd);
 }
@@ -65,7 +66,7 @@ void MainMenu::update(bool isAFK) {
         auto it = m_shapes.find(0);
         if (it == m_shapes.end()) return;
 
-        DVDShape* dvd = static_cast<DVDShape*>(it->second);
+        DVDShape* dvd = static_cast<DVDShape*>(it->second->shape);
         dvd->update(Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT);
 
         dvd->setIsVisible(true);
@@ -74,9 +75,9 @@ void MainMenu::update(bool isAFK) {
     else {
         auto it = m_shapes.find(0);
         if (it == m_shapes.end()) return;
-        if (!m_shapes[0]->getIsVisible()) return;
+        if (!m_shapes.at(0)->shape->getIsVisible()) return;
 
-        DVDShape* dvd = static_cast<DVDShape*>(it->second);
+        DVDShape* dvd = static_cast<DVDShape*>(it->second->shape);
         dvd->setIsVisible(false);
         dvd->setPosition(static_cast<float>(std::rand() % (Constants::WINDOW_WIDTH - static_cast<int>(dvd->getSize().x))),
             static_cast<float>(std::rand() % (Constants::WINDOW_HEIGHT - static_cast<int>(dvd->getSize().y))));

@@ -1,8 +1,10 @@
 #include "Player.h"
+#include "Renderer.h"
+#include "Direction.h"
 #include "CollisionManager.h"
 
-void Player::update()
-{
+void Player::update() {
+	updatePositionFromEnvironment(m_renderer->getDeltaTime());
 }
 
 void Player::draw(Shader* shader)
@@ -10,38 +12,24 @@ void Player::draw(Shader* shader)
 }
 
 void Player::processDirectionKey(int direction) {
-    // Vitesse de déplacement du joueur
-    float velocity;
-
+    float velocity = m_isSprinting ? Constants::PLAYER_SPRINTING_SPEED : Constants::PLAYER_WALKING_SPEED;
     float deltaTime = m_renderer->getDeltaTime();
-
-    if (m_isSprinting) {
-        velocity = Constants::PLAYER_SPRINTING_SPEED * deltaTime;
-	}
-    else {
-        velocity = Constants::PLAYER_WALKING_SPEED* deltaTime;
-    }
-
-    glm::vec3 desiredMovement(0.0f);
+    float distance = velocity * deltaTime;
 
     if (direction == EntityRelativeDirection::FORWARD)
-        desiredMovement += m_direction->getDirectionVector() * velocity;
+        m_frameMovement += m_direction->getDirectionVector() * distance;
     if (direction == EntityRelativeDirection::BACKWARD)
-        desiredMovement -= m_direction->getDirectionVector() * velocity;
+        m_frameMovement -= m_direction->getDirectionVector() * distance;
     if (direction == EntityRelativeDirection::LEFT)
-        desiredMovement -= m_direction->rotateRight90KeepY() * velocity;
+        m_frameMovement -= m_direction->rotateRight90KeepY() * distance;
     if (direction == EntityRelativeDirection::RIGHT)
-        desiredMovement += m_direction->rotateRight90KeepY() * velocity;
-    if (direction == EntityRelativeDirection::UP)
-        desiredMovement += glm::vec3(0.0f, 1.0f, 0.0f) * velocity;
-    if (direction == EntityRelativeDirection::DOWN)
-        desiredMovement -= glm::vec3(0.0f, 1.0f, 0.0f) * velocity;
+        m_frameMovement += m_direction->rotateRight90KeepY() * distance;
 
-    m_position = m_collisionManager->resolvePlayerMovement(
-        m_position,
-        desiredMovement,       // ton vecteur de déplacement calculé normalement
-		deltaTime
-    );
+    // En mode "sans gravité", ces touches permettent de monter/descendre à la volée
+    if (direction == EntityRelativeDirection::UP)
+        m_frameMovement += glm::vec3(0.0f, 1.0f, 0.0f) * distance;
+    if (direction == EntityRelativeDirection::DOWN)
+        m_frameMovement -= glm::vec3(0.0f, 1.0f, 0.0f) * distance;
 }
 
 void Player::processMouseMovements(double yaw, double pitch) {

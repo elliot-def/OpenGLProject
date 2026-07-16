@@ -43,7 +43,7 @@ void Menu::draw() {
         }
     }
     for (const auto& shape : m_shapes) {
-        shape.second->draw();
+        shape.second->shape->draw();
     }
 }
 
@@ -58,6 +58,17 @@ bool Menu::handleClick(double mouseX, double mouseY) {
     for (auto& item : m_items) {
         if (item.contains(mouseX, mouseY) && item.callback) {
             item.callback();
+            Sound* clickSound = m_soundManager->get("menu_click_sound");
+            if (clickSound) {
+                clickSound->play();
+            }
+            return true;
+        }
+    }
+
+    for (const auto& shape : m_shapes) {
+        if (shape.second->contains(mouseX, mouseY) && shape.second->callback) {
+            shape.second->callback();
             Sound* clickSound = m_soundManager->get("menu_click_sound");
             if (clickSound) {
                 clickSound->play();

@@ -6,7 +6,7 @@
 #include <memory>
 
 ModelEntity::ModelEntity(Camera* camera, LightManager* lightManager, Renderer* renderer, const std::string& modelPath, TextureManager* textureManager)
-	: m_camera(camera), m_lightManager(lightManager), Entity(renderer) {
+	: m_camera(camera), m_lightManager(lightManager), Entity(renderer, nullptr) {
 	m_model = std::make_unique<Model>(m_camera, m_lightManager, modelPath, textureManager);
 }
 

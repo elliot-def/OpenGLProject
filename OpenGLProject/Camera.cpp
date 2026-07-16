@@ -11,8 +11,7 @@ Camera::Camera(glm::vec3 position, Direction* direction) :
 
 void Camera::update(Entity* entity) {
     // On place la caméra à la position et la direction de l’entité
-    glm::vec3 eyeOffset = glm::vec3(0.f, 1.0f, 0.f); // yeux à 1.5m au-dessus des pieds
-    m_position = entity->getPosition() + eyeOffset;
+    m_position = entity->getPosition() + Constants::PLAYER_EYE_HEIGHT;
 
     m_front = entity->getDirectionVector();
 }
@@ -24,6 +23,6 @@ glm::mat4 Camera::getViewMatrix() {
         << m_position.y << ", "
         << m_position.z << ")\n";*/
 
-    // glm::lookAt crée une matrice View en utilisant position, target et upVector
-    return glm::lookAt(m_position, m_position+m_front, m_upVector);
+        // glm::lookAt crée une matrice View en utilisant position, target et upVector
+    return glm::lookAt(m_position, m_position + m_front, m_upVector);
 }

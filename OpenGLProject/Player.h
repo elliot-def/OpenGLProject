@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <glm/glm.hpp>
+
 #include "Entity.h"
 
 class CollisionManager;
@@ -12,7 +14,9 @@ class Player : public Entity {
 public:
     // Constructeur : prend un pointeur vers le moteur de rendu
     // Appelle le constructeur de la classe de base Entity
-    Player(CollisionManager* collisionManager, Renderer* renderer) : Entity(renderer), m_collisionManager(collisionManager) {};
+    Player(CollisionManager* collisionManager, Renderer* renderer) : Entity(renderer, collisionManager) {
+		setUseGravity(true); // Le joueur est affecté par la gravité
+    };
 
     // Destructeur par défaut, aucune ressource supplémentaire à libérer
     ~Player() = default;
@@ -35,11 +39,19 @@ public:
 
     inline void processFlashLightKey() { m_isFlashlightEnabled = !m_isFlashlightEnabled; };
 
-    inline bool getFlashlightIsEnabled() { return m_isFlashlightEnabled; };
-
     inline void setIsSprinting(bool isSprinting) { m_isSprinting = isSprinting; };
+
+    // Getters
+
+    inline bool getFlashlightIsEnabled() { return m_isFlashlightEnabled; };
+    inline bool getIsSprinting() { return m_isSprinting; };
+    inline bool getWantsToMove() { return m_wantsToMove; };
+
+    // Retourne la position des yeux du joueur (pour la caméra)
+
+    glm::vec3 getEyePosition() const { return m_position + Constants::PLAYER_EYE_HEIGHT; }
 private:
-    CollisionManager* m_collisionManager;
     bool m_isFlashlightEnabled = false;
     bool m_isSprinting = false;
+	bool m_wantsToMove = false;
 };
