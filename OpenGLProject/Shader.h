@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <unordered_map>
 
 #include "Transformation.h"
 #include "Camera.h"
@@ -67,7 +68,7 @@ private:
     Camera* m_camera;  // Pointeur vers la caméra pour récupérer la vue
 	std::string m_name; // Noms ou sources des shaders
     glm::mat4 m_projection, m_projection2D, m_model, m_view = glm::mat4(1.0f);  // Matrices de transformation
-    std::unordered_map<std::string, unsigned int> m_uniformLocations; // Cache des emplacements des uniforms
+    std::unordered_map<std::string, int> m_uniformLocations; // Cache des emplacements des uniforms
 
     // Charge le code source depuis un fichier
     std::string loadFromFile(const std::string& path);
@@ -79,7 +80,7 @@ private:
     void checkCompileErrors(unsigned int shader, std::string type);
 
     // Récupère l'emplacement d'un uniform dans le shader (avec cache)
-    unsigned int getUniformLocation(const std::string& name);
+    int getUniformLocation(const std::string& name);
 
 	
 };

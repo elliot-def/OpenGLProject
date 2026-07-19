@@ -23,11 +23,22 @@ void Renderer::handleFrameTiming() {
     m_deltaTime = static_cast<float>(currentTime - m_lastTime);
 
     if (m_capFPS) {
-        // Boucle active qui attend jusqu'a ce que le temps de frame soit atteint
-        while ((glfwGetTime() - m_lastTime) < frameTime) {
-            // On pourrait utiliser std::this_thread::yield() ou sleep
-            // mais ici c'est volontairement commente.
+        double timeElapsed = glfwGetTime() - m_lastTime;
+
+        // 1. Sommeil safe : on dort si on a plus de 2 millisecondes d'avance.
+        // On garde une marge de 2ms (0.002s) car l'OS peut se réveiller en retard.
+        while (timeElapsed < (frameTime - 0.002)) {
+            // On dort par petites tranches de 1ms pour ne pas rater notre cible
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            timeElapsed = glfwGetTime() - m_lastTime;
         }
+
+        // 2. Micro-boucle active : précision maximale sur les dernières fractions de ms.
+        while ((glfwGetTime() - m_lastTime) < frameTime) {
+            // On peut optionnellement ajouter un yield() pour être sympa avec l'OS
+            std::this_thread::yield();
+        }
+
         currentTime = glfwGetTime();
         m_deltaTime = static_cast<float>(currentTime - m_lastTime);
     }

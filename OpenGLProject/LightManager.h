@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <glm/glm.hpp>
+#include <string>
 
 #include "constants.h"
 
@@ -29,6 +30,18 @@ public:
     void draw();
 
 private:
+
+    struct LightUniformStrings {
+        std::string position;
+        std::string ambient;
+        std::string diffuse;
+        std::string specular;
+        std::string constant;
+        std::string linear;
+        std::string quadratic;
+    };
+    std::vector<LightUniformStrings> m_lightUniformNames;
+
     static constexpr int MAX_POINT_LIGHTS = Constants::MAX_LIGHTS_SOURCES;
     std::vector<LightSource*> m_lightSources;
     Spotlight* m_flashlight;
