@@ -8,17 +8,20 @@
 
 #include "constants.h"
 #include "Shape.h"
+#include "RangeInput.h"
+#include "CheckboxInput.h"
+#include "SelectInput.h"
 
-class InputManager;     // DÈclaration anticipÈe
-class SoundManager;     // DÈclaration anticipÈe
-class ShaderManager;    // DÈclaration anticipÈe
-class TextRenderer;     // DÈclaration anticipÈe
-class TextureManager;   // DÈclaration anticipÈe
-class Shader;           // DÈclaration anticipÈe
-class Sound;           // DÈclaration anticipÈe
-class Game;             // DÈclaration anticipÈe
+class InputManager;     // D√©claration anticip√©e
+class SoundManager;     // D√©claration anticip√©e
+class ShaderManager;    // D√©claration anticip√©e
+class TextRenderer;     // D√©claration anticip√©e
+class TextureManager;   // D√©claration anticip√©e
+class Shader;           // D√©claration anticip√©e
+class Sound;           // D√©claration anticip√©e
+class Game;             // D√©claration anticip√©e
 
-// Structure pour un ÈlÈment de menu
+// Structure pour un √©l√©ment de menu
 struct MenuText {
     std::string text;
     float x, y, width, height;
@@ -34,7 +37,7 @@ struct MenuText {
     }
 };
 
-// Structure pour un ÈlÈment de menu
+// Structure pour un √©l√©ment de menu
 struct MenuShape {
     Shape* shape;
     bool isHovered;
@@ -49,24 +52,57 @@ struct MenuShape {
     }
 };
 
+// Wrapper d'un RangeInput avec son libell√© (le texte est dessin√© par Menu::draw via TextRenderer)
+struct MenuRange {
+    std::string label;
+    RangeInput* input;
+
+    MenuRange(const std::string& l, RangeInput* i) : label(l), input(i) {}
+    ~MenuRange() { delete input; }
+};
+
+// Wrapper d'un CheckboxInput avec son libell√©
+struct MenuCheckbox {
+    std::string label;
+    CheckboxInput* input;
+
+    MenuCheckbox(const std::string& l, CheckboxInput* i) : label(l), input(i) {}
+    ~MenuCheckbox() { delete input; }
+};
+
+// Wrapper d'un SelectInput avec son libell√©
+struct MenuSelect {
+    std::string label;
+    SelectInput* input;
+
+    MenuSelect(const std::string& l, SelectInput* i) : label(l), input(i) {}
+    ~MenuSelect() { delete input; }
+};
+
 // Classe Menu
 class Menu {
 protected:
     std::vector<std::unique_ptr<TextRenderer>>* m_textRenderers;
 	ShaderManager* m_shaderManager;
 	SoundManager* m_soundManager;
+	CursorManager* m_cursorManager;
     Game* m_game;
     std::vector<MenuText> m_items;
     std::map<int, MenuShape*> m_shapes;
+    std::vector<MenuRange*> m_ranges;
+    std::vector<MenuCheckbox*> m_checkboxes;
+    std::vector<MenuSelect*> m_selects;
     std::string m_title;
     float m_titleX, m_titleY, m_titleWidth, m_titleHeight;
     bool m_drawBackground;
 
     void drawTextCentered(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);
+    void drawTextRightAligned(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);
+    void drawTextLeftAligned(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);
 
 public:
-    Menu(Game* game, SoundManager* soundManager, std::vector<std::unique_ptr<TextRenderer>>* textRenderers = nullptr, ShaderManager* shaderManager = nullptr, const std::string& t = "", bool bg = true)
-        : m_game(game), m_soundManager(soundManager), m_textRenderers(textRenderers), m_shaderManager(shaderManager), m_title(t), m_titleX(Constants::MENU_TITLE_X), m_titleY(Constants::MENU_TITLE_Y), m_titleWidth(Constants::MENU_TITLE_W), m_titleHeight(Constants::MENU_TITLE_H), m_drawBackground(bg) {
+    Menu(Game* game, SoundManager* soundManager, std::vector<std::unique_ptr<TextRenderer>>* textRenderers = nullptr, ShaderManager* shaderManager = nullptr, CursorManager* cursorManager = nullptr, const std::string& t = "", bool bg = true)
+        : m_game(game), m_soundManager(soundManager), m_textRenderers(textRenderers), m_shaderManager(shaderManager), m_cursorManager(cursorManager), m_title(t), m_titleX(Constants::MENU_TITLE_X), m_titleY(Constants::MENU_TITLE_Y), m_titleWidth(Constants::MENU_TITLE_W), m_titleHeight(Constants::MENU_TITLE_H), m_drawBackground(bg) {
     }
 
     ~Menu() {
@@ -81,12 +117,48 @@ public:
         m_shapes.emplace(id, new MenuShape(shape, callback));
     }
 
+    // label         : texte affiche a gauche du slider (rendu par Menu::draw)
+    // x, y          : centre du slider
+    // width, height : dimensions de la piste
+    // Implementation dans Menu.cpp (ShaderManager n'y est que forward-declare ici)
+    void addRange(CursorManager* cursorManager, const std::string& label, float x, float y, float width, float height,
+        float minValue = 0.0f, float maxValue = 1.0f, float defaultValue = 0.5f,
+        std::function<void(float)> onValueChanged = {});
+
+    // label   : texte affiche a gauche de la case
+    // x, y    : centre de la case
+    // size    : cote de la case (carree)
+    void addCheckbox(CursorManager* cursorManager, const std::string& label, float x, float y, float size = 32.0f,
+        bool defaultValue = false, std::function<void(bool)> onValueChanged = {});
+
+    // label         : texte affiche a gauche du select
+    // x, y          : centre de la case fermee
+    // width, height : dimensions d'une rangee (case fermee ou option)
+    void addSelect(CursorManager* cursorManager, const std::string& label, float x, float y, float width, float height,
+        std::vector<std::string> options, int defaultIndex = 0,
+        std::function<void(int)> onValueChanged = {});
+
     void clear() {
         m_items.clear();
         for (auto& pair : m_shapes) {
             delete pair.second;
         }
         m_shapes.clear();
+
+        for (auto* range : m_ranges) {
+            delete range;
+        }
+        m_ranges.clear();
+
+        for (auto* checkbox : m_checkboxes) {
+            delete checkbox;
+        }
+        m_checkboxes.clear();
+
+        for (auto* select : m_selects) {
+            delete select;
+        }
+        m_selects.clear();
     }
 
     std::vector<MenuText> getItems() { return m_items; }
@@ -108,6 +180,14 @@ public:
         }
         for (auto& shape : m_shapes) {
             shape.second->isHovered = shape.second->contains(mouseX, mouseY);
+        }
+    }
+
+    // A appeler chaque frame (independamment du clic) avec la position souris et l'etat du bouton gauche.
+    // Necessaire pour que les sliders (RangeInput) puissent etre glisses (drag).
+    void updateDrag(double mouseX, double mouseY, bool mousePressed) {
+        for (auto* range : m_ranges) {
+            range->input->update(mouseX, mouseY, mousePressed);
         }
     }
 

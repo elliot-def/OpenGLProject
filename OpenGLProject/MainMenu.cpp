@@ -6,8 +6,8 @@
 #include "Sound.h"
 #include "Renderer.h"
 
-MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, const std::string& t, bool bg) :
-        Menu(game, soundManager, textRenderers, shaderManager, t, bg), m_renderer(renderer), m_colorDVDLogo(glm::vec3(1.0f, 1.0f, 1.0f)) {
+MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager, const std::string& t, bool bg) :
+        Menu(game, soundManager, textRenderers, shaderManager, cursorManager, t, bg), m_renderer(renderer), m_colorDVDLogo(glm::vec3(1.0f, 1.0f, 1.0f)) {
     addItem("Jouer", Constants::WINDOW_WIDTH / 2, 700, 200, 50, [this]() {
         m_game->changeState(STATE_PLAYING);
         });

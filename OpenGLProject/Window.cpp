@@ -9,17 +9,7 @@
 #include <GLFW/glfw3.h>
 #include <stb/stb_image.h>
 
-// fonction static / libre (au niveau fichier)
-static void GLFWWindowFocusCallback(GLFWwindow* window, int focused)
-{
-    // récupère le SoundManager attaché à la fenêtre
-    SoundManager* sm = static_cast<SoundManager*>(glfwGetWindowUserPointer(window));
-    if (sm) {
-        sm->window_focus_callback(window, focused);
-    }
-}
-
-Window::Window(SoundManager* soundManager) : m_soundManager(soundManager), m_width(Constants::WINDOW_WIDTH), m_height(Constants::WINDOW_HEIGHT), m_title(Constants::WINDOW_TITLE), m_window(nullptr) {
+Window::Window() : m_width(Constants::WINDOW_WIDTH), m_height(Constants::WINDOW_HEIGHT), m_title(Constants::WINDOW_TITLE), m_window(nullptr) {
     if (!init()) {
         std::cerr << "Failed to initialize Window\n";
         std::exit(EXIT_FAILURE);
@@ -121,14 +111,6 @@ bool Window::init() {
 
     setWindowIcon("./res/textures/logo.jpeg");
 
-	setCustomCursor("./res/textures/menu/cursor.png");
-
-    // attacher le pointeur de l'instance SoundManager à la fenêtre
-    glfwSetWindowUserPointer(m_window, m_soundManager);
-
-    // enregistrer le callback (fonction ayant la bonne signature et convention)
-    glfwSetWindowFocusCallback(m_window, GLFWWindowFocusCallback);
-
     return true;
 }
 
@@ -183,5 +165,4 @@ void Window::setCustomCursor(const char* cursorPath) {
     else {
         printf("Erreur: Impossible de charger l'image du curseur ./res/textures/menu/cursor.png\n");
     }
-
 }

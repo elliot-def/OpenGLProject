@@ -142,9 +142,11 @@
   <ItemGroup>
     <ClCompile Include="Backward.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CheckboxInput.cpp" />
     <ClCompile Include="CollisionManager.cpp" />
     <ClCompile Include="Crouch.cpp" />
     <ClCompile Include="Cube.cpp" />
+    <ClCompile Include="CursorManager.cpp" />
     <ClCompile Include="Direction.cpp" />
     <ClCompile Include="DVDShape.cpp" />
     <ClCompile Include="Escape.cpp" />
@@ -173,8 +175,10 @@
     <ClCompile Include="OptionsMenu.cpp" />
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="PauseMenu.cpp" />
+    <ClCompile Include="RangeInput.cpp" />
     <ClCompile Include="ReceiveBuffer.cpp" />
     <ClCompile Include="Rectangle.cpp" />
+    <ClCompile Include="SelectInput.cpp" />
     <ClCompile Include="Shape.cpp" />
     <ClCompile Include="Socket.cpp" />
     <ClCompile Include="Player.cpp" />
@@ -195,12 +199,14 @@
   <ItemGroup>
     <ClInclude Include="Backward.h" />
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CheckboxInput.h" />
     <ClInclude Include="CollisionManager.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="configKeys.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="Crouch.h" />
     <ClInclude Include="Cube.h" />
+    <ClInclude Include="CursorManager.h" />
     <ClInclude Include="Direction.h" />
     <ClInclude Include="DVDShape.h" />
     <ClInclude Include="Escape.h" />
@@ -228,8 +234,10 @@
     <ClInclude Include="Packet.h" />
     <ClInclude Include="PacketBuilder.h" />
     <ClInclude Include="PauseMenu.h" />
+    <ClInclude Include="RangeInput.h" />
     <ClInclude Include="ReceiveBuffer.h" />
     <ClInclude Include="Rectangle.h" />
+    <ClInclude Include="SelectInput.h" />
     <ClInclude Include="Shape.h" />
     <ClInclude Include="Socket.h" />
     <ClInclude Include="Player.h" />

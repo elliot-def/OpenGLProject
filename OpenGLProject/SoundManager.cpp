@@ -2,6 +2,7 @@
 
 #include "SoundManager.h"
 #include "Sound.h"
+#include "Window.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -11,6 +12,17 @@
 #include <AL/efx.h>
 #include <AL/alext.h>
 #include <AL/efx-presets.h>   // EFXEAXREVERBPROPERTIES presets
+
+
+// fonction static / libre (au niveau fichier)
+static void GLFWWindowFocusCallback(GLFWwindow* window, int focused)
+{
+    // récupère le SoundManager attaché à la fenêtre
+    SoundManager* sm = static_cast<SoundManager*>(glfwGetWindowUserPointer(window));
+    if (sm) {
+        sm->window_focus_callback(window, focused);
+    }
+}
 
 // Définitions de secours pour macros de preset éventuellement absentes dans certaines implémentations
 #ifndef EFX_REVERB_PRESET_OUTDOORS_DEEPVALLEY
@@ -37,8 +49,14 @@ static void alcCheckError(ALCdevice* device, const char* context) {
 
 // ─── Constructeur / Destructeur ───────────────────────────────────────────────
 
-SoundManager::SoundManager() {
+SoundManager::SoundManager(Window* window) : m_window(window) {
     initOpenAL();
+
+    // attacher le pointeur de l'instance SoundManager à la fenêtre
+    glfwSetWindowUserPointer(m_window->getGLFWwindow(), this);
+
+    // enregistrer le callback (fonction ayant la bonne signature et convention)
+    glfwSetWindowFocusCallback(m_window->getGLFWwindow(), GLFWWindowFocusCallback);
 }
 
 SoundManager::~SoundManager() {

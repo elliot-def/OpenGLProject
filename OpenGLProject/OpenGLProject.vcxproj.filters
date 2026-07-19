@@ -103,6 +103,9 @@
     <Filter Include="Fichiers d%27en-tête\Menu\Input">
       <UniqueIdentifier>{b6a8c891-0e5a-4f2a-89b6-fa120b008a2c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Fichiers sources\Menu\Input">
+      <UniqueIdentifier>{b0d90cb5-0845-4f6b-b50f-b7cf8f2a4206}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -257,6 +260,18 @@
     </ClCompile>
     <ClCompile Include="CollisionManager.cpp">
       <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="SelectInput.cpp">
+      <Filter>Fichiers sources\Menu\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="RangeInput.cpp">
+      <Filter>Fichiers sources\Menu\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="CheckboxInput.cpp">
+      <Filter>Fichiers sources\Menu\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="CursorManager.cpp">
+      <Filter>Fichiers sources\Menu</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -421,6 +436,18 @@
     </ClInclude>
     <ClInclude Include="Spotlight.h">
       <Filter>Fichiers d%27en-tête\Light</Filter>
+    </ClInclude>
+    <ClInclude Include="SelectInput.h">
+      <Filter>Fichiers d%27en-tête\Menu\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="RangeInput.h">
+      <Filter>Fichiers d%27en-tête\Menu\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="CheckboxInput.h">
+      <Filter>Fichiers d%27en-tête\Menu\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="CursorManager.h">
+      <Filter>Fichiers d%27en-tête\Menu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

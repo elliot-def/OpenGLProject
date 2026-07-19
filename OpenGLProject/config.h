@@ -22,6 +22,7 @@
 #include "Cube.h"
 #include "LightSource.h"
 #include "LightManager.h"
+#include "CursorManager.h"
 #include "Socket.h"
 #include "PacketBuilder.h"
 #include "MenuManager.h"

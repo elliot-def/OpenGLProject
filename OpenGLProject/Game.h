@@ -13,6 +13,7 @@
 class Window;
 class Renderer;
 class CollisionManager;
+class CursorManager;
 class TextureManager;
 class ShaderManager;
 class InputManager;
@@ -39,6 +40,7 @@ private:
     std::vector<std::unique_ptr<Cube>> m_alphacubes;
     std::vector<std::unique_ptr<LightSource>> m_lights;
 
+    std::unique_ptr<CursorManager> m_cursorManager;
     std::unique_ptr<Window> m_window;
     std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<CollisionManager> m_collisionManager;

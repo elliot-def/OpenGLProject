@@ -58,6 +58,8 @@ namespace Constants {
 	inline constexpr float MENU_TITLE_H = 150.0f;
 	inline constexpr float MAINMENU_AFK_THRESHOLD = 60.0f; // Time in seconds before considering the player as AFK in the main menu
 	inline constexpr float WEIRD_SOUND_INTERVAL = 12.00f;
+	
+    inline constexpr const char* JSON_OPTION_PATH = "./res/options.json";
 
 	// Sound
 	inline constexpr float DEFAULT_MASTER_VOLUME = 0.2f; // Volume maître par défaut (0.0 → ∞)

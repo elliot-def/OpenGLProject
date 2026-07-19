@@ -7,5 +7,5 @@ class TextRenderer;
 
 class PauseMenu : public Menu {
 public:
-    PauseMenu(Game* game, SoundManager* soundManager, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager);
+    PauseMenu(Game* game, SoundManager* soundManager, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager);
 };

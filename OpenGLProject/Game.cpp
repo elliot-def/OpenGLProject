@@ -17,19 +17,20 @@ Game::~Game() {
 }
 
 void Game::initialize() {
-    m_soundManager   = std::make_unique<SoundManager>();
-    m_window         = std::make_unique<Window>(m_soundManager.get());
-    m_renderer       = std::make_unique<Renderer>();
-    m_collisionManager = std::make_unique<CollisionManager>();
-    m_camera         = std::make_unique<Camera>();
-    m_socket         = std::make_unique<Socket>();
-    m_textureManager = std::make_unique<TextureManager>();
-    m_shaderManager  = std::make_unique<ShaderManager>(m_camera.get());
-    m_player         = std::make_unique<Player>(m_collisionManager.get(), m_renderer.get());
-    m_lightManager   = std::make_unique<LightManager>(m_renderer.get(), m_player.get());
-    m_textRenderers  = std::make_unique<std::vector<std::unique_ptr<TextRenderer>>>();
-    m_menuManager    = std::make_unique<MenuManager>(this, m_soundManager.get(), m_renderer.get(), m_textRenderers.get(), m_textureManager.get(), m_shaderManager.get());
-    m_inputManager   = std::make_unique<InputManager>(this, m_menuManager.get(), m_window.get(), m_player.get());
+    m_window            = std::make_unique<Window>();
+    m_renderer          = std::make_unique<Renderer>();
+    m_collisionManager  = std::make_unique<CollisionManager>();
+    m_camera            = std::make_unique<Camera>();
+    m_socket            = std::make_unique<Socket>();
+    m_textureManager    = std::make_unique<TextureManager>();
+    m_soundManager      = std::make_unique<SoundManager>(m_window.get());
+    m_cursorManager     = std::make_unique<CursorManager>(m_window.get());
+    m_shaderManager     = std::make_unique<ShaderManager>(m_camera.get());
+    m_player            = std::make_unique<Player>(m_collisionManager.get(), m_renderer.get());
+    m_lightManager      = std::make_unique<LightManager>(m_renderer.get(), m_player.get());
+    m_textRenderers     = std::make_unique<std::vector<std::unique_ptr<TextRenderer>>>();
+    m_menuManager       = std::make_unique<MenuManager>(this, m_soundManager.get(), m_renderer.get(), m_textRenderers.get(), m_textureManager.get(), m_shaderManager.get(), m_cursorManager.get());
+    m_inputManager      = std::make_unique<InputManager>(this, m_menuManager.get(), m_window.get(), m_player.get());
 
     m_menuManager->setInputManager(m_inputManager.get());
 
@@ -48,7 +49,7 @@ void Game::initialize() {
 
 	std::vector<Texture*> crateTextures = { containerTexture };
 
-	m_soundManager->setMasterVolume(Constants::DEFAULT_MASTER_VOLUME); // Volume maître à 20%
+	// m_soundManager->setMasterVolume(Constants::DEFAULT_MASTER_VOLUME); // Volume maître à 20%
 
     // Lumière 1 - Rouge forte
     m_lightManager->addPointLight(new LightSource(

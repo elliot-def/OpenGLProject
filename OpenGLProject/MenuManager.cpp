@@ -13,8 +13,8 @@
 #include "constants.h"
 #include <chrono>
 
-MenuManager::MenuManager(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, TextureManager* textureManager, ShaderManager* shaderManager) :
-    m_game(game), m_soundManager(soundManager), m_renderer(renderer), m_inputManager(nullptr), m_textRenderers(textRenderers), m_textureManager(textureManager), m_shaderManager(shaderManager), m_currentState(STATE_MENU), m_previousState(STATE_MENU) {
+MenuManager::MenuManager(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, TextureManager* textureManager, ShaderManager* shaderManager, CursorManager* cursorManager) :
+    m_game(game), m_soundManager(soundManager), m_renderer(renderer), m_inputManager(nullptr), m_textRenderers(textRenderers), m_textureManager(textureManager), m_shaderManager(shaderManager), m_cursorManager(cursorManager), m_currentState(STATE_MENU), m_previousState(STATE_MENU) {
     initMenus();
 	changeState(STATE_MENU);
 }
@@ -26,9 +26,9 @@ MenuManager::~MenuManager() {
 }
 
 void MenuManager::initMenus() {
-    m_mainMenu = new MainMenu(m_game, m_soundManager, m_renderer, m_textRenderers, m_shaderManager);
-    m_pauseMenu = new PauseMenu(m_game, m_soundManager, m_textRenderers, m_shaderManager);
-    m_optionsMenu = new OptionsMenu(m_game, m_soundManager, m_previousState, m_textRenderers, m_shaderManager);
+    m_mainMenu = new MainMenu(m_game, m_soundManager, m_renderer, m_textRenderers, m_shaderManager, m_cursorManager);
+    m_pauseMenu = new PauseMenu(m_game, m_soundManager, m_textRenderers, m_shaderManager, m_cursorManager);
+    m_optionsMenu = new OptionsMenu(m_game, m_soundManager, m_previousState, m_textRenderers, m_shaderManager, m_cursorManager);
 }
 
 void MenuManager::changeState(GameState newState) {
@@ -79,6 +79,10 @@ void MenuManager::updateHover(double mouseX, double mouseY) {
 
 void MenuManager::handleClick(double mouseX, double mouseY) {
     getCurrentMenu()->handleClick(mouseX, mouseY);
+}
+
+void MenuManager::updateDrag(double mouseX, double mouseY, bool mousePressed) {
+    getCurrentMenu()->updateDrag(mouseX, mouseY, mousePressed);
 }
 
 void MenuManager::update() {

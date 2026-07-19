@@ -25,7 +25,7 @@ public:
      *
      * Crée la fenêtre et initialise GLFW
      */
-    Window(SoundManager* soundManager);
+    Window();
 
     /**
      * @brief Destructeur
@@ -55,7 +55,6 @@ private:
     int m_height;           // Hauteur
     const char* m_title;    // Titre
     GLFWwindow* m_window;   // Pointeur vers la fenêtre GLFW
-    SoundManager* m_soundManager; // Pointeur vers le gestionnaire de son
 
     void pollEvents() const;  // Récupère les événements (clavier, souris)
     void swapBuffers() const; // Échange les buffers pour le rendu

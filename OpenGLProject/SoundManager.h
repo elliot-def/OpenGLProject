@@ -8,6 +8,7 @@
 #include <AL/alc.h>
 
 class Sound;
+class Window;
 
 struct GLFWwindow;
 struct ALCdevice_struct;
@@ -57,7 +58,7 @@ enum class ReverbPreset {
  */
 class SoundManager {
 public:
-    SoundManager();
+    SoundManager(Window* window); 
     ~SoundManager();
 
     // ─── Chargement ──────────────────────────────────────────────────────────
@@ -209,6 +210,8 @@ public:
     bool isEFXAvailable() const { return m_efxAvailable; }
 
 private:
+    Window* m_window;
+
     ALCdevice* m_device = nullptr;
     ALCcontext* m_context = nullptr;
 
