@@ -18,7 +18,7 @@ MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, s
         m_game->stop();
         });
     // Dans la classe qui instancie le menu :
-    auto* dvd = new DVDShape(m_shaderManager->getShader("image/masque"), m_renderer, 100.0f, 100.0f, 330.0f, 195.0f, 200.0f, 180.0f);
+    auto* dvd = new DVDShape(m_shaderManager->getShader("image/mask"), m_renderer, 100.0f, 100.0f, 330.0f, 195.0f, 200.0f, 180.0f);
     Sound* menuMusic = m_soundManager->load("menu_music", "./res/sounds/menu/industry-garage-ventilation-system-01.wav", true, 1.0f, 1.0f);
     try {
         Sound* menuMusic = m_soundManager->load("menu_music", "./res/sounds/menu/./res/sounds/menu/atmo-horror-ghost-birds-03.wav", true, 1.0f, 1.0f);

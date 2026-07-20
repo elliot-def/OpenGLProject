@@ -21,7 +21,6 @@ DVDShape::DVDShape(Shader* shader, Renderer* renderer, float startX, float start
     std::srand(static_cast<unsigned>(std::time(nullptr)));
     m_color = s_colors[0];
     setIsVisible(false);
-	//setRotation(180.0f);
     setupBuffers();
 }
 
@@ -73,5 +72,5 @@ void DVDShape::pickNewColor() {
 
 void DVDShape::draw() {
     if (!m_isVisible) return;
-    MaskImage::draw();
+    MaskImage::draw(m_color);
 }

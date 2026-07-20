@@ -269,8 +269,8 @@
     <None Include="res\shaders\cube\severallights\severallights.vert" />
     <None Include="res\shaders\image\image.frag" />
     <None Include="res\shaders\image\image.vert" />
-    <None Include="res\shaders\image\masque\masque.frag" />
-    <None Include="res\shaders\image\masque\masque.vert" />
+    <None Include="res\shaders\image\masque\mask.frag" />
+    <None Include="res\shaders\image\masque\mask.vert" />
     <None Include="res\shaders\model\model.frag" />
     <None Include="res\shaders\model\model.vert" />
     <None Include="res\shaders\shape\shape.frag" />

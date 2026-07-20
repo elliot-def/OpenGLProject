@@ -73,9 +73,6 @@
     <Filter Include="Fichiers de ressources\shaders\image">
       <UniqueIdentifier>{d71ac3fc-37f0-4719-96fe-04237c8d3575}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Fichiers de ressources\shaders\image\masque">
-      <UniqueIdentifier>{4de3b241-8a61-42e0-b7b5-0871eb97cdc4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Fichiers d%27en-tête\Sound">
       <UniqueIdentifier>{c8379479-9052-4c1c-95a1-1eadd9baa61a}</UniqueIdentifier>
     </Filter>
@@ -108,6 +105,9 @@
     </Filter>
     <Filter Include="Fichiers d%27en-tête\Shape\2D\Shared">
       <UniqueIdentifier>{2f885dbd-3b9e-4ed3-9e6c-39e700dec411}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers de ressources\shaders\image\mask">
+      <UniqueIdentifier>{4de3b241-8a61-42e0-b7b5-0871eb97cdc4}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -511,11 +511,11 @@
     <None Include="res\shaders\image\image.vert">
       <Filter>Fichiers de ressources\shaders\image</Filter>
     </None>
-    <None Include="res\shaders\image\masque\masque.frag">
-      <Filter>Fichiers de ressources\shaders\image\masque</Filter>
+    <None Include="res\shaders\image\masque\mask.frag">
+      <Filter>Fichiers de ressources\shaders\image\mask</Filter>
     </None>
-    <None Include="res\shaders\image\masque\masque.vert">
-      <Filter>Fichiers de ressources\shaders\image\masque</Filter>
+    <None Include="res\shaders\image\masque\mask.vert">
+      <Filter>Fichiers de ressources\shaders\image\mask</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

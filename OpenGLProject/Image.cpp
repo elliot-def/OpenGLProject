@@ -43,7 +43,7 @@ void Image::loadTexture(const std::string& imagePath) {
     // wrapMode = GL_CLAMP_TO_EDGE (comportement d'origine : un sprite 2D ne doit pas boucler sur les bords)
     // requestedChannels = 0 : on garde la detection automatique du format (RGBA/RGB/etc.), comme avant.
     // Le ImageLoader leve une exception en cas d'echec, message equivalent a celui d'origine.
-    ImageLoader loader(imagePath, /*flipVertically=*/true, /*generateMipmaps=*/true, GL_CLAMP_TO_EDGE, /*requestedChannels=*/0);
+    ImageLoader loader(imagePath, /*flipVertically=*/false, /*generateMipmaps=*/true, GL_CLAMP_TO_EDGE, /*requestedChannels=*/0);
     m_textureID = loader.releaseTextureID(); // Image reste proprietaire de la texture (m_ownsTexture gere sa destruction)
 }
 
