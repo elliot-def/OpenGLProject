@@ -26,7 +26,7 @@ public:
     void setOpacity(float opacity) { m_opacity = opacity; }
     float getOpacity() const { return m_opacity; }
 
-private:
+protected:
     void setupBuffers() override;
     void loadTexture(const std::string& imagePath);
 

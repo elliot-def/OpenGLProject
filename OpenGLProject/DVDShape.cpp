@@ -21,22 +21,12 @@ DVDShape::DVDShape(Shader* shader, Renderer* renderer, float startX, float start
     std::srand(static_cast<unsigned>(std::time(nullptr)));
     m_color = s_colors[0];
     setIsVisible(false);
+	setRotation(180.0f);
     //setupBuffers();
 }
 
 void DVDShape::setupBuffers() {
-    // Construire les Vertex en utilisant le constructeur (pos, normal, color, tex)
-    std::vector<Vertex> vertices = {
-        Vertex(glm::vec3(0.0f, 0.0f, 0.0f),  glm::vec3(0.0f), glm::vec3(1.0f), glm::vec2(0.0f, 1.0f)),
-        Vertex(glm::vec3(1.0f, 0.0f, 0.0f),  glm::vec3(0.0f), glm::vec3(1.0f), glm::vec2(1.0f, 1.0f)),
-        Vertex(glm::vec3(1.0f, 1.0f, 0.0f),  glm::vec3(0.0f), glm::vec3(1.0f), glm::vec2(1.0f, 0.0f)),
-        Vertex(glm::vec3(0.0f, 1.0f, 0.0f),  glm::vec3(0.0f), glm::vec3(1.0f), glm::vec2(0.0f, 0.0f)),
-    };
-
-    std::vector<unsigned int> indices = { 0, 1, 2, 0, 2, 3 };
-
-    // 0b1001 => POSITION + COLOR (selon l'enum VertexAttribute)
-    m_mesh = new Mesh(vertices, indices, 0b1001);
+	Image::setupBuffers();
 }
 
 void DVDShape::update(float screenWidth, float screenHeight) {

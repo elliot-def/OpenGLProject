@@ -29,5 +29,7 @@
 #include "TextRenderer.h"
 #include "gamestate.h"
 #include "ModelEntity.h"
+#include "CollisionManager.h"
+#include "SharedQuad.h"
 
 #include "constants.h"

@@ -14,7 +14,6 @@ Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>&
         m_aabbMin = glm::min(m_aabbMin, p);
         m_aabbMax = glm::max(m_aabbMax, p);
     }
-
 }
 
 Mesh::~Mesh() {

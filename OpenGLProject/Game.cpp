@@ -1,7 +1,6 @@
 #include "Game.h"
 #include "config.h"
 #include <vector>
-#include "CollisionManager.h"
 
 
 Game::Game() {
@@ -12,6 +11,7 @@ Game::Game() {
 }
 
 Game::~Game() {
+	SharedQuad::destroy();
     m_socket->stop();
     glfwTerminate(); // pas besoin de delete, les unique_ptr nettoient tout seuls
 }

@@ -1,11 +1,11 @@
 #include "Image.h"
+#include "ImageLoader.h"
 #include "Mesh.h"
 #include "Shader.h"
 #include "Vertex.h"
 #include "constants.h"
 
 #include <glad/glad.h>
-#include <stb/stb_image.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <stdexcept>
 #include <iostream>
@@ -40,34 +40,11 @@ Image::~Image() {
 }
 
 void Image::loadTexture(const std::string& imagePath) {
-    glGenTextures(1, &m_textureID);
-    glBindTexture(GL_TEXTURE_2D, m_textureID);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    stbi_set_flip_vertically_on_load(true);
-
-    int width, height, channels;
-    unsigned char* data = stbi_load(imagePath.c_str(), &width, &height, &channels, 0);
-
-    if (!data) {
-        glDeleteTextures(1, &m_textureID);
-        m_textureID = 0;
-        throw std::runtime_error("Image : impossible de charger \"" + imagePath + "\" : " + stbi_failure_reason());
-    }
-
-    GLenum format = (channels == 4) ? GL_RGBA
-        : (channels == 3) ? GL_RGB
-        : GL_RED;
-
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    stbi_image_free(data);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    // wrapMode = GL_CLAMP_TO_EDGE (comportement d'origine : un sprite 2D ne doit pas boucler sur les bords)
+    // requestedChannels = 0 : on garde la detection automatique du format (RGBA/RGB/etc.), comme avant.
+    // Le ImageLoader leve une exception en cas d'echec, message equivalent a celui d'origine.
+    ImageLoader loader(imagePath, /*flipVertically=*/true, /*generateMipmaps=*/true, GL_CLAMP_TO_EDGE, /*requestedChannels=*/0);
+    m_textureID = loader.releaseTextureID(); // Image reste proprietaire de la texture (m_ownsTexture gere sa destruction)
 }
 
 void Image::setupBuffers() {

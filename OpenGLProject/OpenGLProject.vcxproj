@@ -155,6 +155,7 @@
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="Image.cpp" />
+    <ClCompile Include="ImageLoader.cpp" />
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Jump.cpp" />
     <ClCompile Include="Left.cpp" />
@@ -210,11 +211,13 @@
     <ClInclude Include="Direction.h" />
     <ClInclude Include="DVDShape.h" />
     <ClInclude Include="Escape.h" />
+    <ClInclude Include="File.h" />
     <ClInclude Include="Flashlight.h" />
     <ClInclude Include="Forward.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="gamestate.h" />
     <ClInclude Include="Image.h" />
+    <ClInclude Include="ImageLoader.h" />
     <ClInclude Include="InputManager.h" />
     <ClInclude Include="Jump.h" />
     <ClInclude Include="Key.h" />
@@ -239,6 +242,7 @@
     <ClInclude Include="Rectangle.h" />
     <ClInclude Include="SelectInput.h" />
     <ClInclude Include="Shape.h" />
+    <ClInclude Include="SharedQuad.h" />
     <ClInclude Include="Socket.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Renderer.h" />

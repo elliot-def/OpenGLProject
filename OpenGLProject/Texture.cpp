@@ -1,11 +1,18 @@
+// IMPORTANT : cette macro doit rester definie dans EXACTEMENT une seule unite de compilation
+// du projet entier (c'etait deja le cas ici avant la factorisation). ImageLoader.cpp et
+// Image.cpp incluent stb_image.h sans cette macro : ils ne font qu'utiliser les declarations,
+// l'implementation reelle (le code des fonctions stbi_*) est compilee uniquement ici.
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
 #include "Texture.h"
+#include "ImageLoader.h"
 #include "Shader.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <filesystem>
+#include <iostream>
 
 Texture::Texture(const std::string& filePath, const int textureID, float shininess, bool hasSpecular)
     : m_filePath(filePath), m_textureID(textureID), m_shininess(shininess) {
@@ -13,10 +20,10 @@ Texture::Texture(const std::string& filePath, const int textureID, float shinine
     m_hasSpecular = hasSpecular; // Si il trouve _specular.png dans le filename
     loadTexture(m_filePath, m_textureID);
 
-	// Chargement de la texture spéculaire si applicable
+	// Chargement de la texture spÃ©culaire si applicable
 
     if (m_hasSpecular) {
-		// Générer le chemin du fichier spéculaire
+		// GÃ©nÃ©rer le chemin du fichier spÃ©culaire
 
 		m_fileSpecularPath = m_filePath;
         m_specularTextureID = textureID + 1;
@@ -39,41 +46,26 @@ Texture::~Texture() {
 }
 
 void Texture::loadTexture(std::string& filePath, unsigned int& id) {
-    glGenTextures(1, &id);
-    glBindTexture(GL_TEXTURE_2D, id);
-
-    // Paramètres de la texture
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    // Inverser l'image verticalement
-    stbi_set_flip_vertically_on_load(true);
-
-    // Vérifier si le fichier existe
-    bool filepathExists = std::filesystem::exists(filePath);
-    if (!filepathExists) {
+    // VÃ©rifier si le fichier existe (comportement conservÃ© : on log et on abandonne, sans exception fatale)
+    if (!std::filesystem::exists(filePath)) {
         std::cerr << "File path does not exist: " << filePath << std::endl;
         return;
     }
 
-    // Chargement de l'image en RGBA
-    unsigned char* data = stbi_load(filePath.c_str(), &m_width, &m_height, &m_nrChannels, 4);
-    if (data) {
+    try {
+        // wrapMode = GL_REPEAT (comportement d'origine, pour du tiling sur des materiaux 3D)
+        // requestedChannels = 4 (comportement d'origine : on force toujours du RGBA)
+        ImageLoader loader(filePath, /*flipVertically=*/true, /*generateMipmaps=*/true, GL_REPEAT, /*requestedChannels=*/4);
+
+        id = loader.releaseTextureID(); // Texture reste proprietaire, ImageLoader ne la detruira plus
+        m_width = loader.getWidth();
+        m_height = loader.getHeight();
         m_nrChannels = 4;
-        GLenum format = GL_RGBA;
-        glTexImage2D(GL_TEXTURE_2D, 0, format, m_width, m_height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
     }
-    else {
-        std::cerr << "Failed to load texture: " << filePath << std::endl;
+    catch (const std::exception& e) {
+        std::cerr << "Failed to load texture: " << filePath << " (" << e.what() << ")" << std::endl;
     }
-
-    // Libération de la mémoire CPU
-    stbi_image_free(data);
 }
-
 
 void Texture::applyToShader(Shader* shader) {
     shader->setTexture("material.diffuse", m_textureID, 0);

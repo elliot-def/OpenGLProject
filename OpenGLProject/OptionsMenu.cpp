@@ -2,21 +2,21 @@
 #include "Game.h"
 #include "constants.h"
 #include "CursorManager.h"
+#include "File.h"
 #include <iostream>
-#include <fstream> // Ajouté pour la gestion des fichiers (ifstream / ofstream)
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
 OptionsMenu::OptionsMenu(Game* game, SoundManager* soundManager, GameState& previousState, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager)
-	: Menu(game, soundManager, textRenderers, shaderManager, cursorManager, "Options", false), m_previousState(previousState)
+    : Menu(game, soundManager, textRenderers, shaderManager, cursorManager, "Options", false), m_previousState(previousState)
 {
     // On charge les options enregistrées avant de créer les éléments visuels
     loadJSON();
 }
 
 OptionsMenu::~OptionsMenu() {
-	// Nettoyage des ressources si nécessaire
+    // Nettoyage des ressources si nécessaire
 }
 
 void OptionsMenu::createOptions(bool isMuted, float volume) {
@@ -36,22 +36,27 @@ void OptionsMenu::createOptions(bool isMuted, float volume) {
 }
 
 void OptionsMenu::loadJSON() {
-    std::ifstream file(Constants::JSON_OPTION_PATH);
-    if (!file.is_open()) {
+    File optionFile(Constants::JSON_OPTION_PATH);
+
+    // On vérifie directement si le fichier existe
+    if (!optionFile.exists()) {
         std::cout << "[Options] Aucun fichier de sauvegarde trouvé. Utilisation des valeurs par défaut.\n";
         createOptions(false, 1.0f);
         return;
     }
 
     try {
-        json j;
-        file >> j;
+        // On lit tout le contenu du fichier d'un coup grâce à readAll()
+        std::string content = optionFile.readAll();
+
+        // On parse la string JSON reçue
+        json j = json::parse(content);
 
         // Extraction des données avec valeurs de secours (fallback) si la clé est absente
         bool isMuted = j.value("muted", false);
         float volume = j.value("volume", 1.0f);
 
-		createOptions(isMuted, volume);
+        createOptions(isMuted, volume);
 
         // Application des paramètres au SoundManager
         if (m_soundManager) {
@@ -65,16 +70,10 @@ void OptionsMenu::loadJSON() {
         createOptions(false, 1.0f);
         std::cerr << "[Options] Erreur lors de la lecture du JSON : " << e.what() << "\n";
     }
-
-    file.close();
 }
 
 void OptionsMenu::exportJSON() {
-    std::ofstream file(Constants::JSON_OPTION_PATH);
-    if (!file.is_open()) {
-        std::cerr << "[Options] Impossible de créer ou d'ouvrir le fichier " << Constants::JSON_OPTION_PATH << " pour l'écriture.\n";
-        return;
-    }
+    File optionFile(Constants::JSON_OPTION_PATH);
 
     try {
         json j;
@@ -82,21 +81,20 @@ void OptionsMenu::exportJSON() {
         // On récupère les valeurs actuelles du soundManager pour les sauvegarder
         if (m_soundManager) {
             j["muted"] = m_soundManager->isMuted();
-            // Attention : assure-toi d'avoir une méthode pour récupérer le volume dans ton SoundManager (ex: getMasterVolume())
-            // Si elle n'existe pas, il faudra stocker le volume dans une variable membre de OptionsMenu
             j["volume"] = m_soundManager->getMasterVolume();
         }
         else {
-			throw std::runtime_error("SoundManager non initialisé, impossible d'exporter les paramètres.");
+            throw std::runtime_error("SoundManager non initialisé, impossible d'exporter les paramètres.");
         }
 
-        // Écriture dans le fichier avec une indentation de 4 espaces pour que ce soit lisible
-        file << j.dump(4);
+        // On génère la string JSON et on l'écrit d'un coup avec writeText()
+        if (!optionFile.writeText(j.dump(4))) {
+            throw std::runtime_error("Impossible d'écrire dans le fichier d'options.");
+        }
+
         std::cout << "[Options] Paramètres exportés avec succès.\n";
     }
     catch (const std::exception& e) {
         std::cerr << "[Options] Erreur lors de l'export JSON : " << e.what() << "\n";
     }
-
-    file.close();
 }

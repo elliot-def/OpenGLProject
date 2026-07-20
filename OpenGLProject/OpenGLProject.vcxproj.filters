@@ -106,6 +106,9 @@
     <Filter Include="Fichiers sources\Menu\Input">
       <UniqueIdentifier>{b0d90cb5-0845-4f6b-b50f-b7cf8f2a4206}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Fichiers d%27en-tête\Shape\2D\Shared">
+      <UniqueIdentifier>{2f885dbd-3b9e-4ed3-9e6c-39e700dec411}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -413,9 +416,6 @@
     <ClInclude Include="Image.h">
       <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
     </ClInclude>
-    <ClInclude Include="MaskShape.h">
-      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
-    </ClInclude>
     <ClInclude Include="Rectangle.h">
       <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
     </ClInclude>
@@ -448,6 +448,21 @@
     </ClInclude>
     <ClInclude Include="CursorManager.h">
       <Filter>Fichiers d%27en-tête\Menu</Filter>
+    </ClInclude>
+    <ClInclude Include="SharedQuad.h">
+      <Filter>Fichiers d%27en-tête\Shape\2D\Shared</Filter>
+    </ClInclude>
+    <ClInclude Include="MaskShape.h">
+      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
+    </ClInclude>
+    <ClInclude Include="File.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageLoader.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageLoader.h">
+      <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

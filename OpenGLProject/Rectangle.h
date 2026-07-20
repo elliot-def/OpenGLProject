@@ -2,6 +2,7 @@
 
 #include "Shape.h"
 
+
 class Shader;
 
 class Rectangle : public Shape {
