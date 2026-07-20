@@ -240,7 +240,7 @@
     <ClCompile Include="Image.cpp">
       <Filter>Fichiers sources\Shape\2D</Filter>
     </ClCompile>
-    <ClCompile Include="MaskShape.cpp">
+    <ClCompile Include="MaskImage.cpp">
       <Filter>Fichiers sources\Shape\2D</Filter>
     </ClCompile>
     <ClCompile Include="Rectangle.cpp">
@@ -275,6 +275,9 @@
     </ClCompile>
     <ClCompile Include="CursorManager.cpp">
       <Filter>Fichiers sources\Menu</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageLoader.cpp">
+      <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -452,14 +455,11 @@
     <ClInclude Include="SharedQuad.h">
       <Filter>Fichiers d%27en-tête\Shape\2D\Shared</Filter>
     </ClInclude>
-    <ClInclude Include="MaskShape.h">
+    <ClInclude Include="MaskImage.h">
       <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
     </ClInclude>
     <ClInclude Include="File.h">
       <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="ImageLoader.cpp">
-      <Filter>Fichiers sources</Filter>
     </ClInclude>
     <ClInclude Include="ImageLoader.h">
       <Filter>Fichiers d%27en-tête</Filter>

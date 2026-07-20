@@ -21,8 +21,7 @@ public:
 
     ~Image();
 
-    void draw() override;
-    void drawGradient(glm::vec3 color);
+    virtual void draw() override;
     void setOpacity(float opacity) { m_opacity = opacity; }
     float getOpacity() const { return m_opacity; }
 

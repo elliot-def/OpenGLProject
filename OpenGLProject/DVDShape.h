@@ -1,21 +1,18 @@
 #pragma once
-#include "Image.h"
+#include "MaskImage.h"
 #include <vector>
 #include <glm/glm.hpp>
 
 
 class Renderer;
 
-class DVDShape : public Image {
+class DVDShape : public MaskImage {
 public:
     DVDShape(Shader* shader, Renderer* renderer, float startX = 100.0f, float startY = 100.0f, float width = 120.0f, float height = 44.0f, float vx = 2.5f, float vy = 2.0f);
 
     void setupBuffers() override;
     void draw() override;
     void update(float screenWidth, float screenHeight);
-
-    glm::vec3 getCurrentColor() const { return m_color; }
-
 private:
     void pickNewColor();
 

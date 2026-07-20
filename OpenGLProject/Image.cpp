@@ -2,7 +2,7 @@
 #include "ImageLoader.h"
 #include "Mesh.h"
 #include "Shader.h"
-#include "Vertex.h"
+#include "SharedQuad.h"
 #include "constants.h"
 
 #include <glad/glad.h>
@@ -48,15 +48,7 @@ void Image::loadTexture(const std::string& imagePath) {
 }
 
 void Image::setupBuffers() {
-    std::vector<Vertex> vertices = {
-        {{ 0.0f, 0.0f, 0.0f }, { 0,0,1 }, { 1,1,1 }, { 0.0f, 1.0f }},
-        {{ 1.0f, 0.0f, 0.0f }, { 0,0,1 }, { 1,1,1 }, { 1.0f, 1.0f }},
-        {{ 1.0f, 1.0f, 0.0f }, { 0,0,1 }, { 1,1,1 }, { 1.0f, 0.0f }},
-        {{ 0.0f, 1.0f, 0.0f }, { 0,0,1 }, { 1,1,1 }, { 0.0f, 0.0f }},
-    };
-    std::vector<unsigned int> indices = { 0, 1, 2, 0, 2, 3 };
-
-    m_mesh = new Mesh(vertices, indices, 0b1111, { m_textureID });
+	SharedQuad::init();
 }
 
 void Image::draw() {
@@ -84,41 +76,7 @@ void Image::draw() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    m_mesh->draw();
-
-    glDisable(GL_BLEND);
-}
-
-void Image::drawGradient(glm::vec3 color) {
-    if (m_textureID == 0) return;
-
-    m_shader->use();
-
-    glm::mat4 projection = glm::ortho(
-        0.0f, static_cast<float>(Constants::WINDOW_WIDTH),
-        static_cast<float>(Constants::WINDOW_HEIGHT), 0.0f,
-        -1.0f, 1.0f
-    );
-
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, m_position);
-    model = glm::translate(model, glm::vec3(m_size.x * 0.5f, m_size.y * 0.5f, 0.0f));
-    model = glm::rotate(model, glm::radians(m_rotation), glm::vec3(0.0f, 0.0f, 1.0f));
-    model = glm::translate(model, glm::vec3(-m_size.x * 0.5f, -m_size.y * 0.5f, 0.0f));
-    model = glm::scale(model, glm::vec3(m_size.x, m_size.y, 1.0f));
-
-    m_shader->setMat4("model", model);
-    m_shader->setMat4("projection", projection);
-    m_shader->setFloat("opacity", m_opacity);
-
-    if(m_shader->getName() == "image/gradient") {
-        m_shader->setVec3("customColor", color);
-    }
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    m_mesh->draw();
+    SharedQuad::draw();
 
     glDisable(GL_BLEND);
 }

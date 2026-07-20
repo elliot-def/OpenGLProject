@@ -164,7 +164,7 @@
     <ClCompile Include="LightSource.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainMenu.cpp" />
-    <ClCompile Include="MaskShape.cpp" />
+    <ClCompile Include="MaskImage.cpp" />
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="MenuManager.cpp" />
     <ClCompile Include="Mesh.cpp" />
@@ -226,7 +226,7 @@
     <ClInclude Include="LightManager.h" />
     <ClInclude Include="LightSource.h" />
     <ClInclude Include="MainMenu.h" />
-    <ClInclude Include="MaskShape.h" />
+    <ClInclude Include="MaskImage.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="MenuManager.h" />
     <ClInclude Include="Mesh.h" />

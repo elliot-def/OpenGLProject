@@ -1,7 +1,7 @@
 #include "DVDShape.h"
 #include "Shader.h"
-#include "Mesh.h"
-#include "Image.h"
+
+#include "MaskImage.h"
 #include "Renderer.h"
 #include <cstdlib>
 #include <ctime>
@@ -17,16 +17,16 @@ const std::vector<glm::vec3> DVDShape::s_colors = {
 };
 
 DVDShape::DVDShape(Shader* shader, Renderer* renderer, float startX, float startY, float width, float height, float vx, float vy)
-    : Image(shader, "./res/textures/menu/dvd_logo.png", startX, startY, width, height), m_renderer(renderer), m_vx(vx), m_vy(vy), m_colorIndex(0) {
+    : MaskImage(shader, "./res/textures/menu/dvd_logo.png", startX, startY, width, height), m_renderer(renderer), m_vx(vx), m_vy(vy), m_colorIndex(0) {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
     m_color = s_colors[0];
     setIsVisible(false);
-	setRotation(180.0f);
-    //setupBuffers();
+	//setRotation(180.0f);
+    setupBuffers();
 }
 
 void DVDShape::setupBuffers() {
-	Image::setupBuffers();
+	MaskImage::setupBuffers();
 }
 
 void DVDShape::update(float screenWidth, float screenHeight) {
@@ -73,8 +73,5 @@ void DVDShape::pickNewColor() {
 
 void DVDShape::draw() {
     if (!m_isVisible) return;
-    m_shader->use();
-    m_shader->setVec3("color", m_color);
-    m_shader->setFloat("opacity", 1.0f);
-    Image::draw();
+    MaskImage::draw();
 }
