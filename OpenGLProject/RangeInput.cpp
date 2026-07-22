@@ -5,11 +5,10 @@
 
 #include <algorithm>
 
-RangeInput::RangeInput(CursorManager* cursorManager, Shader* shader, float x, float y, float width, float height,
+RangeInput::RangeInput(Shader* shader, float x, float y, float width, float height,
     float minValue, float maxValue, float defaultValue,
     std::function<void(float)> onValueChanged)
-    : m_cursorManager(cursorManager),
-    m_position(x, y), m_size(width, height),
+    : m_position(x, y), m_size(width, height),
     m_handleWidth(height * 0.8f), // le curseur est un peu plus large que la piste n'est haute
     m_minValue(minValue), m_maxValue(maxValue),
     m_value(std::clamp(defaultValue, minValue, maxValue)),
@@ -70,8 +69,8 @@ bool RangeInput::isPointInside(double px, double py) const {
     // Zone cliquable = toute la piste, un peu elargie verticalement pour faciliter le clic
     float left = m_position.x - m_size.x / 2.0f;
     float right = m_position.x + m_size.x / 2.0f;
-    float top = m_position.y - m_size.y * 2.0f;
-    float bottom = m_position.y + m_size.y * 2.0f;
+    float top = m_position.y - m_size.y * 1.2f;
+    float bottom = m_position.y + m_size.y * 1.2f;
 
     return px >= left && px <= right && py >= top && py <= bottom;
 }

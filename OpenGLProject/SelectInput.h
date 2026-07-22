@@ -24,7 +24,7 @@ public:
     // options  : libelles affiches
     // defaultIndex : index selectionne au depart
     // onValueChanged : callback appele avec l'index choisi
-    SelectInput(CursorManager* cursorManager, Shader* shader, float x, float y, float width, float height,
+    SelectInput(Shader* shader, float x, float y, float width, float height,
         std::vector<std::string> options, int defaultIndex = 0,
         std::function<void(int)> onValueChanged = nullptr);
 

@@ -121,20 +121,20 @@ public:
     // x, y          : centre du slider
     // width, height : dimensions de la piste
     // Implementation dans Menu.cpp (ShaderManager n'y est que forward-declare ici)
-    void addRange(CursorManager* cursorManager, const std::string& label, float x, float y, float width, float height,
+    void addRange(const std::string& label, float x, float y, float width, float height,
         float minValue = 0.0f, float maxValue = 1.0f, float defaultValue = 0.5f,
         std::function<void(float)> onValueChanged = {});
 
     // label   : texte affiche a gauche de la case
     // x, y    : centre de la case
     // size    : cote de la case (carree)
-    void addCheckbox(CursorManager* cursorManager, const std::string& label, float x, float y, float size = 32.0f,
+    void addCheckbox(const std::string& label, float x, float y, float size = 32.0f,
         bool defaultValue = false, std::function<void(bool)> onValueChanged = {});
 
     // label         : texte affiche a gauche du select
     // x, y          : centre de la case fermee
     // width, height : dimensions d'une rangee (case fermee ou option)
-    void addSelect(CursorManager* cursorManager, const std::string& label, float x, float y, float width, float height,
+    void addSelect(const std::string& label, float x, float y, float width, float height,
         std::vector<std::string> options, int defaultIndex = 0,
         std::function<void(int)> onValueChanged = {});
 

@@ -4,10 +4,10 @@
 
 #include <algorithm>
 
-SelectInput::SelectInput(CursorManager* cursorManager, Shader* shader, float x, float y, float width, float height,
+SelectInput::SelectInput(Shader* shader, float x, float y, float width, float height,
     std::vector<std::string> options, int defaultIndex,
     std::function<void(int)> onValueChanged)
-    : m_cursorManager(cursorManager), m_shader(shader), m_options(std::move(options)),
+    : m_shader(shader), m_options(std::move(options)),
     m_selectedIndex(std::clamp(defaultIndex, 0, static_cast<int>(m_options.size()) - 1)),
     m_position(x, y), m_size(width, height),
     m_onValueChanged(onValueChanged)

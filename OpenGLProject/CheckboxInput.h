@@ -16,7 +16,7 @@ public:
     // size          : taille (largeur = hauteur) de la case
     // defaultValue  : etat initial (coche ou non)
     // onValueChanged : callback appele a chaque bascule (clic)
-    CheckboxInput(CursorManager* cursorManager, Shader* shader, float x, float y, float size = 32.0f,
+    CheckboxInput(Shader* shader, float x, float y, float size = 32.0f,
         bool defaultValue = false,
         std::function<void(bool)> onValueChanged = nullptr);
 

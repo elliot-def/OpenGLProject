@@ -2,9 +2,9 @@
 #include "Rectangle.h"
 #include "constants.h"
 
-CheckboxInput::CheckboxInput(CursorManager* cursorManager, Shader* shader, float x, float y, float size,
+CheckboxInput::CheckboxInput(Shader* shader, float x, float y, float size,
     bool defaultValue, std::function<void(bool)> onValueChanged)
-    : m_cursorManager(cursorManager), m_position(x, y), m_size(size), m_value(defaultValue), m_onValueChanged(onValueChanged)
+    : m_position(x, y), m_size(size), m_value(defaultValue), m_onValueChanged(onValueChanged)
 {
     m_box = new Rectangle(shader, x, y, size, size, glm::vec3(0.3f, 0.3f, 0.3f));
     // La coche est un peu plus petite que le cadre, avec une marge interieure

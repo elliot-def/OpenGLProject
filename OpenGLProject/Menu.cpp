@@ -41,24 +41,24 @@ void Menu::drawTextLeftAligned(const std::string& text, float leftX, float cente
     m_textRenderers->at(textRendererIndex)->renderText(text, startX, startY, scale, color.r, color.g, color.b);
 }
 
-void Menu::addRange(CursorManager* cursorManager, const std::string& label, float x, float y, float width, float height,
+void Menu::addRange(const std::string& label, float x, float y, float width, float height,
     float minValue, float maxValue, float defaultValue,
     std::function<void(float)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
-    m_ranges.push_back(new MenuRange(label, new RangeInput(cursorManager, shader, x, y, width, height, minValue, maxValue, defaultValue, onValueChanged)));
+    m_ranges.push_back(new MenuRange(label, new RangeInput(shader, x, y, width, height, minValue, maxValue, defaultValue, onValueChanged)));
 }
 
-void Menu::addCheckbox(CursorManager* cursorManager, const std::string& label, float x, float y, float size,
+void Menu::addCheckbox(const std::string& label, float x, float y, float size,
     bool defaultValue, std::function<void(bool)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
-    m_checkboxes.push_back(new MenuCheckbox(label, new CheckboxInput(cursorManager, shader, x, y, size, defaultValue, onValueChanged)));
+    m_checkboxes.push_back(new MenuCheckbox(label, new CheckboxInput(shader, x, y, size, defaultValue, onValueChanged)));
 }
 
-void Menu::addSelect(CursorManager* cursorManager, const std::string& label, float x, float y, float width, float height,
+void Menu::addSelect(const std::string& label, float x, float y, float width, float height,
     std::vector<std::string> options, int defaultIndex,
     std::function<void(int)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
-    m_selects.push_back(new MenuSelect(label, new SelectInput(cursorManager, shader, x, y - height / 2.0f, width, height, std::move(options), defaultIndex, onValueChanged)));
+    m_selects.push_back(new MenuSelect(label, new SelectInput(shader, x, y, width, height, std::move(options), defaultIndex, onValueChanged)));
 }
 
 void Menu::draw() {
@@ -99,12 +99,12 @@ void Menu::draw() {
             float labelX = pos.x - size.x / 2.0f - 20.0f;
             float valueX = pos.x + size.x / 2.0f + 20.0f;
             //float labelX = pos.x - size.x - 20.0f;
-            drawTextRightAligned(range->label, labelX, pos.y, 0, Colors::LINEN);
+            drawTextRightAligned(range->label, labelX, pos.y - range->input->getSize().y / 2.0f, 0, Colors::LINEN);
 
             float val = range->input->getValue();
             ss << std::fixed << std::setprecision(2) << val;
 
-            drawTextLeftAligned(ss.str(), valueX, pos.y, 0, Colors::LINEN);
+            drawTextLeftAligned(ss.str(), valueX, pos.y - range->input->getSize().y / 2.0f, 0, Colors::LINEN);
         }
         range->input->draw();
     }
@@ -114,9 +114,9 @@ void Menu::draw() {
         glm::vec2 pos = checkbox->input->getPosition();
         float size = checkbox->input->getSize();
         if (!checkbox->label.empty()) {
-            // float labelX = pos.x - size / 2.0f - 20.0f;
-            float labelX = pos.x - size - 20.0f;
-            drawTextRightAligned(checkbox->label, labelX, pos.y, 0, Colors::LINEN);
+            float labelX = pos.x - size / 2.0f - 20.0f;
+            // float labelX = pos.x - size - 20.0f;
+            drawTextRightAligned(checkbox->label, labelX, pos.y - size / 2.0f, 0, Colors::LINEN);
         }
         checkbox->input->draw();
     }

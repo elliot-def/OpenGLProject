@@ -109,6 +109,9 @@
     <Filter Include="Fichiers de ressources\shaders\image\mask">
       <UniqueIdentifier>{4de3b241-8a61-42e0-b7b5-0871eb97cdc4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Fichiers d%27en-tête\Collision">
+      <UniqueIdentifier>{ab262397-9325-49b3-afb5-fb55c4d4ddb9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -386,9 +389,6 @@
     <ClInclude Include="LeftClick.h">
       <Filter>Fichiers d%27en-tête\Inputs</Filter>
     </ClInclude>
-    <ClInclude Include="CollisionManager.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
     <ClInclude Include="Menu.h">
       <Filter>Fichiers d%27en-tête\Menu</Filter>
     </ClInclude>
@@ -463,6 +463,12 @@
     </ClInclude>
     <ClInclude Include="ImageLoader.h">
       <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="CollisionManager.h">
+      <Filter>Fichiers d%27en-tête\Collision</Filter>
+    </ClInclude>
+    <ClInclude Include="BVHNode.h">
+      <Filter>Fichiers d%27en-tête\Collision</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

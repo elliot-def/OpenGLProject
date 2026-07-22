@@ -20,12 +20,12 @@ OptionsMenu::~OptionsMenu() {
 }
 
 void OptionsMenu::createOptions(bool isMuted, float volume) {
-    addCheckbox(m_cursorManager, "Son", Constants::WINDOW_WIDTH / 2, 700, 50, !isMuted, [this](bool isChecked) {
+    addCheckbox("Son", Constants::WINDOW_WIDTH / 2, 700, 40, !isMuted, [this](bool isChecked) {
         m_soundManager->setMute(!isChecked);
         });
 
     // Note : Pense à adapter la valeur par défaut (ici récupérée via le SoundManager si possible, sinon 1.0f)
-    addRange(m_cursorManager, "Volume", Constants::WINDOW_WIDTH / 2, 800, 300, 25, 0, 2, volume, [this](float volume) {
+    addRange("Volume", Constants::WINDOW_WIDTH / 2, 800, 300, 25, 0, 2, volume, [this](float volume) {
         m_soundManager->setMasterVolume(volume);
         });
 
@@ -40,7 +40,7 @@ void OptionsMenu::loadJSON() {
 
     // On vérifie directement si le fichier existe
     if (!optionFile.exists()) {
-        std::cout << "[Options] Aucun fichier de sauvegarde trouvé. Utilisation des valeurs par défaut.\n";
+        std::cout << "[Options] Aucun fichier de sauvegarde trouve. Utilisation des valeurs par defaut.\n";
         createOptions(false, 1.0f);
         return;
     }
@@ -64,7 +64,7 @@ void OptionsMenu::loadJSON() {
             m_soundManager->setMasterVolume(volume);
         }
 
-        std::cout << "[Options] Paramètres chargés avec succès.\n";
+        std::cout << "[Options] Parametres charges avec succes.\n";
     }
     catch (const json::parse_error& e) {
         createOptions(false, 1.0f);
@@ -92,7 +92,7 @@ void OptionsMenu::exportJSON() {
             throw std::runtime_error("Impossible d'écrire dans le fichier d'options.");
         }
 
-        std::cout << "[Options] Paramètres exportés avec succès.\n";
+        std::cout << "[Options] Parametres exportés avec succes.\n";
     }
     catch (const std::exception& e) {
         std::cerr << "[Options] Erreur lors de l'export JSON : " << e.what() << "\n";

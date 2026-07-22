@@ -16,7 +16,7 @@ public:
     // width, height : dimensions totales de la piste
     // minValue/maxValue/defaultValue : bornes et valeur initiale
     // onValueChanged : callback appele a chaque changement de valeur (drag)
-    RangeInput(CursorManager* cursorManager, Shader* shader, float x, float y, float width, float height,
+    RangeInput(Shader* shader, float x, float y, float width, float height,
         float minValue = 0.0f, float maxValue = 1.0f, float defaultValue = 0.5f,
         std::function<void(float)> onValueChanged = nullptr);
 
