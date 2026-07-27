@@ -198,7 +198,17 @@ glm::vec3 CollisionManager::sweepSphere(glm::vec3 start,
 
             // 2. Glissement : On retire la partie du mouvement qui fonce dans le mur
             float project = glm::dot(remainingMove, col.normal);
+
+            // Sauvegarde la longueur maximale autorisée avant la projection
+            float maxAllowedLength = glm::length(remainingMove);
+
             remainingMove = remainingMove - project * col.normal;
+
+            // CORRECTION : On s'assure que le glissement ne fait PAS accélérer le joueur
+            float newLength = glm::length(remainingMove);
+            if (newLength > maxAllowedLength && newLength > 1e-6f) {
+                remainingMove = (remainingMove / newLength) * maxAllowedLength;
+            }
 
             // Sécurité anti-rebond infini dans les coins étroits
             if (project < 0.0f && glm::length2(remainingMove) < 1e-6f) {
@@ -268,7 +278,18 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
     glm::vec3 offsetMiddle = glm::vec3(0.f, height * 0.5f, 0.f);
     glm::vec3 offsetTop = glm::vec3(0.f, height - radius, 0.f);
 
-    m_isGrounded = false;
+    m_isPlayerGrounded = false;
+
+    // ── 0. APPLICATION DE LA GRAVITÉ ─────────────────────────────────────────
+
+    if (gravityEnabled) {
+        // Accélération de la vélocité verticale par la gravité
+        m_verticalVelocity += Constants::GRAVITY * deltaTime;
+    }
+    else {
+        m_isPlayerGrounded = false;
+        m_verticalVelocity = 0.f; // Pas d'accumulation en vol libre
+    }
 
     // ── 1. MOUVEMENT HORIZONTAL ──────────────────────────────────────────────
     glm::vec3 horizontalMovement = glm::vec3(desiredMovement.x, 0.f, desiredMovement.z);
@@ -291,8 +312,8 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
     }
 
     // ── 2. MOUVEMENT VERTICAL ────────────────────────────────────────────────
-    // On n'applique la chute automatique que si la gravité est activée pour le joueur
-    float verticalMove = gravityEnabled ? (m_verticalVelocity * deltaTime) : 0.0f;
+    // Cumul du mouvement voulu (saut/vol) et de la vélocité gravitationnelle
+    float verticalMove = m_verticalVelocity * deltaTime;
     float totalVertical = desiredMovement.y + verticalMove;
     glm::vec3 vertMove = glm::vec3(0.f, totalVertical, 0.f);
     glm::vec3 posAfterV = posAfterH;
@@ -313,24 +334,54 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
         }
     }
 
-    // ── 3. DÉTECTION SOL / PLAFOND ───────────────────────────────────────────
-    float actualVertical = posAfterV.y - posAfterH.y;
+    // ── 3. DÉTECTION SOL / PLAFOND (sonde indépendante du mouvement) ────────
+    // ── 3. DÉTECTION SOL / PLAFOND (sonde indépendante du mouvement) ────────
+    float actualVertical = posAfterV.y - posAfterH.y;  // <-- à rajouter
 
     if (gravityEnabled) {
-        if (totalVertical < -1e-3f && std::abs(actualVertical) < std::abs(totalVertical) * 0.5f) {
-            m_isGrounded = true;
+        const float groundProbeDistance = 0.05f;
+        glm::vec3 groundProbePos = posAfterV + offsetBottom + glm::vec3(0.f, -groundProbeDistance, 0.f);
+        CollisionResult groundCheck = testSphereAll(groundProbePos, radius);
+
+        m_isPlayerGrounded = groundCheck.hit && groundCheck.normal.y > 0.5f;
+
+        if (m_isPlayerGrounded && m_verticalVelocity < 0.f) {
             m_verticalVelocity = 0.f;
         }
         if (totalVertical > 1e-3f && std::abs(actualVertical) < std::abs(totalVertical) * 0.5f) {
-            m_verticalVelocity = 0.f;
+            m_verticalVelocity = 0.f; // cognement au plafond
         }
     }
     else {
-        m_isGrounded = false;
-        m_verticalVelocity = 0.f; // On s'assure qu'aucune vélocité ne s'accumule en volant
+        m_isPlayerGrounded = false;
+        m_verticalVelocity = 0.f;
     }
 
     return posAfterV;
+}
+
+void CollisionManager::buildBVH() {
+    if (!m_staticBoxes.empty()) {
+        m_bvh.build(m_staticBoxes);
+        m_useBVH = true;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Saut : impulsion verticale conditionnée à l'état au sol
+// ─────────────────────────────────────────────────────────────────────────────
+bool CollisionManager::tryJump(float jumpVelocity) {
+    if (!m_isPlayerGrounded) return false;
+    if (jumpVelocity <= 0.f) return false; // Garde : impulsion strictement positive
+
+    // On coupe toute chute résiduelle puis on applique l'impulsion vers le haut.
+    // La gravité (intégrée dans resolvePlayerMovement) décélérera puis
+    // redessendra naturellement le joueur, donnant l'arc de saut recherché.
+    m_verticalVelocity = jumpVelocity;
+    // On marque le joueur comme non-grounded : évite un re-saut intra-frame
+    // avant que la prochaine frame repasse dans resolvePlayerMovement.
+    m_isPlayerGrounded = false;
+    return true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

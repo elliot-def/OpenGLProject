@@ -6,11 +6,6 @@
 
 #include "AABB.h" // Ta structure AABB existante
 
-struct StaticBox {
-    std::string name;
-    AABB aabb;
-};
-
 struct BVHNode {
     AABB box;
     int leftChild = -1;  // Indice dans le tableau de nœuds (-1 si feuille)
@@ -124,4 +119,4 @@ private:
 
         return nodeIdx;
     }
-}; #pragma once
+};

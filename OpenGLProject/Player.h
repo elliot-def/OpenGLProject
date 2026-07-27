@@ -8,29 +8,33 @@
 
 class CollisionManager;
 
-// Classe Player : représente le joueur dans le jeu
-// Hérite de Entity et gère le déplacement, la vue et le rendu
+// Classe Player : reprï¿½sente le joueur dans le jeu
+// Hï¿½rite de Entity et gï¿½re le dï¿½placement, la vue et le rendu
 class Player : public Entity {
 public:
     // Constructeur : prend un pointeur vers le moteur de rendu
     // Appelle le constructeur de la classe de base Entity
     Player(CollisionManager* collisionManager, Renderer* renderer) : Entity(renderer, collisionManager) {
-		setUseGravity(true); // Le joueur est affecté par la gravité
+		setUseGravity(true); // Le joueur est affectï¿½ par la gravitï¿½
     };
 
-    // Destructeur par défaut, aucune ressource supplémentaire à libérer
+    // Destructeur par dï¿½faut, aucune ressource supplï¿½mentaire ï¿½ libï¿½rer
     ~Player() = default;
 
-    // Met à jour la logique du joueur chaque frame
-    // Déplacement, animations, actions
+    // Met ï¿½ jour la logique du joueur chaque frame
+    // Dï¿½placement, animations, actions
     void update() override;
 
-    // Dessine le joueur à l'écran
+    // Dessine le joueur ï¿½ l'ï¿½cran
     void draw(Shader* shader) override;
 
     // Traite les touches de direction
     // direction : valeur parmi direction::FORWARD, BACKWARD, LEFT, RIGHT, UP, DOWN
     void processDirectionKey(int direction);
+
+    // DÃ©clenche un saut : dÃ©lÃ¨gue au CollisionManager qui applique l'impulsion
+    // verticale si le joueur est au sol.
+    void processJump();
 
     // Traite les mouvements de la souris
     // yaw : rotation horizontale
@@ -47,7 +51,7 @@ public:
     inline bool getIsSprinting() { return m_isSprinting; };
     inline bool getWantsToMove() { return m_wantsToMove; };
 
-    // Retourne la position des yeux du joueur (pour la caméra)
+    // Retourne la position des yeux du joueur (pour la camï¿½ra)
 
     glm::vec3 getEyePosition() const { return m_position + Constants::PLAYER_EYE_HEIGHT; }
 private:

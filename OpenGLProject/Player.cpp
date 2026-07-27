@@ -16,20 +16,38 @@ void Player::processDirectionKey(int direction) {
     float deltaTime = m_renderer->getDeltaTime();
     float distance = velocity * deltaTime;
 
-    if (direction == EntityRelativeDirection::FORWARD)
-        m_frameMovement += m_direction->getDirectionVector() * distance;
-    if (direction == EntityRelativeDirection::BACKWARD)
-        m_frameMovement -= m_direction->getDirectionVector() * distance;
-    if (direction == EntityRelativeDirection::LEFT)
-        m_frameMovement -= m_direction->rotateRight90KeepY() * distance;
-    if (direction == EntityRelativeDirection::RIGHT)
-        m_frameMovement += m_direction->rotateRight90KeepY() * distance;
+    if (m_useGravity) {
+        if (direction == EntityRelativeDirection::FORWARD)
+            m_frameMovement += m_direction->getDirectionVectorKeepY() * distance;
+        if (direction == EntityRelativeDirection::BACKWARD)
+            m_frameMovement -= m_direction->getDirectionVectorKeepY() * distance;
+        if (direction == EntityRelativeDirection::LEFT)
+            m_frameMovement -= m_direction->rotateRight90KeepY() * distance;
+        if (direction == EntityRelativeDirection::RIGHT)
+            m_frameMovement += m_direction->rotateRight90KeepY() * distance;
+        // UP : géré par processJump() en mode gravité (vrai saut à impulsion)
+    }
+    else {
+        if (direction == EntityRelativeDirection::FORWARD)
+            m_frameMovement += m_direction->getDirectionVector() * distance;
+        if (direction == EntityRelativeDirection::BACKWARD)
+            m_frameMovement -= m_direction->getDirectionVector() * distance;
+        if (direction == EntityRelativeDirection::LEFT)
+            m_frameMovement -= m_direction->rotateRight90KeepY() * distance;
+        if (direction == EntityRelativeDirection::RIGHT)
+            m_frameMovement += m_direction->rotateRight90KeepY() * distance;
+        // Mode vol libre (sans gravité) : UP/DOWN permettent de monter/descendre
+        if (direction == EntityRelativeDirection::UP)
+            m_frameMovement += glm::vec3(0.0f, 1.0f, 0.0f) * distance;
+        if (direction == EntityRelativeDirection::DOWN)
+            m_frameMovement -= glm::vec3(0.0f, 1.0f, 0.0f) * distance;
+    }
+}
 
-    // En mode "sans gravit�", ces touches permettent de monter/descendre � la vol�e
-    if (direction == EntityRelativeDirection::UP)
-        m_frameMovement += glm::vec3(0.0f, 1.0f, 0.0f) * distance;
-    if (direction == EntityRelativeDirection::DOWN)
-        m_frameMovement -= glm::vec3(0.0f, 1.0f, 0.0f) * distance;
+void Player::processJump() {
+    // Délègue au CollisionManager : il appliquera l'impulsion uniquement
+    // si le joueur est actuellement au sol (m_isPlayerGrounded).
+    m_collisionManager->tryJump(Constants::PLAYER_JUMP_VELOCITY);
 }
 
 void Player::processMouseMovements(double yaw, double pitch) {

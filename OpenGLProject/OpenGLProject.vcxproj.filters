@@ -112,6 +112,9 @@
     <Filter Include="Fichiers d%27en-tête\Collision">
       <UniqueIdentifier>{ab262397-9325-49b3-afb5-fb55c4d4ddb9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Fichiers sources\Collision">
+      <UniqueIdentifier>{e5e80e73-48f9-472b-99b0-86a2fdfd054e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -264,9 +267,6 @@
     <ClCompile Include="Spotlight.cpp">
       <Filter>Fichiers sources\Light</Filter>
     </ClCompile>
-    <ClCompile Include="CollisionManager.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
     <ClCompile Include="SelectInput.cpp">
       <Filter>Fichiers sources\Menu\Input</Filter>
     </ClCompile>
@@ -281,6 +281,12 @@
     </ClCompile>
     <ClCompile Include="ImageLoader.cpp">
       <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="AABB.h">
+      <Filter>Fichiers d%27en-tête\Collision</Filter>
+    </ClCompile>
+    <ClCompile Include="CollisionManager.cpp">
+      <Filter>Fichiers sources\Collision</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

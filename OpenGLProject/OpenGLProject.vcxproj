@@ -140,6 +140,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AABB.h" />
     <ClCompile Include="Backward.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CheckboxInput.cpp" />

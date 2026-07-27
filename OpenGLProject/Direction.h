@@ -25,6 +25,11 @@ public:
         return glm::normalize(glm::vec3(-v.z, 0, v.x));
     }
 
+    glm::vec3 getDirectionVectorKeepY() {
+        glm::vec3 v = getDirectionVector();
+        return glm::vec3(v.x, 0, v.z);
+    }
+
 private:
     double m_yaw;   // Rotation horizontale (gauche-droite)
     double m_pitch; // Rotation verticale (haut-bas)

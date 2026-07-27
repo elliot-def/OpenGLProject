@@ -19,10 +19,16 @@ namespace Constants {
 	inline constexpr float PLAYER_SPRINTING_SPEED = 4.0f; // unit : pixels per second
 	inline constexpr float DEFAULT_PLAYER_RADIUS = 0.2f;
 	inline constexpr float DEFAULT_PLAYER_HEIGHT = 1.6f;
+    inline constexpr glm::vec3 PLAYER_EYE_HEIGHT = glm::vec3(0.0f, 1.0f, 0.0f); // Hauteur des yeux du joueur par rapport à sa position (en unités de jeu)
+
 
     // Collision Manager
 
     static constexpr float GRAVITY = -9.81f;
+
+    // Saut : Vélocité verticale initiale appliquée au joueur quand il saute
+    // Avec GRAVITY = -9.81, V=12 m/s donne ~2.45 s en l'air (hauteur max ~7.3 m)
+    inline constexpr float PLAYER_JUMP_VELOCITY = 12.0f;
 
     // Texture
 
@@ -63,8 +69,6 @@ namespace Constants {
 
 	// Sound
 	inline constexpr float DEFAULT_MASTER_VOLUME = 0.2f; // Volume maître par défaut (0.0 → ∞)
-
-	inline constexpr glm::vec3 PLAYER_EYE_HEIGHT = glm::vec3(0.0f, 1.0f, 0.0f); // Hauteur des yeux du joueur par rapport à sa position (en unités de jeu)
 }
 
 namespace Materials {

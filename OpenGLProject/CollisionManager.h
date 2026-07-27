@@ -3,46 +3,19 @@
 #define NOMINMAX
 #include <Windows.h>
 
-#include <glm/glm.hpp>
+
 #include <vector>
 #include <string>
 #include <unordered_map>
-#include <limits>
+
 
 #include "Constants.h"
+#include "BVHNode.h"
+#include "AABB.h"
 
 class Mesh;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// AABB (Axis-Aligned Bounding Box)
-// ─────────────────────────────────────────────────────────────────────────────
 
-struct AABB {
-    glm::vec3 min{ (std::numeric_limits<float>::max)() };
-    glm::vec3 max{ -(std::numeric_limits<float>::max)() };
-
-    void expand(glm::vec3 p) {
-        min = glm::min(min, p);
-        max = glm::max(max, p);
-    }
-    void expand(const AABB& o) {
-        min = glm::min(min, o.min);
-        max = glm::max(max, o.max);
-    }
-
-    glm::vec3 center() const { return (min + max) * 0.5f; }
-    bool isValid() const { return min.x <= max.x && min.y <= max.y && min.z <= max.z; }
-
-    // Retourne le point de l'AABB le plus proche de p
-    glm::vec3 closestPoint(glm::vec3 p) const {
-        return glm::clamp(p, min, max);
-    }
-
-    bool intersectsSphere(glm::vec3 center, float radius) const {
-        glm::vec3 closest = glm::clamp(center, min, max);
-        return glm::length(center - closest) <= radius;
-    }
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Résultat d'un test de collision sphère/AABB
@@ -52,15 +25,6 @@ struct CollisionResult {
     bool      hit = false;
     glm::vec3 normal = glm::vec3(0.0f);   // Normale de la surface touchée (world space)
     float     penetration = 0.0f;              // Profondeur de pénétration
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Entrée de collider statique
-// ─────────────────────────────────────────────────────────────────────────────
-
-struct StaticBox {
-    std::string name;
-    AABB        aabb;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -110,19 +74,18 @@ public:
      * Ajoute un ou plusieurs meshes dynamiques sous une clé commune.
      * L'AABB englobante de tous les sous-meshes est calculée immédiatement.
      */
-    void addDynamicMesh(const std::string& key,
-        const std::vector<Mesh*>& meshes,
-        const glm::mat4& modelMatrix);
+    void addDynamicMesh(const std::string& key, const std::vector<Mesh*>& meshes, const glm::mat4& modelMatrix);
 
     /**
      * Met à jour l'AABB d'un groupe de meshes dynamiques.
      * Appeler chaque frame si l'objet a bougé.
      */
-    void updateDynamic(const std::string& key,
-        const std::vector<Mesh*>& meshes,
-        const glm::mat4& modelMatrix);
+    void updateDynamic(const std::string& key, const std::vector<Mesh*>& meshes, const glm::mat4& modelMatrix);
 
     void removeDynamic(const std::string& key);
+
+    // À appeler après avoir ajouté TOUS tes objets statiques (ex: au chargement du niveau)
+    void buildBVH();
     void clear();
 
     // ── Résolution mouvement joueur ──────────────────────────────────────────
@@ -149,29 +112,26 @@ public:
 
     glm::vec3 pushPlayerAway(glm::vec3 currentPlayerPos);
 
+    /**
+     * @brief Tente de faire sauter le joueur. Applique une impulsion verticale
+     *        uniquement si le joueur est actuellement au sol.
+     *
+     * La gravité se charge ensuite naturellement de freiner puis de faire
+     * redescendre le joueur, procurant un temps en l'air de quelques secondes.
+     *
+     * @param jumpVelocity Vélocité verticale initiale (positive, unités/s).
+     *                     En pratique : Constants::PLAYER_JUMP_VELOCITY.
+     * @return true si le saut a été déclenché, false sinon (pas grounded).
+     */
+    bool tryJump(float jumpVelocity);
+
     void  setVerticalVelocity(float vy) { m_verticalVelocity = vy; }
     float getVerticalVelocity()  const { return m_verticalVelocity; }
-    bool  isGrounded()           const { return m_isGrounded; }
+    bool  getIsPlayerGrounded() const { return m_isPlayerGrounded; }
 
     // ── Debug ────────────────────────────────────────────────────────────────
 
     void printInfo() const;
-
-private:
-    std::vector<StaticBox>                     m_staticBoxes;
-    std::unordered_map<std::string, AABB>      m_dynamicBoxes;
-
-    float m_verticalVelocity = 0.0f;
-    bool  m_isGrounded = false;
-
-    // Construit l'AABB world-space d'un ensemble de meshes
-    static AABB computeWorldAABB(const std::vector<Mesh*>& meshes,
-        const glm::mat4& modelMatrix);
-
-    // Teste une sphère contre une AABB et retourne le résultat de collision
-    static CollisionResult testSphereAABB(glm::vec3 center,
-        float     radius,
-        const AABB& box);
 
     // Teste une sphère contre tous les colliders (statiques + dynamiques)
     CollisionResult testSphereAll(glm::vec3 center, float radius) const;
@@ -181,4 +141,23 @@ private:
         glm::vec3 movement,
         float     radius,
         int       maxIterations = 5) const;
+
+private:
+    std::vector<StaticBox>                     m_staticBoxes;
+    std::unordered_map<std::string, AABB>      m_dynamicBoxes;
+
+    BVH m_bvh; // Intégration du BVH
+    bool m_useBVH = false;
+
+    float m_verticalVelocity = 0.0f;
+    bool  m_isPlayerGrounded = false;
+
+    // Construit l'AABB world-space d'un ensemble de meshes
+    static AABB computeWorldAABB(const std::vector<Mesh*>& meshes,
+        const glm::mat4& modelMatrix);
+
+    // Teste une sphère contre une AABB et retourne le résultat de collision
+    static CollisionResult testSphereAABB(glm::vec3 center,
+        float     radius,
+        const AABB& box);
 };
