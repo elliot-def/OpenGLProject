@@ -6,34 +6,36 @@
 
 #include "Renderer.h"  // Gestion du rendu OpenGL
 #include "Entity.h"    // Classe de base pour tous les objets du jeu
-#include "Direction.h" // Classe pour stocker les angles de rotation de la caméra
+#include "Direction.h" // Classe pour stocker les angles de rotation de la camï¿½ra
 
 // Classe Camera : gere la vue 3D dans le jeu
 class Camera {
 public:
     // Constructeur
-    // position : position initiale de la caméra
-    // direction : angles de rotation de la caméra (yaw/pitch)
+    // position : position initiale de la camï¿½ra
+    // direction : angles de rotation de la camï¿½ra (yaw/pitch)
     Camera(glm::vec3 position = glm::vec3(3.0f, 3.0f, 3.0f), Direction* direction = new Direction(-90.0f, 0.0f));
 
-    // Retourne la matrice "View" (vue de la caméra) calculée avec glm::lookAt
-    // Utilisée par OpenGL pour savoir d'où et vers quoi regarder
-    glm::mat4 getViewMatrix();
+    // Retourne la matrice "View" (vue de la camï¿½ra) calculï¿½e avec glm::lookAt
+    // Utilisï¿½e par OpenGL pour savoir d'oï¿½ et vers quoi regarder
+    // MUST stay const : appelee via Shader::getCamera() qui retourne const Camera*.
+    // Si un futur refactor ajoute une ecriture d'etat, Cube::draw() ligne 193 explosera en C2662.
+    glm::mat4 getViewMatrix() const;
 
-    // Position actuelle de la caméra
+    // Position actuelle de la camï¿½ra
 	inline glm::vec3 getPosition() const { return m_position; } 
 	inline glm::vec3 getFront() const { return m_front; } 
 	inline glm::vec3 getUp() const { return m_upVector; } 
 
-    // Met à jour la position et la direction de la caméra en suivant une entité
-    // entity : objet à suivre (ex : le joueur)
+    // Met ï¿½ jour la position et la direction de la camï¿½ra en suivant une entitï¿½
+    // entity : objet ï¿½ suivre (ex : le joueur)
     void update(Entity* entity);
 
 private:
-    Renderer* m_renderer;     // Pointeur vers le renderer pour accéder au rendu (non utilisé ici)
-    Direction* m_direction;   // Contient yaw et pitch pour orienter la caméra
+    Renderer* m_renderer;     // Pointeur vers le renderer pour accï¿½der au rendu (non utilisï¿½ ici)
+    Direction* m_direction;   // Contient yaw et pitch pour orienter la camï¿½ra
 
-    glm::vec3 m_position = glm::vec3(3.0f, 3.0f, 3.0f); // Position actuelle de la caméra
-    glm::vec3 m_front = glm::vec3(1.0f, 1.0f, 0.0f);    // Direction dans laquelle la caméra regarde
-    glm::vec3 m_upVector = glm::vec3(0.0f, 1.0f, 0.0f); // Vecteur "haut" de la caméra, pour l'orientation
+    glm::vec3 m_position = glm::vec3(3.0f, 3.0f, 3.0f); // Position actuelle de la camï¿½ra
+    glm::vec3 m_front = glm::vec3(1.0f, 1.0f, 0.0f);    // Direction dans laquelle la camï¿½ra regarde
+    glm::vec3 m_upVector = glm::vec3(0.0f, 1.0f, 0.0f); // Vecteur "haut" de la camï¿½ra, pour l'orientation
 };

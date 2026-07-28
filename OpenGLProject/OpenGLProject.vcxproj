@@ -118,6 +118,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>LIBCMT;LIBCPMT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
       <Command>xcopy /Y /D "$(ProjectDir)dependencies\bin\*.dll" "$(OutDir)"</Command>
@@ -137,10 +138,12 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>LIBCMT;LIBCPMT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AABB.h" />
+    <ClCompile Include="Outlineable.h" />
     <ClCompile Include="Backward.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CheckboxInput.cpp" />
@@ -195,6 +198,8 @@
     <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="Transformation.h" />
     <ClCompile Include="Texture.cpp" />
+    <ClCompile Include="Animator.cpp" />
+    <ClCompile Include="ArmsRenderer.cpp" />
     <ClCompile Include="Triangle.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
@@ -251,6 +256,7 @@
     <ClInclude Include="Right.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderManager.h" />
+    <ClInclude Include="ShaderType.h" />
     <ClInclude Include="Sound.h" />
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="Spotlight.h" />
@@ -260,6 +266,11 @@
     <ClInclude Include="TextureManager.h" />
     <ClInclude Include="Triangle.h" />
     <ClInclude Include="Vertex.h" />
+    <ClInclude Include="win_compat.h" />
+    <ClInclude Include="SkinningData.h" />
+    <ClInclude Include="AnimationClip.h" />
+    <ClInclude Include="Animator.h" />
+    <ClInclude Include="ArmsRenderer.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
@@ -274,6 +285,8 @@
     <None Include="res\shaders\image\masque\mask.frag" />
     <None Include="res\shaders\image\masque\mask.vert" />
     <None Include="res\shaders\model\model.frag" />
+    <None Include="res\shaders\outline\outline.frag" />
+    <None Include="res\shaders\outline\outline.vert" />
     <None Include="res\shaders\model\model.vert" />
     <None Include="res\shaders\shape\shape.frag" />
     <None Include="res\shaders\shape\shape.vert" />

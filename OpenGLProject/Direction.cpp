@@ -1,6 +1,6 @@
 #include "Direction.h"
 
-Direction::Direction(float yaw, float pitch) : m_yaw(yaw), m_pitch(pitch) {}
+Direction::Direction(double yaw, double pitch) : m_yaw(yaw), m_pitch(pitch) {}
 
 glm::vec3 Direction::getDirectionVector() {
 	glm::highp_vec3 direction;
@@ -14,9 +14,9 @@ glm::vec3 Direction::getDirectionVector() {
 void Direction::addDelta(double deltaX, double deltaY) {
 	m_yaw += deltaX;
 	m_pitch += deltaY;
-	// Limiter l'inclinaison pour éviter le retournement
-	if (m_pitch > 89.0f)
-		m_pitch = 89.0f;
-	if (m_pitch < -89.0f)
-		m_pitch = -89.0f;
+	// Limiter l'inclinaison pour ï¿½viter le retournement
+	if (m_pitch > 89.0)
+		m_pitch = 89.0;
+	if (m_pitch < -89.0)
+		m_pitch = -89.0;
 }

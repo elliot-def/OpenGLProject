@@ -19,13 +19,9 @@ MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, s
         });
     // Dans la classe qui instancie le menu :
     auto* dvd = new DVDShape(m_shaderManager->getShader("image/mask"), m_renderer, 100.0f, 100.0f, 330.0f, 195.0f, 200.0f, 180.0f);
+    // Musique du menu. Remplace le chemin si tu préfères l'atmosphère horror :
+    // "./res/sounds/menu/atmo-horror-ghost-birds-03.wav".
     Sound* menuMusic = m_soundManager->load("menu_music", "./res/sounds/menu/industry-garage-ventilation-system-01.wav", true, 1.0f, 1.0f);
-    try {
-        Sound* menuMusic = m_soundManager->load("menu_music", "./res/sounds/menu/./res/sounds/menu/atmo-horror-ghost-birds-03.wav", true, 1.0f, 1.0f);
-    }
-    catch (const std::exception& e) {
-        std::cerr << "[MainMenu] " << e.what() << std::endl;
-    }
     m_weirdSounds.push_back(m_soundManager->load("weird_sound1", "./res/sounds/menu/atmo-horror-ghost-birds-03.wav", false, 2.0f, 1.0f));
     m_weirdSounds.push_back(m_soundManager->load("weird_sound2", "./res/sounds/menu/atmo-horror-ghost-birds-02.wav", false, 2.0f, 1.0f));
     m_weirdSounds.push_back(m_soundManager->load("weird_sound3", "./res/sounds/menu/atmo-horror-ghost-birds-01.wav", false, 2.0f, 1.0f));

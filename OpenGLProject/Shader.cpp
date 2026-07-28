@@ -16,11 +16,14 @@ Shader::Shader(const std::string& vertexSource, const std::string& fragmentSourc
     m_view = glm::mat4(1.0f);
     m_projection = glm::mat4(1.0f);
 	m_name = std::filesystem::path(vertexSource).stem().string();
+	// RÃ©solution unique du rÃ´le du shader : une comparaison de chaÃ®ne par crÃ©ation,
+	// puis un simple compare d'enum (= 1 cycle CPU) Ã  chaque draw().
+	m_type = extractShaderType(m_name);
     m_camera = camera;
 
     m_view = m_camera->getViewMatrix();
 
-    // Projection en perspective : effet 3D avec champ de vision de 60°
+    // Projection en perspective : effet 3D avec champ de vision de 60ï¿½
     m_projection = glm::perspective(
         glm::radians(60.0f),
         (float)Constants::WINDOW_WIDTH / (float)Constants::WINDOW_HEIGHT,
@@ -44,7 +47,7 @@ Shader::Shader(const std::string& vertexSource, const std::string& fragmentSourc
     GLuint vertex = compile(GL_VERTEX_SHADER, vertexCode);
     GLuint fragment = compile(GL_FRAGMENT_SHADER, fragmentCode);
 
-    // Création et linkage du programme
+    // Crï¿½ation et linkage du programme
     m_id = glCreateProgram();
     glAttachShader(m_id, vertex);
     glAttachShader(m_id, fragment);
@@ -52,7 +55,7 @@ Shader::Shader(const std::string& vertexSource, const std::string& fragmentSourc
 
     checkCompileErrors(m_id, "PROGRAM");
 
-    // Shaders bruts supprimés après linkage
+    // Shaders bruts supprimï¿½s aprï¿½s linkage
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 }
@@ -76,7 +79,14 @@ void Shader::setupMatrices() {
 
 void Shader::setupMatrices2D() {
     //setMat4("model", m_model);
+    // Envoie la projection ortho sous les DEUX conventions de nommage : les
+    // shaders 2D historiques (shape, text, image) declarent `uniform mat4
+    // projection;` (sans prefixe), mais le shader d'outline suit la
+    // convention 3D `uniform mat4 uProjection;`. setMat4 sur un nom inexistant
+    // dans le shader courant est un no-op cote GPU (getUniformLocation = -1),
+    // donc innoffensif pour les autres shaders qui ignorent uProjection.
     setMat4("projection", m_projection2D);
+    setMat4("uProjection", m_projection2D);
 }
 
 GLuint Shader::getID() const {
@@ -211,6 +221,14 @@ void Shader::setMat4(const std::string& name, const glm::mat4& mat) {
     }
 }
 
+void Shader::setMat4Array(const std::string& name, const glm::mat4* mats, int count) {
+    if (count <= 0) return;
+    GLint location = getUniformLocation(name);
+    if (location != -1) {
+        glUniformMatrix4fv(location, count, GL_FALSE, glm::value_ptr(mats[0]));
+    }
+}
+
 int Shader::getUniformLocation(const std::string& name) {
     auto it = m_uniformLocations.find(name);
     if (it != m_uniformLocations.end()) {
@@ -218,7 +236,7 @@ int Shader::getUniformLocation(const std::string& name) {
     }
 
     GLint location = glGetUniformLocation(m_id, name.c_str());
-    m_uniformLocations[name] = location; // On cache même le -1 pour éviter de re-interroger OpenGL
+    m_uniformLocations[name] = location; // On cache mï¿½me le -1 pour ï¿½viter de re-interroger OpenGL
     return location;
 }
 

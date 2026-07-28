@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Vertex.h"
+#include "Outlineable.h"
 
 class Shader;
 class Mesh;
@@ -16,21 +17,21 @@ class Player;
 class Renderer;
 
 // Classe Cube : represente un cube 3D dans le jeu
-class Cube {
+class Cube : public Outlineable {
 public:
     // Constructeur
     // center : position du centre du cube
-    // edge : taille d'une arête du cube
-    // shader : shader utilisé pour le rendu
-    // texture : texture appliquée au cube
+    // edge : taille d'une arï¿½te du cube
+    // shader : shader utilisï¿½ pour le rendu
+    // texture : texture appliquï¿½e au cube
     
     Cube(glm::vec3 center, float edge, Shader* shader, LightSource* lightSource, Player* player);
     Cube(glm::vec3 center, float edge, Shader* shader, std::vector<Texture*> textures, Renderer* renderer, LightManager* lightManager, Player* player);
 
-    // Destructeur : libere la memoire (mesh, transformation…)
+    // Destructeur : libere la memoire (mesh, transformationï¿½)
     ~Cube();
 
-    // Mise à jour du cube (transformations, animations, effets…)
+    // Mise ï¿½ jour du cube (transformations, animations, effetsï¿½)
     void update();
 
     // Dessine le cube a l'ecran (appelle Mesh + Shader)
@@ -45,20 +46,25 @@ public:
 
 	inline Mesh* getMesh() const { return m_mesh; }
 
+    // Outline (silhouette) â€” voir Outlineable.h
+    void setOutlineShader(Shader* s) { m_outlineShader = s; }
+    Shader* getOutlineShader() const { return m_outlineShader; }
+
 protected:
     Cube(glm::vec3 center, float edge, Shader* shader, Player* player);
 
-    Mesh* m_mesh;                     // Maillage du cube (buffers OpenGL)
+    Mesh* m_mesh = nullptr;           // Maillage du cube (buffers OpenGL)
     glm::vec3 m_center;               // Centre du cube dans l'espace
     std::vector<Texture*> m_textures; // Texture appliquee
     Shader* m_shader;                 // Shader pour le rendu
-    Transformation* m_transformation; // Transformations : position, rotation, scale
-	LightManager* m_lightManager;     // Pointeur vers le LightBlock associé (si applicable)
-	LightSource* m_lightSource;       // Pointeur vers le LightSource associé (si applicable)
+    Shader* m_outlineShader = nullptr;  // Outline (silhouette)
+    Transformation* m_transformation = nullptr; // Transformations : position, rotation, scale
+	LightManager* m_lightManager;     // Pointeur vers le LightBlock associï¿½ (si applicable)
+	LightSource* m_lightSource;       // Pointeur vers le LightSource associï¿½ (si applicable)
     Player* m_player;
     Renderer* m_renderer;
 
-    float m_edge;                      // Taille d'une arête du cube
+    float m_edge;                      // Taille d'une arï¿½te du cube
 
 private:
     void drawLightSourceShader();

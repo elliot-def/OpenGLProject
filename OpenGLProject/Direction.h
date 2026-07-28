@@ -8,7 +8,7 @@ public:
     // Constructeur
     // yaw : rotation autour de l'axe Y (gauche-droite)
     // pitch : rotation autour de l'axe X (haut-bas)
-    Direction(float yaw = 0.0f, float pitch = 0.0f);
+    Direction(double yaw = 0.0, double pitch = 0.0);
 
     // Ajoute un delta a la rotation (ex : mouvement de souris)
     // deltaX : changement horizontal (yaw)

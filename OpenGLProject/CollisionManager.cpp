@@ -1,4 +1,3 @@
-#define NOMINMAX
 #define GLM_ENABLE_EXPERIMENTAL
 #include "CollisionManager.h"
 #include "Mesh.h"
@@ -139,11 +138,30 @@ void CollisionManager::clear() {
 CollisionResult CollisionManager::testSphereAll(glm::vec3 center, float radius) const {
     CollisionResult best;
 
-    for (const auto& sb : m_staticBoxes) {
+    // Closest-penetration accumulator partagé entre statiques et dynamiques.
+    // Capture par référence : le lambda peut muter best.
+    auto considerStatic = [&](const StaticBox& sb) {
         CollisionResult r = testSphereAABB(center, radius, sb.aabb);
         if (r.hit && r.penetration > best.penetration) best = r;
+    };
+
+    // 1) Statiques : on passe par le BVH (O(log n)) dès qu'il est construit.
+    // Le BVH possède sa propre copie des StaticBox (déplacées par buildBVH) et
+    // n'est pas perturbé par des ajouts/suppressions ultérieures dans
+    // m_staticBoxes — ce qui est le cas attendu, buildBVH étant appelé une
+    // seule fois à l'initialisation du niveau (cf. Game::initialize).
+    if (m_useBVH) {
+        m_bvh.querySphere(center, radius, considerStatic);
+    }
+    else {
+        // Fallback : aucun niveau chargé encore (ou buildBVH jamais appelé).
+        for (const auto& sb : m_staticBoxes) considerStatic(sb);
     }
 
+    // 2) Dynamiques : scan linéaire. Les AABB bougent à chaque frame, donc
+    // reconstruire un BVH par frame annulerait le gain — le coût de
+    // m_dynamicBoxes reste borné par le nombre d'objets mobiles réellement
+    // actifs (souvent < 10 dans ce projet).
     for (const auto& [key, box] : m_dynamicBoxes) {
         CollisionResult r = testSphereAABB(center, radius, box);
         if (r.hit && r.penetration > best.penetration) best = r;

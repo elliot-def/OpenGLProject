@@ -1,3 +1,8 @@
+// win_compat.h: force windows.h en mode LEAN_AVANT glad.h, sinon C4005
+// (APIENTRY redefini par minwindef.h:130). Doit etre la PREMIERE inclusion
+// pour eviter qu un header projet pull windows.h en mode non-LEAN.
+#include "win_compat.h"
+
 #include "CursorManager.h"
 
 #include "Window.h"

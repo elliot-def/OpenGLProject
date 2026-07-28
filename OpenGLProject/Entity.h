@@ -5,6 +5,7 @@
 #include <glm/fwd.hpp>
 
 #include "constants.h"
+#include "Outlineable.h"
 
 class CollisionManager;
 class Renderer;
@@ -27,26 +28,26 @@ namespace EntityRelativeDirection {
 
 // Classe Entity : classe de base pour tous les objets de la scene
 // Exemple : joueur, cube, camera, etc.
-class Entity
+class Entity : public Outlineable
 {
 public:
     // Constructeur
-    // renderer : pointeur vers le renderer, utile pour dessiner l'entité
+    // renderer : pointeur vers le renderer, utile pour dessiner l'entitï¿½
     Entity(Renderer* renderer, CollisionManager* collisionManager);
 
     // Destructeur virtuel pour que les classes derives liberent correctement leur memoire
     ~Entity();
 
-    // Methode virtuelle : mise a jour de l'entité (mouvement, physique, logique)
+    // Methode virtuelle : mise a jour de l'entitï¿½ (mouvement, physique, logique)
     virtual void update();
     void updatePositionFromEnvironment(float deltaTime);
 
-    // Methode virtuelle : rendu de l'entité (envoie les donnees a OpenGL)
-    // Correction : la méthode draw doit prendre un Shader* en paramètre pour permettre l'override
+    // Methode virtuelle : rendu de l'entitï¿½ (envoie les donnees a OpenGL)
+    // Correction : la mï¿½thode draw doit prendre un Shader* en paramï¿½tre pour permettre l'override
     virtual void draw(Shader* shader);
 
     // Getters
-    glm::vec3 getPosition() const { return m_position; }           // Position de l'entité
+    glm::vec3 getPosition() const { return m_position; }           // Position de l'entitï¿½
     Direction* getDirection() const { return m_direction; } // Direction regardee
     glm::vec3 getDirectionVector() const; // Direction regardee
     bool isGravityEnabled() const { return m_useGravity; }
@@ -56,13 +57,18 @@ public:
         m_position = position;
     }
 
+    // Outline (silhouette haute couleur) â€” voir Outlineable.h
+    void setOutlineShader(Shader* s) { m_outlineShader = s; }
+    Shader* getOutlineShader() const { return m_outlineShader; }
+
 protected:
     Renderer* m_renderer;     // Renderer pour dessiner et gerer le rendu
-    Direction* m_direction;   // Orientation de l'entité (yaw/pitch)
+    Direction* m_direction;   // Orientation de l'entitï¿½ (yaw/pitch)
     CollisionManager* m_collisionManager;
 
-    glm::vec3 m_position;     // Position dans l'espace 3D
+    glm::vec3 m_position;     // Position dans l'espace 3D    
     bool m_useGravity = true;       // Ton nouvel attribut
     glm::vec3 m_frameMovement{ 0.f }; // Accumulateur de mouvement
 
+    Shader* m_outlineShader = nullptr;  // Optionnel
 };

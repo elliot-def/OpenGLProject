@@ -8,6 +8,11 @@
 #include <string>
 #include <unordered_map>
 
+#include "SkinningData.h"
+#include "AnimationClip.h"
+#include "Animator.h"
+#include "Vertex.h" // std::vector<Vertex>& dans extractBoneDataFromMesh (type complet requis).
+
 class Shader;
 class Mesh;
 class TextureManager;
@@ -16,7 +21,7 @@ class LightManager;
 
 #pragma comment(lib, "assimp-vc143-mtd.lib")
 
-// Structure pour représenter une bounding box
+// Structure pour reprï¿½senter une bounding box
 struct BoundingBox {
     glm::vec3 min;
     glm::vec3 max;
@@ -39,11 +44,11 @@ struct BoundingBox {
     // Transforme la bounding box avec une matrice
     BoundingBox transform(const glm::mat4& matrix) const;
 
-    // Vérifie la collision avec une autre bounding box
+    // Vï¿½rifie la collision avec une autre bounding box
     bool intersects(const BoundingBox& other) const;
 };
 
-// Structure pour une hitbox sphérique (plus simple pour certains objets)
+// Structure pour une hitbox sphï¿½rique (plus simple pour certains objets)
 struct BoundingSphere {
     glm::vec3 center;
     float radius;
@@ -51,10 +56,10 @@ struct BoundingSphere {
     BoundingSphere() : center(0.0f), radius(0.0f) {}
     BoundingSphere(const BoundingBox& box);
 
-    // Transforme la sphère avec une matrice
+    // Transforme la sphï¿½re avec une matrice
     BoundingSphere transform(const glm::mat4& matrix) const;
 
-    // Vérifie la collision avec une autre sphere
+    // Vï¿½rifie la collision avec une autre sphere
     bool intersects(const BoundingSphere& other) const;
 };
 
@@ -62,8 +67,9 @@ class Model {
 public:
     // Constructeur avec chemin du modele et texture manager
     Model(Camera* camera, LightManager* lightManager, const std::string& path, TextureManager* textureManager = nullptr);
+    ~Model(); // Libere les Mesh* heap-allocated via new (processMesh + createDebugBoundingBoxMesh).
 
-    // Dessine le modèle
+    // Dessine le modï¿½le
     void draw(Shader& shader);
 
     // Dessine la bounding box (pour debug)
@@ -71,19 +77,32 @@ public:
 
     const std::vector<Mesh*>& getMeshes() const { return m_meshes; }
 
+    // Skeleton / animation : retourne la map nom->BoneInfo (lecture seule)
+    // et le vecteur d'animations extraites du scene assimp. Le Animator utilise
+    // ces acces pour animer le modele chaque frame.
+    const std::unordered_map<std::string, BoneInfo>& getBoneInfoMap() const { return m_boneInfoMap; }
+    const std::vector<AnimationClip>& getAnimations() const { return m_animations; }
+
     // Getters pour les hitbox
     const BoundingBox& getBoundingBox() const { return m_boundingBox; }
     const BoundingSphere& getBoundingSphere() const { return m_boundingSphere; }
 
-    // Obtenir la bounding box transformée
+    // Acces a l'aiScene root vivant (l'Importer reste en vie tant que le
+    // Model existe -> le aiScene* + aiNode* et les aiAnimation* sont
+    // toujours valides). Utilise par Animator::setup pour snapshoter la
+    // hierarchie d'os et permettre la lecture bone-par-bone des clips.
+    const aiScene* getScene() const { return m_scene; }
+    const aiNode*  getRootNode() const { return m_scene ? m_scene->mRootNode : nullptr; }
+
+    // Obtenir la bounding box transformï¿½e
     BoundingBox getTransformedBoundingBox(const glm::mat4& modelMatrix) const;
     BoundingSphere getTransformedBoundingSphere(const glm::mat4& modelMatrix) const;
 
-    // Vérifier collision avec un autre modèle
+    // Vï¿½rifier collision avec un autre modï¿½le
     bool checkCollision(const Model& other, const glm::mat4& thisMatrix,
         const glm::mat4& otherMatrix) const;
 
-    // Raycast - renvoie true si le rayon touche le modèle
+    // Raycast - renvoie true si le rayon touche le modï¿½le
     bool raycast(const glm::vec3& origin, const glm::vec3& direction,
         const glm::mat4& modelMatrix, float& distance) const;
 
@@ -98,7 +117,18 @@ private:
     std::unordered_map<std::string, unsigned int> m_loadedTextures;
     std::vector<Mesh*> m_meshes;
 
-    // Hitbox du modèle entier
+    // Importer assimp + scene : conserves en vie au dela de loadModel() pour
+    // que le aiNode* reste adressable (utilise par Animator). L'Importe detient
+    // le scene et le detruit automatiquement quand le Model est detruit.
+    Assimp::Importer m_importer;
+    const aiScene*   m_scene = nullptr;
+
+    // Donnees de skinning (optionnelles : vide pour les mesh non rigges)
+    std::unordered_map<std::string, BoneInfo> m_boneInfoMap; // nom de bone -> id + offset
+    int                                       m_boneCounter = 0;
+    std::vector<AnimationClip>                m_animations;    // clips issus de aiScene->mAnimations
+
+    // Hitbox du modï¿½le entier
     BoundingBox m_boundingBox;
     BoundingSphere m_boundingSphere;
 
@@ -107,15 +137,29 @@ private:
 
     // Chargement
     unsigned int loadTextureFromFile(const std::string& path);
+    // Charge une texture embarquee (GLB/GLTF) depuis un aiTexture. Les GLB
+    // stockent leurs textures dans le binaire ; Assimp les expose via des
+    // chemins "*0", "*1" (index dans scene->mTextures[]). Deux cas :
+    //  - mHeight==0 : texture compressee (PNG/JPEG) -> stbi_load_from_memory
+    //  - mHeight!=0 : pixels bruts BGRA8888 -> upload direct avec GL_BGRA
+    // cacheKey = le chemin "*N" original (sert de cle de cache partagee).
+    unsigned int loadEmbeddedTexture(const aiTexture* texture, const std::string& cacheKey);
     void loadModel(const std::string& path);
     void processNode(aiNode* node, const aiScene* scene);
     Mesh* processMesh(aiMesh* mesh, const aiScene* scene);
+
+    // Extraction skinning : peuple m_boneInfoMap a partir de mesh->mBones[],
+    // met a jour les bone IDs + weights des SkinnedVertex.
+    void extractBoneDataFromMesh(const aiMesh* mesh, std::vector<Vertex>& vertices);
+
+    // Extrait m_animations a partir de scene->mAnimations (lecture seule).
+    void loadAnimations(const aiScene* scene);
 
     // Calcul des hitbox
     void calculateBoundingBox();
     void calculateBoundingSphere();
 
-    // Création du mesh de debug
+    // Crï¿½ation du mesh de debug
     void createDebugBoundingBoxMesh();
 
     // Helpers pour les textures

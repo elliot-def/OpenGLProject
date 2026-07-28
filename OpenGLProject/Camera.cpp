@@ -1,28 +1,28 @@
 #include "Camera.h"
 
 Camera::Camera(glm::vec3 position, Direction* direction) :
-    m_position(position),                     // Position de départ de la caméra
-    m_direction(direction),                   // Point regardé
-    m_upVector(glm::vec3(0.0f, 1.0f, 0.0f)),  // Définit l'axe vertical (Y+)
-    m_renderer(nullptr)                       // Pas encore lié à un renderer
+    m_position(position),                     // Position de dï¿½part de la camï¿½ra
+    m_direction(direction),                   // Point regardï¿½
+    m_upVector(glm::vec3(0.0f, 1.0f, 0.0f)),  // Dï¿½finit l'axe vertical (Y+)
+    m_renderer(nullptr)                       // Pas encore liï¿½ ï¿½ un renderer
 {
-    // Ici tu peux ajouter d’autres initialisations si nécessaire
+    // Ici tu peux ajouter dï¿½autres initialisations si nï¿½cessaire
 }
 
 void Camera::update(Entity* entity) {
-    // On place la caméra à la position et la direction de l’entité
+    // On place la camï¿½ra ï¿½ la position et la direction de lï¿½entitï¿½
     m_position = entity->getPosition() + Constants::PLAYER_EYE_HEIGHT;
 
     m_front = entity->getDirectionVector();
 }
 
-glm::mat4 Camera::getViewMatrix() {
-    // Petit debug dans la console pour voir la position de la caméra
+glm::mat4 Camera::getViewMatrix() const {
+    // Petit debug dans la console pour voir la position de la camï¿½ra
     /*std::cout << "Camera Position: ("
         << m_position.x << ", "
         << m_position.y << ", "
         << m_position.z << ")\n";*/
 
-        // glm::lookAt crée une matrice View en utilisant position, target et upVector
+        // glm::lookAt crï¿½e une matrice View en utilisant position, target et upVector
     return glm::lookAt(m_position, m_position + m_front, m_upVector);
 }

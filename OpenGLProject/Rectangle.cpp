@@ -11,9 +11,27 @@ Rectangle::Rectangle(Shader* shader, float x, float y, float width, float height
 Rectangle::~Rectangle() = default;
 
 void Rectangle::draw() {
+    // ── OUTLINE PASS ─────────────────────────────────────────────────────────────
+    if (m_outlineEnabled && m_outlineShader) {
+        m_outlineShader->use();
+        Transformation outline_trans;
+        glm::vec2 outline_size = m_size * (1.0f + m_outlineThickness);
+        outline_trans.translate(m_position)
+            .rotate(glm::vec3(0.0f, 0.0f, 1.0f), m_rotation)
+            .scale(glm::vec3(outline_size.x, outline_size.y, 1.0f));
+        m_outlineShader->setTransformation("uModel", &outline_trans);
+        m_outlineShader->setupMatrices2D();
+        m_outlineShader->setMat4("uView", glm::mat4(1.0f));
+        m_outlineShader->setVec3("uOutlineColor", m_outlineColor);
+
+        glDepthMask(GL_FALSE);
+        SharedQuad::draw();
+        glDepthMask(GL_TRUE);
+    }
+
     m_shader->use();
 
-    // Creer la transformation compl�te avec votre classe
+    // Creer la transformation compl�te avec votre classe
     Transformation trans;
     trans.translate(m_position)                                  // 1. Position
         .rotate(glm::vec3(0.0f, 0.0f, 1.0f), m_rotation)         // 2. Rotation

@@ -7,11 +7,13 @@
 #include <vector>
 #include <iostream>
 
+#include <glad/glad.h>  // GL_FALSE / glUniformMatrix4fv / glDrawArrays / etc.
+
 TextRenderer::TextRenderer(ShaderManager* shaderManager)
     : m_shaderManager(shaderManager), m_fontSize(48.0f), m_VAO(0), m_VBO(0), m_shaderProgram(0),
     m_screenWidth(Constants::WINDOW_WIDTH), m_screenHeight(Constants::WINDOW_HEIGHT) {
 
-    // Créer le shader
+    // Crï¿½er le shader
 	m_shaderProgram = m_shaderManager->getShader("text")->getID();
 
     // Configuration du VAO/VBO
@@ -58,7 +60,7 @@ bool TextRenderer::loadFont(const std::string& fontPath, float fontSize) {
 
     float scale = stbtt_ScaleForPixelHeight(&font, fontSize);
 
-    // Désactiver l'alignement par défaut d'OpenGL
+    // Dï¿½sactiver l'alignement par dï¿½faut d'OpenGL
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     for (unsigned char c = 0; c < 128; c++) {
@@ -117,11 +119,11 @@ float TextRenderer::getTextHeight(const std::string& text, float scale) {
         if (m_characters.find(c) != m_characters.end()) {
             Character ch = m_characters[c];
 
-            // Point le plus haut du caractère
+            // Point le plus haut du caractï¿½re
             float top = ch.bearingY * scale;
             maxBearingY = std::max(maxBearingY, top);
 
-            // Point le plus bas du caractère
+            // Point le plus bas du caractï¿½re
             float bottom = (ch.bearingY - ch.sizeY) * scale;
             minY = std::min(minY, bottom);
         }

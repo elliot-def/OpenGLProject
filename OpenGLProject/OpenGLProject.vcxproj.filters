@@ -55,6 +55,9 @@
     <Filter Include="Fichiers de ressources\shaders\model">
       <UniqueIdentifier>{a7cbd5eb-282c-4309-a818-edc4758ad80c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Fichiers de ressources\shaders\outline">
+      <UniqueIdentifier>{be1cf2d3-8e7f-4a28-bf0d-4b2bfbb1b001}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Fichiers d%27en-tête\Shape">
       <UniqueIdentifier>{3d0cec28-26b6-4ccb-917f-bd6b8483e45a}</UniqueIdentifier>
     </Filter>
@@ -114,6 +117,12 @@
     </Filter>
     <Filter Include="Fichiers sources\Collision">
       <UniqueIdentifier>{e5e80e73-48f9-472b-99b0-86a2fdfd054e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers sources\Render">
+      <UniqueIdentifier>{4f3e7d8a-1c2b-4e9f-a8d6-7b3c2e1f0a4b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers d%27en-tête\Render">
+      <UniqueIdentifier>{9a8b7c6d-5e4f-4a3b-b2c1-3d2e1f0a4b5c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -288,6 +297,9 @@
     <ClCompile Include="CollisionManager.cpp">
       <Filter>Fichiers sources\Collision</Filter>
     </ClCompile>
+    <ClCompile Include="ArmsRenderer.cpp">
+      <Filter>Fichiers sources\Render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h">
@@ -308,6 +320,9 @@
     <ClInclude Include="Vertex.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
+    <ClInclude Include="win_compat.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
     <ClInclude Include="Mesh.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
@@ -324,6 +339,9 @@
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="ShaderManager.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="ShaderType.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="TextureManager.h">
@@ -476,6 +494,9 @@
     <ClInclude Include="BVHNode.h">
       <Filter>Fichiers d%27en-tête\Collision</Filter>
     </ClInclude>
+    <ClInclude Include="ArmsRenderer.h">
+      <Filter>Fichiers d%27en-tête\Render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\cube\cube.frag">
@@ -510,6 +531,12 @@
     </None>
     <None Include="res\shaders\model\model.vert">
       <Filter>Fichiers de ressources\shaders\model</Filter>
+    </None>
+    <None Include="res\shaders\outline\outline.frag">
+      <Filter>Fichiers de ressources\shaders\outline</Filter>
+    </None>
+    <None Include="res\shaders\outline\outline.vert">
+      <Filter>Fichiers de ressources\shaders\outline</Filter>
     </None>
     <None Include="res\shaders\shape\shape.frag">
       <Filter>Fichiers de ressources\shaders\shape</Filter>

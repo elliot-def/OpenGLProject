@@ -11,6 +11,8 @@
 #include "InputManager.h"
 #include "Renderer.h"
 #include "constants.h"
+
+#include <glad/glad.h>  // dessin 2D des menus: glEnable / glDisable / glBlendFunc
 #include <chrono>
 
 MenuManager::MenuManager(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, TextureManager* textureManager, ShaderManager* shaderManager, CursorManager* cursorManager) :

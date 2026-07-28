@@ -7,25 +7,26 @@
 
 #include "Transformation.h"
 #include "Camera.h"
+#include "ShaderType.h"
 
 // Classe qui encapsule un shader OpenGL (vertex + fragment)
-// Gère la compilation, le linkage, l'utilisation et l'envoi des variables uniformes
+// Gï¿½re la compilation, le linkage, l'utilisation et l'envoi des variables uniformes
 class Shader {
 public:
     // Constructeur : compile et lie les shaders
-    // vertexSource et fragmentSource peuvent être des chemins de fichiers ou du code source directement
+    // vertexSource et fragmentSource peuvent ï¿½tre des chemins de fichiers ou du code source directement
     Shader(const std::string& vertexSource, const std::string& fragmentSource, Camera* camera, bool isFile);
 
-    // Destructeur : supprime le programme shader côté GPU
+    // Destructeur : supprime le programme shader cï¿½tï¿½ GPU
     ~Shader();
 
     // Active ce shader pour le rendu et envoie les matrices model, view, projection
     void use();
 
-    // Associe une texture 2D à un uniform du shader
+    // Associe une texture 2D ï¿½ un uniform du shader
     void setTexture(const std::string& name, unsigned int textureID, unsigned int unit);
 
-    // Envoie une transformation encapsulée dans la classe Transformation
+    // Envoie une transformation encapsulï¿½e dans la classe Transformation
     void setTransformation(const std::string& name, Transformation* trans);
 
     // Vide le cache des uniforms
@@ -38,7 +39,7 @@ public:
     void setupMatrices();
     void setupMatrices2D();
 
-    // Méthodes pour envoyer des variables uniformes simples
+    // Mï¿½thodes pour envoyer des variables uniformes simples
     void setBool(const std::string& name, bool value);
     void setInt(const std::string& name, int value);
     void setFloat(const std::string& name, float value);
@@ -52,21 +53,27 @@ public:
     void setMat3(const std::string& name, const glm::mat3& mat);
     void setMat4(const std::string& name, const glm::mat4& mat);
 
-    // Méthodes pour modifier les matrices internes du shader
+    // Envoie un tableau de mat4 (utilise pour uBoneMatrices du skinning).
+    // count = nombre de matrices ; count > 0 requis.
+    void setMat4Array(const std::string& name, const glm::mat4* mats, int count);
+
+    // Mï¿½thodes pour modifier les matrices internes du shader
     void setModel(const glm::mat4& model) { m_model = model; }
     void setView(const glm::mat4& view) { m_view = view; }
     void setProjection(const glm::mat4& projection) { m_projection = projection; }
 
-    // Méthodes pour obtenir les matrices internes
+    // Mï¿½thodes pour obtenir les matrices internes
     const glm::mat4& getModel() const { return m_model; }
     const glm::mat4& getView() const { return m_view; }
     const glm::mat4& getProjection() const { return m_projection; }
 	inline const Camera* getCamera() const { return m_camera; }
 	inline const std::string getName() const { return m_name; }
+	inline ShaderType getType() const { return m_type; }
 private:
     unsigned int m_id;  // ID OpenGL du programme shader
-    Camera* m_camera;  // Pointeur vers la caméra pour récupérer la vue
+    Camera* m_camera;  // Pointeur vers la camï¿½ra pour rï¿½cupï¿½rer la vue
 	std::string m_name; // Noms ou sources des shaders
+	ShaderType m_type = ShaderType::Unknown; // Role du shader, resolu une fois dans le constructeur
     glm::mat4 m_projection, m_projection2D, m_model, m_view = glm::mat4(1.0f);  // Matrices de transformation
     std::unordered_map<std::string, int> m_uniformLocations; // Cache des emplacements des uniforms
 
@@ -76,10 +83,10 @@ private:
     // Compile un shader GLSL (vertex ou fragment)
     unsigned int compile(unsigned int type, const std::string& source);
 
-    // Vérifie les erreurs de compilation ou de linkage
+    // Vï¿½rifie les erreurs de compilation ou de linkage
     void checkCompileErrors(unsigned int shader, std::string type);
 
-    // Récupère l'emplacement d'un uniform dans le shader (avec cache)
+    // Rï¿½cupï¿½re l'emplacement d'un uniform dans le shader (avec cache)
     int getUniformLocation(const std::string& name);
 
 	

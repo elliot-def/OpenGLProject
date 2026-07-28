@@ -1,8 +1,9 @@
 #pragma once
 
-#define NOMINMAX
-#include <Windows.h>
-
+// Aucune inclusion Windows dans ce header : CollisionManager est de la logique
+// métier pure (AABB / sphères / vecteurs). Le seul besoin natif (<Windows.h>,
+// #define NOMINMAX) vit dans CollisionManager.cpp si jamais il s'avère
+// nécessaire — pas dans l'API publique.
 
 #include <vector>
 #include <string>
