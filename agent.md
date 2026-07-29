@@ -123,6 +123,7 @@ les transparents sont triés par distance caméra puis dessinés avec `glDepthMa
 ### 4.1 Game (`Game.h/.cpp`)
 - `initialize()` crée les managers dans le bon ordre (le `Player` est créé après `CollisionManager`).
 - Appelle `m_collisionManager->buildBVH()` après avoir ajouté tous les statiques (sinon la requête BVH est désactivée — `m_useBVH=false`).
+- **Règle de propreté** : `Game.cpp` ne doit PAS contenir de logique de chargement d'assets, de setup d'animation, ou de code spécifique à un sous-système. Chaque nouveau sous-système (ex: bras riggés, armes, inventaire…) doit être extrait dans une classe Manager dédiée (ex: `ArmsManager`). `Game::initialize()` ne fait qu'instancier et appeler `manager->initialize(...)`. `Game::update()` et `Game::draw()` délèguent aux managers. Le code de `Game.cpp` doit tenir en ~50 lignes utiles hors includes et boilerplate. Si un bloc de code dépasse 10 lignes dans `Game.cpp`, c'est qu'il mérite sa propre classe.
 
 ### 4.2 Window (`Window.h/.cpp`)
 - Wrapper GLFW3. Forward-declare `GLFWwindow` dans le header (n'inclut jamais GLFW dans l'API publique).

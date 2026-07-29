@@ -176,6 +176,7 @@ bool Model::raycast(const glm::vec3& origin, const glm::vec3& direction,
 }
 
 void Model::loadModel(const std::string& path) {
+    m_processedMeshIndices.clear();  // reset dedup entre deux load successifs (defensif)
     m_scene = m_importer.ReadFile(path,
         aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals
         // Pas de LimBoneWeights (on garde MAX_BONE_INFLUENCE=4 dans le shader)
@@ -195,7 +196,6 @@ void Model::loadModel(const std::string& path) {
     // Skinning / animations : on extrait les bones par mesh et les animations
     // du scene apres que tous les meshes ont ete processe (ainsi la boneInfoMap
     // partage la meme numerotation pour tous les meshes du modele).
-    loadAnimations(scene);
 
     processNode(scene->mRootNode, scene);
 }
@@ -203,7 +203,17 @@ void Model::loadModel(const std::string& path) {
 void Model::processNode(aiNode* node, const aiScene* scene) {
     // Traiter tous les meshes du noeud
     for (unsigned int i = 0; i < node->mNumMeshes; i++) {
-        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+        unsigned int meshIndex = node->mMeshes[i];
+        // D�duplication : certains exports GLB/GLTF r�f�rencent le m�me mesh
+        // depuis plusieurs nœuds (fr�quent avec Mixamo/Blender). Sans ce skip,
+        // deux Mesh* identiques sont dessin�s � la m�me position → z-fighting.
+        if (m_processedMeshIndices.count(meshIndex)) {
+            std::cout << "[Model] Mesh duplicate ignor� (index=" << meshIndex
+                      << ", node=\"" << node->mName.C_Str() << "\")" << std::endl;
+            continue;
+        }
+        m_processedMeshIndices.insert(meshIndex);
+        aiMesh* mesh = scene->mMeshes[meshIndex];
         m_meshes.push_back(processMesh(mesh, scene));
     }
 
@@ -305,113 +315,8 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     // la construction du Mesh (qui appelle glBufferData avec sizeof(Vertex)).
     // Sinon la VBO GPU serait uploadee avec tous bone IDs a 0 et le shader
     // skinned recevrait une identite -> l'animation ne produirait aucun effet.
-    if (mesh->mNumBones > 0) {
-        extractBoneDataFromMesh(mesh, vertices);
-    }
 
     return new Mesh(vertices, indices, mask, textureIDs);
-}
-
-void Model::extractBoneDataFromMesh(const aiMesh* mesh, std::vector<Vertex>& vertices) {
-    // Pour chaque bone declare par assimp sur ce mesh :
-    //  1. Resoudre / creer un BoneInfo (id unique global).
-    //  2. Pour chaque vertex reference par ce bone, ajouter une influence.
-    for (unsigned int boneIdx = 0; boneIdx < mesh->mNumBones; ++boneIdx) {
-        const aiBone* aiBone = mesh->mBones[boneIdx];
-        std::string boneName(aiBone->mName.C_Str());
-        int boneID = -1;
-
-        // Lookup ou allocation d'un id pour ce bone (global au modele).
-        auto it = m_boneInfoMap.find(boneName);
-        if (it == m_boneInfoMap.end()) {
-            BoneInfo info;
-            info.id = m_boneCounter++;
-            info.offsetMatrix = aiMatrixToGlm(aiBone->mOffsetMatrix);
-            m_boneInfoMap[boneName] = info;
-            boneID = info.id;
-        }
-        else {
-            boneID = it->second.id;
-        }
-
-        // Pour chaque influence (vertex, weight) sur ce bone, on accumule
-        // dans la liste d'influences du vertex (jusqu'a MAX_BONE_INFLUENCE).
-        for (unsigned int w = 0; w < aiBone->mNumWeights; ++w) {
-            unsigned int vertexId = aiBone->mWeights[w].mVertexId;
-            float weight = aiBone->mWeights[w].mWeight;
-            if (vertexId >= vertices.size()) continue;
-
-            Vertex& v = vertices[vertexId];
-            // Cherche un slot libre dans m_weights.
-            for (int slot = 0; slot < MAX_BONE_INFLUENCE; ++slot) {
-                if (v.m_weights[slot] == 0.0f) {
-                    v.m_boneIDs[slot] = boneID;
-                    v.m_weights[slot] = weight;
-                    break;
-                }
-            }
-        }
-    }
-}
-
-void Model::loadAnimations(const aiScene* scene) {
-    m_animations.clear();
-    if (!scene) return;
-
-    for (unsigned int i = 0; i < scene->mNumAnimations; ++i) {
-        const aiAnimation* aiAnim = scene->mAnimations[i];
-        AnimationClip clip;
-        clip.name = std::string(aiAnim->mName.C_Str());
-        clip.duration = static_cast<double>(aiAnim->mDuration);
-        clip.ticksPerSecond = (aiAnim->mTicksPerSecond != 0.0)
-                            ? static_cast<double>(aiAnim->mTicksPerSecond)
-                            : 25.0; // fallback defensif
-        clip.channels.reserve(aiAnim->mNumChannels);
-
-        for (unsigned int ch = 0; ch < aiAnim->mNumChannels; ++ch) {
-            const aiNodeAnim* nodeAnim = aiAnim->mChannels[ch];
-            AnimationChannel channel;
-            channel.nodeName = std::string(nodeAnim->mNodeName.C_Str());
-
-            channel.positionKeys.reserve(nodeAnim->mNumPositionKeys);
-            for (unsigned int k = 0; k < nodeAnim->mNumPositionKeys; ++k) {
-                PositionKey pk;
-                pk.time = static_cast<double>(nodeAnim->mPositionKeys[k].mTime);
-                pk.value = glm::vec3(
-                    nodeAnim->mPositionKeys[k].mValue.x,
-                    nodeAnim->mPositionKeys[k].mValue.y,
-                    nodeAnim->mPositionKeys[k].mValue.z);
-                channel.positionKeys.push_back(pk);
-            }
-
-            channel.rotationKeys.reserve(nodeAnim->mNumRotationKeys);
-            for (unsigned int k = 0; k < nodeAnim->mNumRotationKeys; ++k) {
-                RotationKey rk;
-                rk.time = static_cast<double>(nodeAnim->mRotationKeys[k].mTime);
-                rk.value = glm::quat(
-                    nodeAnim->mRotationKeys[k].mValue.w,
-                    nodeAnim->mRotationKeys[k].mValue.x,
-                    nodeAnim->mRotationKeys[k].mValue.y,
-                    nodeAnim->mRotationKeys[k].mValue.z);
-                channel.rotationKeys.push_back(rk);
-            }
-
-            channel.scaleKeys.reserve(nodeAnim->mNumScalingKeys);
-            for (unsigned int k = 0; k < nodeAnim->mNumScalingKeys; ++k) {
-                ScaleKey sk;
-                sk.time = static_cast<double>(nodeAnim->mScalingKeys[k].mTime);
-                sk.value = glm::vec3(
-                    nodeAnim->mScalingKeys[k].mValue.x,
-                    nodeAnim->mScalingKeys[k].mValue.y,
-                    nodeAnim->mScalingKeys[k].mValue.z);
-                channel.scaleKeys.push_back(sk);
-            }
-
-            clip.channels.push_back(std::move(channel));
-        }
-
-        m_animations.push_back(std::move(clip));
-    }
 }
 
 std::vector<unsigned int> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type) {

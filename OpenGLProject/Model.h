@@ -7,11 +7,10 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "SkinningData.h"
-#include "AnimationClip.h"
-#include "Animator.h"
-#include "Vertex.h" // std::vector<Vertex>& dans extractBoneDataFromMesh (type complet requis).
+#include "Vertex.h"
 
 class Shader;
 class Mesh;
@@ -77,12 +76,6 @@ public:
 
     const std::vector<Mesh*>& getMeshes() const { return m_meshes; }
 
-    // Skeleton / animation : retourne la map nom->BoneInfo (lecture seule)
-    // et le vecteur d'animations extraites du scene assimp. Le Animator utilise
-    // ces acces pour animer le modele chaque frame.
-    const std::unordered_map<std::string, BoneInfo>& getBoneInfoMap() const { return m_boneInfoMap; }
-    const std::vector<AnimationClip>& getAnimations() const { return m_animations; }
-
     // Getters pour les hitbox
     const BoundingBox& getBoundingBox() const { return m_boundingBox; }
     const BoundingSphere& getBoundingSphere() const { return m_boundingSphere; }
@@ -123,17 +116,17 @@ private:
     Assimp::Importer m_importer;
     const aiScene*   m_scene = nullptr;
 
-    // Donnees de skinning (optionnelles : vide pour les mesh non rigges)
-    std::unordered_map<std::string, BoneInfo> m_boneInfoMap; // nom de bone -> id + offset
-    int                                       m_boneCounter = 0;
-    std::vector<AnimationClip>                m_animations;    // clips issus de aiScene->mAnimations
-
     // Hitbox du mod�le entier
     BoundingBox m_boundingBox;
     BoundingSphere m_boundingSphere;
 
     // Mesh pour visualiser la bounding box
     Mesh* m_debugBoundingBoxMesh;
+
+    // D�duplication : certains exports GLB/GLTF r�f�rencent le m�me aiMesh
+    // depuis plusieurs nœuds (fr�quent avec Mixamo/Blender). Sans ce set,
+    // deux Mesh* identiques sont pouss�s dans m_meshes → z-fighting � l'�cran.
+    std::unordered_set<unsigned int> m_processedMeshIndices;
 
     // Chargement
     unsigned int loadTextureFromFile(const std::string& path);
@@ -147,13 +140,6 @@ private:
     void loadModel(const std::string& path);
     void processNode(aiNode* node, const aiScene* scene);
     Mesh* processMesh(aiMesh* mesh, const aiScene* scene);
-
-    // Extraction skinning : peuple m_boneInfoMap a partir de mesh->mBones[],
-    // met a jour les bone IDs + weights des SkinnedVertex.
-    void extractBoneDataFromMesh(const aiMesh* mesh, std::vector<Vertex>& vertices);
-
-    // Extrait m_animations a partir de scene->mAnimations (lecture seule).
-    void loadAnimations(const aiScene* scene);
 
     // Calcul des hitbox
     void calculateBoundingBox();

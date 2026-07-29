@@ -8,7 +8,6 @@
 
 #include "gamestate.h"
 #include "SoundManager.h"
-#include "Animator.h"
 
 // D�clarations anticip�es
 class Window;
@@ -27,12 +26,11 @@ class Socket;
 class MenuManager;
 class TextRenderer;
 class ModelEntity;
-class Model;
 
 class Game {
 public:
     Game();
-    ~Game(); // tu peux m�me le supprimer si tu n�as rien de sp�cial � lib�rer
+    ~Game();
 
     void run();
     void stop();
@@ -58,11 +56,6 @@ private:
     std::unique_ptr<std::vector<std::unique_ptr<TextRenderer>>> m_textRenderers;
 
     ModelEntity* m_modelEntity;
-
-    // Avant-bras rigues first-person : modele skinned importe depuis
-    // res/rigging/arm/ + Animator pour la lecture des AnimationClip.
-    std::unique_ptr<Model>    m_armsModel;
-    std::unique_ptr<Animator> m_armsAnimator;
 
     bool m_isRunning = true;
 

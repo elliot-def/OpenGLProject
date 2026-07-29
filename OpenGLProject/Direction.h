@@ -27,7 +27,7 @@ public:
 
     glm::vec3 getDirectionVectorKeepY() {
         glm::vec3 v = getDirectionVector();
-        return glm::vec3(v.x, 0, v.z);
+        return glm::normalize(glm::vec3(v.x, 0, v.z));
     }
 
 private:

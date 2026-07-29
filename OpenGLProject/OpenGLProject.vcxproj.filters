@@ -118,12 +118,6 @@
     <Filter Include="Fichiers sources\Collision">
       <UniqueIdentifier>{e5e80e73-48f9-472b-99b0-86a2fdfd054e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Fichiers sources\Render">
-      <UniqueIdentifier>{4f3e7d8a-1c2b-4e9f-a8d6-7b3c2e1f0a4b}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Render">
-      <UniqueIdentifier>{9a8b7c6d-5e4f-4a3b-b2c1-3d2e1f0a4b5c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Fichiers de ressources\shaders\skinned">
       <UniqueIdentifier>{4f1a7e15-530a-448d-88a0-39be2c6b05df}</UniqueIdentifier>
     </Filter>
@@ -300,14 +294,8 @@
     <ClCompile Include="CollisionManager.cpp">
       <Filter>Fichiers sources\Collision</Filter>
     </ClCompile>
-    <ClCompile Include="ArmsRenderer.cpp">
-      <Filter>Fichiers sources\Render</Filter>
-    </ClCompile>
     <ClCompile Include="Outlineable.h">
       <Filter>Fichiers d%27en-tête</Filter>
-    </ClCompile>
-    <ClCompile Include="Animator.cpp">
-      <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -503,16 +491,7 @@
     <ClInclude Include="BVHNode.h">
       <Filter>Fichiers d%27en-tête\Collision</Filter>
     </ClInclude>
-    <ClInclude Include="ArmsRenderer.h">
-      <Filter>Fichiers d%27en-tête\Render</Filter>
-    </ClInclude>
     <ClInclude Include="SkinningData.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="AnimationClip.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Animator.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>

@@ -31,7 +31,5 @@
 #include "ModelEntity.h"
 #include "CollisionManager.h"
 #include "SharedQuad.h"
-#include "ArmsRenderer.h"
-
 
 #include "constants.h"

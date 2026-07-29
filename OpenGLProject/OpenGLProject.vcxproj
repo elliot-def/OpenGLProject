@@ -198,8 +198,6 @@
     <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="Transformation.h" />
     <ClCompile Include="Texture.cpp" />
-    <ClCompile Include="Animator.cpp" />
-    <ClCompile Include="ArmsRenderer.cpp" />
     <ClCompile Include="Triangle.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
@@ -268,9 +266,6 @@
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="win_compat.h" />
     <ClInclude Include="SkinningData.h" />
-    <ClInclude Include="AnimationClip.h" />
-    <ClInclude Include="Animator.h" />
-    <ClInclude Include="ArmsRenderer.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
