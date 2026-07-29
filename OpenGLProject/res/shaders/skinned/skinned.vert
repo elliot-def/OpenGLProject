@@ -1,81 +1,74 @@
 #version 330 core
 
-// Attributs finaux du Vertex (cf. Vertex.h) :
-//   0 = aPos         (vec3) — toujours actif
-//   1 = aNormal      (vec3) — optionnel
-//   2 = aColor       (vec3) — optionnel (non utilise ici)
-//   3 = aTexCoords   (vec2) — optionnel
-//   4 = aBoneIDs[4]  (int,  glVertexAttribIPointer) — skinning
-//   5 = aWeights[4]  (float) — skinning
+// ─────────────────────────────────────────────────────────────────────────────
+// skinned.vert : vertex shader pour les modeles rigges (skinned).
 //
-// Convention identique a res/shaders/model/model.vert, plus l'extension
-// skinning 4+5. Le mesh non-rig (Cube, backpack) laisse les boneIDs a 0 et
-// les weights a 0 : le garde-fou wsum<=0 ci-dessous bascule sur une
-// transformation identite -> pas besoin d'un deuxieme shader "non-skinned".
-layout (location = 0) in vec3  aPos;
-layout (location = 1) in vec3  aNormal;
-layout (location = 3) in vec2  aTexCoords;
-layout (location = 4) in ivec4 aBoneIDs;
-layout (location = 5) in vec4  aWeights;
+// Convention uniformes (alignee avec model.vert) :
+//   model, view, projection : MVP standard
+//   viewPos                  : position camera (calculee cote C++)
+//   uBoneMatrices[MAX_BONES] : palette de matrices finals (offset * global).
+//
+// Convention attribs (loc):
+//   0 vec3 aPos
+//   1 vec3 aNormal
+//   2 vec3 aColor (optionnel)
+//   3 vec2 aTexCoords
+//   4 ivec4 aBoneIDs   (optionnel — skinned only)
+//   5 vec4  aWeights   (optionnel — skinned only)
+//
+// Si weights somme a 0 (mesh non-skinne), on retombe sur le model brut
+// (multiplication par identite) pour eviter tout deplacement parasite.
+// ─────────────────────────────────────────────────────────────────────────────
 
-out vec2 TexCoords;
-out vec3 FragPos;
-out vec3 Normal;
+layout(location = 0) in vec3 aPos;
+layout(location = 1) in vec3 aNormal;
+layout(location = 2) in vec3 aColor;
+layout(location = 3) in vec2 aTexCoords;
+layout(location = 4) in ivec4 aBoneIDs;
+layout(location = 5) in vec4  aWeights;
 
-// Matrices espace monde : envoyees par Shader::setupMatrices().
+const int MAX_BONES = 100;
+
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-
-// Palette de bones. Taille 100 (cf. MAX_BONES dans ArmsRenderer.cpp), uploadee
-// via Shader::setMat4Array("uBoneMatrices", padded, 100). Le slot i contient
-// globalTransform * offsetMatrix, calcule par Animator::updateNodeHierarchy
-// (cf. OpenGLProject/Animator.cpp).
-const int MAX_BONE_INFLUENCE = 4;
-const int MAX_BONES          = 100;
 uniform mat4 uBoneMatrices[MAX_BONES];
 
+out vec3 FragPos;
+out vec3 Normal;
+out vec3 VertexColor;
+out vec2 TexCoords;
+
 void main() {
-    // Blend pondere des transformations bone-espace appliquées au vertex
-    // courant. Pour chaque influence non-nulle (w > 0) :
-    //   pos += bone * vec4(localPos, 1) * w
-    //   nrm += mat3(bone) * localNormal * w (la rotation seule du bone)
-    vec4 totalPos = vec4(0.0);
-    vec3 totalNor = vec3(0.0);
-    float wsum    = 0.0;
-
-    for (int i = 0; i < MAX_BONE_INFLUENCE; ++i) {
-        float w = aWeights[i];
-        if (w > 0.0) {
-            int id = aBoneIDs[i];
-            mat4 bone = uBoneMatrices[id];
-            totalPos += bone * vec4(aPos, 1.0) * w;
-            totalNor += mat3(bone) * aNormal * w;
-            wsum += w;
-        }
+    // 1. Application du skinning (matrices finals par bone, ponderees par
+    //    influence). Si le mesh n'est pas rigge (weights=[0,0,0,0]), le total
+    //    est identite -> pas de transformation sur la position.
+    mat4 boneTransform = mat4(1.0);
+    float wsum = aWeights.x + aWeights.y + aWeights.z + aWeights.w;
+    if (wsum > 1e-5) {
+        mat4 m0 = uBoneMatrices[aBoneIDs[0]] * aWeights[0];
+        mat4 m1 = uBoneMatrices[aBoneIDs[1]] * aWeights[1];
+        mat4 m2 = uBoneMatrices[aBoneIDs[2]] * aWeights[2];
+        mat4 m3 = uBoneMatrices[aBoneIDs[3]] * aWeights[3];
+        boneTransform = m0 + m1 + m2 + m3;
     }
 
-    // Garde-fou : mesh non-rig (tous weights a 0) -> transformation identite.
-    // Assimp remplit toujours les bone slots quand le mesh est rig, donc
-    // wsum == 0 implique un mesh classique (Cube, backpack, etc.).
-    if (wsum <= 0.0) {
-        totalPos = vec4(aPos, 1.0);
-        totalNor = aNormal;
-    } else {
-        // Normalisation : compense la normalisation faite cote CPU par
-        // Model::extractBoneDataFromMesh (Assimp normalise aussi), mais en
-        // cas de derive (somme != 1) on evite les artefacts de scale.
-        totalPos = vec4(totalPos.xyz / wsum, 1.0);
-        totalNor = normalize(totalNor / wsum);
-    }
+    vec4 posModel = boneTransform * vec4(aPos, 1.0);
 
-    // Passage en espace monde puis projection.
-    FragPos   = vec3(model * totalPos);
-    // Normale : mat3(transpose(inverse(model))) — correct pour les scales
-    // non-uniformes (mat3(model) ne suffit pas). Cout CPU negligeable sur
-    // les avant-bras (low poly).
-    Normal    = mat3(transpose(inverse(model))) * totalNor;
-    TexCoords = aTexCoords;
+    // 2. Normale transformee uniquement par la partie rotation/scale de
+    //    boneTransform (le bone "L" est scale non-uniforme possible -> on
+    //    utilise la transposee de l'inverse pour eviter les mauvaises
+    //    normales sur mesh rigides).
+    mat3 normalMatrix = mat3(transpose(inverse(boneTransform)));
+    vec3 normalModel = normalMatrix * aNormal;
 
-    gl_Position = projection * view * vec4(FragPos, 1.0);
+    // 3. Position finale.
+    vec4 worldPos = model * posModel;
+    FragPos      = vec3(worldPos);
+    Normal       = mat3(model) * normalModel;
+    VertexColor  = aColor;
+    TexCoords    = aTexCoords;
+
+    gl_Position = projection * view * worldPos;
+    //gl_Position = projection * view * model * vec4(aPos, 1.0);
 }

@@ -225,74 +225,53 @@ void Animator::playClip(const std::string& clipName) {
 }
 
 void Animator::update(float deltaTime) {
-    // m_currentClipIndex = -1;
-    if (!m_hasRootNode || m_currentClipIndex < 0) {
-        // T-pose : identite partout (deja initialise dans m_finalBoneMatrices).
-        return;
-    }
-    // Pour l'instant : lecture simple d'un seul clip. Le blend multi-clip est
-    // un slot futur (l'API m_activeClips est deja prevue dans AnimationClip).
-    const AnimationClip& clip = m_clips[m_currentClipIndex];
-    m_currentTime += static_cast<double>(deltaTime) * clip.ticksPerSecond;
-    if (clip.duration > 0.0 && m_currentTime > clip.duration) {
-        m_currentTime = std::fmod(m_currentTime, clip.duration);
-    }
+    if (!m_hasRootNode || m_currentClipIndex < 0) return;
 
-    // Indexation nom de channel -> channel dans le clip (lookup O(N) ; N petit).
-    // Pour accelerer on pourrait pre-index une fois, mais N reste borne (~10-20 bones max).
+        const AnimationClip& clip = m_clips[m_currentClipIndex];
+        m_currentTime += static_cast<double>(deltaTime) * clip.ticksPerSecond;
+        if (clip.duration > 0.0 && m_currentTime > clip.duration) {
+            m_currentTime = std::fmod(m_currentTime, clip.duration);
+        }
+
     std::unordered_map<std::string, const AnimationChannel*> channelByName;
-    channelByName.reserve(clip.channels.size());
-    for (const auto& ch : clip.channels) channelByName[ch.nodeName] = &ch;
+        for (const auto& ch : clip.channels) channelByName[ch.nodeName] = &ch;
 
-    // Override : pour chaque noeud, si un channel anime son nom, on remplace
-    // la transformation statique (issue du squelette load) par celle animee.
-    // Sinon on conserve la transformation du bind pose.
-    // Impl. simplifiee : on patchely sur l'arbre copie en remplissant un map
-    // "node->localMatrixOverrides".
-    // (pour rester compact, on fait la recursion avec une lambda qui consulte
-    //  channelByName a chaque noeud.)
+            std::fill(m_finalBoneMatrices.begin(), m_finalBoneMatrices.end(), glm::mat4(1.0f));
 
-    // Reset output.
-    std::fill(m_finalBoneMatrices.begin(), m_finalBoneMatrices.end(), glm::mat4(1.0f));
+            // Matrice inverse de la racine pour ramener les os dans l'espace local du Mesh
+            glm::mat4 globalInverse = glm::inverse(m_rootNodeCopy.transformation);
 
-    // Recursion avec override.
     struct StackEntry {
         const AssimpNodeData* node;
-        glm::mat4             parentGlobal;
+            glm::mat4 parentGlobal;
     };
     std::vector<StackEntry> stack;
-    stack.reserve(64);
-    stack.push_back({ &m_rootNodeCopy, glm::mat4(1.0f) });
+        stack.push_back({ &m_rootNodeCopy, glm::mat4(1.0f) });
 
-    while (!stack.empty()) {
-        StackEntry cur = stack.back();
-        stack.pop_back();
+        while (!stack.empty()) {
+            StackEntry cur = stack.back();
+                stack.pop_back();
 
-        // Override animation s'il existe pour ce noeud.
-        glm::mat4 local = cur.node->transformation;
-        auto itCh = channelByName.find(cur.node->name);
-        if (itCh != channelByName.end()) {
-            local = channelLocalTransform(*(itCh->second), m_currentTime);
-        }
+                glm::mat4 local = cur.node->transformation;
+                auto itCh = channelByName.find(cur.node->name);
+                if (itCh != channelByName.end()) {
+                    local = channelLocalTransform(*(itCh->second), m_currentTime);
+                }
 
-        glm::mat4 global = cur.parentGlobal * local;
+            glm::mat4 global = cur.parentGlobal * local;
 
-        // Si ce noeud est un bone, on stocke globalTransform * offsetMatrix
-        // (offsetMatrix contient l'inverse-bind, donc le produit donne le bone-
-        // space transform multiplie par la position au bind : c'est ce que le
-        // vertex shader applique a chaque vertex skinne).
-        auto itBone = m_boneMap.find(cur.node->name);
-        if (itBone != m_boneMap.end()) {
-            if (itBone->second.id >= 0 && itBone->second.id < static_cast<int>(m_finalBoneMatrices.size())) {
-                m_finalBoneMatrices[itBone->second.id] = global * itBone->second.offsetMatrix;
+                auto itBone = m_boneMap.find(cur.node->name);
+                if (itBone != m_boneMap.end()) {
+                    if (itBone->second.id >= 0 && itBone->second.id < static_cast<int>(m_finalBoneMatrices.size())) {
+                        // Multiplier par globalInverse évite le décalage/étirement bizarre du Mesh
+                        m_finalBoneMatrices[itBone->second.id] = globalInverse * global * itBone->second.offsetMatrix;
+                    }
+                }
+
+            if (cur.node->childrenCount > 0 && cur.node->children) {
+                for (int i = cur.node->childrenCount - 1; i >= 0; --i) {
+                    stack.push_back({ &cur.node->children[i], global });
+                }
             }
         }
-
-        // Empile les enfants en ordre inverse pour respecter un parcours pre-order.
-        if (cur.node->childrenCount > 0 && cur.node->children) {
-            for (int i = cur.node->childrenCount - 1; i >= 0; --i) {
-                stack.push_back({ &cur.node->children[i], global });
-            }
-        }
-    }
 }

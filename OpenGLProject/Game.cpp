@@ -5,7 +5,6 @@
 
 #include "Game.h"
 #include "config.h"
-#include "ArmsRenderer.h"  // drawFP() helper pour les avant-bras skinned first-person
 
 #include <glad/glad.h>  // GL_TRUE/GL_FALSE/glDepthMask - utilise dans glDepthMask pour l'outline/transparents
 #include <vector>
@@ -121,7 +120,7 @@ void Game::initialize() {
                 std::cout << "       bones=" << m_armsAnimator->getBoneCount()
                           << ", anims=" << m_armsModel->getAnimations().size() << std::endl;
                 if (!m_armsModel->getAnimations().empty()) {
-                    m_armsAnimator->playClip(m_armsModel->getAnimations()[0].name);
+                    m_armsAnimator->playClip("finger_gun_idle");
                     m_armsAnimator->update(0.0f); // Bake premiere frame : evite un flash T-pose d'1 frame au demarrage.
                     std::cout << "       clip par defaut : " << m_armsModel->getAnimations()[0].name << std::endl;
                 }
