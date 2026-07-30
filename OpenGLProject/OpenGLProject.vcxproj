@@ -265,7 +265,6 @@
     <ClInclude Include="Triangle.h" />
     <ClInclude Include="Vertex.h" />
     <ClInclude Include="win_compat.h" />
-    <ClInclude Include="SkinningData.h" />
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>

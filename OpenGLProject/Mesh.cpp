@@ -1,11 +1,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <cstddef>     // offsetof (sur probe struct, voir setupMesh)
-#include <type_traits> // std::is_standard_layout (probe struct)
-
 #include "Mesh.h"
-#include "SkinningData.h" // MAX_BONE_INFLUENCE (pour l'attrib bone IDs)
 
 
 Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, unsigned int attributesMask, const std::vector<unsigned int>& textureIDs) 
@@ -77,36 +73,6 @@ void Mesh::setupMesh(unsigned int attributesMask = 0b0101) {
             (void*)(9 * sizeof(float)));
     }
 
-    // Bone attribs (4 int boneIDs + 5 float weights). Configures UNE SEULE
-    // fois dans setupMesh() au lieu d'etre re-injectes dans draw() a chaque
-    // frame (~6 appels GL epargnes par draw()). Tous les Vertex portent des
-    // zero en skin (voir Vertex.h), donc les mesh non rigges restent en
-    // identite cote shader skinned (wsum==0 -> transformation passee outre).
-    //
-    // NB : Vertex n'est PAS standard-layout (il a des constructeurs), donc
-    // offsetof(Vertex, m_boneIDs) est UB et refuse par MSVC. On utilise une
-    // probe struct standard-layout dediee qui reflete l'arrangement de la fin
-    // de Vertex. Les static_assert cassent la compile si quelqu'un modifie
-    // Vertex et casse le stride -- detection immediate du layout drift.
-    struct SkinLayoutProbe {
-        char  pre[11 * sizeof(float)];       // 3 pos + 3 normal + 3 color + 2 uv
-        int   boneIDs[MAX_BONE_INFLUENCE];   // m_boneIDs
-        float weights[MAX_BONE_INFLUENCE];   // m_weights
-    };
-    static_assert(std::is_standard_layout<SkinLayoutProbe>::value,
-                  "SkinLayoutProbe doit etre standard-layout pour offsetof");
-    static_assert(sizeof(SkinLayoutProbe) == sizeof(Vertex),
-                  "Vertex layout drift: skin stride != sizeof(Vertex). "
-                  "Reordonnancer m_boneIDs/m_weights dans Vertex.h, ou "
-                  "revoir SkinLayoutProbe.");
-
-    glEnableVertexAttribArray(4);
-    glVertexAttribIPointer(4, MAX_BONE_INFLUENCE, GL_INT, sizeof(Vertex),
-                           (void*)offsetof(SkinLayoutProbe, boneIDs));
-    glEnableVertexAttribArray(5);
-    glVertexAttribPointer(5, MAX_BONE_INFLUENCE, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                          (void*)offsetof(SkinLayoutProbe, weights));
-
     glBindVertexArray(0); // D�bind pour �viter les erreurs plus tard
 }
 
@@ -127,10 +93,6 @@ void Mesh::draw() const {
 
     glBindVertexArray(m_vao);
     glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
-    // Bone attribs (4, 5) configures une seule fois dans setupMesh() et
-    // captures dans le VAO state : glBindVertexArray(m_vao) ci-dessus les
-    // reactive automatiquement sans avoir a les re-pusher a chaque draw.
-    // ~6 appels GL epargnes par draw call * nombre de mesh par frame.
 
     glBindVertexArray(0);
 }

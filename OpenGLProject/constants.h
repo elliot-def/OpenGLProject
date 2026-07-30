@@ -48,40 +48,6 @@ namespace Constants {
     
     inline constexpr const char PREFERED_SEPARATOR_PATH = '/';
 
-    // First-person arms positioning
-    //
-    // FP_ARMS_DOWN_OFFSET     : metres sous les yeux (mains au niveau de la taille)
-    // FP_ARMS_FORWARD_OFFSET  : metres devant la camera
-    // FP_ARMS_SCALE           : facteur de scale du mesh (1.0 = pas de scale)
-    // FP_ARMS_YAW_OFFSET      : radians de rotation autour de Y ajoute au yaw camera
-    //                            Convention par defaut Mixamo/Quaternius (-Z forward) : pi
-    //                            Convention Unreal mannequin (-X forward)            : pi/2
-    //                            Convention +Z forward (Blender par defaut)           : 0
-    inline constexpr float FP_ARMS_DOWN_OFFSET    = 0.55f;
-    inline constexpr float FP_ARMS_FORWARD_OFFSET = 0.45f;
-    inline constexpr float FP_ARMS_SCALE          = 0.25f;
-    inline constexpr float FP_ARMS_YAW_OFFSET     = 3.14159265f;
-
-    // FP_ARMS_ANIM_EXPANSION : marge de securite appliquee sur l'extent Z de
-    //                           l'AABB locale (bind-pose) dans ArmsRenderer::drawFP.
-    //                           L'AABB est calculee sur le bind pose (vertices au
-    //                           repos), mais pendant l'animation les vertices
-    //                           s'etendent au-dela (mains qui pivotent vers la
-    //                           camera, coudes qui montent). Un facteur > 1.0
-    //                           garantit que le safe-forward dynamique couvre
-    //                           l'extent reel pendant l'animation, evitant le
-    //                           clignotement rouge au near-plane (vertices qui
-    //                           franchissent [0, nearPlane] -> Z-fight +
-    //                           interpolation garbage sur les normales/coords
-    //                           clippées).
-    //
-    // NB : l'ancien cap FP_ARMS_MAX_SAFE_FORWARD (0.7m) a ete supprime. Il
-    //      causait precisement le clignotement rouge en interdisant a l'offset
-    //      de suivre l'extent reel des rigs animés. L'aspect "3e personne" se
-    //      regle cote asset (rig d'avant-bras seul) plutot que par un cap qui
-    //      sacrifie la robustesse du rendu.
-    inline constexpr float FP_ARMS_ANIM_EXPANSION = 1.5f;
-
     // Lights Shadering
 
     inline constexpr const int MAX_LIGHTS_SOURCES = 10;

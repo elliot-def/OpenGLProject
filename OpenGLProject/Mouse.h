@@ -24,13 +24,10 @@ public:
     // xpos, ypos : position actuelle de la souris
     bool update(InputContext context, double xpos, double ypos);
 
-	void setContext(InputContext context) { m_context = context; };
-	InputContext getContext() { return m_context; };
 private:
 	std::map<std::string, Key*> m_keys; // Contient toutes les touches accessibles par leur nom
     std::map<InputContext, std::function<void(double xpos, double ypos)>> m_handleMovement;
 	MenuManager* m_menuManager;
-	InputContext m_context;
     Player* m_player;                   // Pointeur vers le joueur pour appliquer les rotations de la camera
     double m_xpos, m_ypos;              // Dernieres positions connues de la souris
     const float m_sensitivity;          // Sensibilite de la souris (vitesse de rotation)

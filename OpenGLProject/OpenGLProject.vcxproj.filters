@@ -491,9 +491,6 @@
     <ClInclude Include="BVHNode.h">
       <Filter>Fichiers d%27en-tête\Collision</Filter>
     </ClInclude>
-    <ClInclude Include="SkinningData.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\cube\cube.frag">

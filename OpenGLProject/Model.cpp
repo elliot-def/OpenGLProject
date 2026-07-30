@@ -6,6 +6,9 @@
 #include "Camera.h"
 #include "LightManager.h"
 
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+
 #include <iostream>
 #include <exception>
 #include <utility> // std::declval pour le static_assert(noexcept(Mesh::~Mesh)).
@@ -91,9 +94,8 @@ Model::~Model() {
                   "Mesh::~Mesh doit rester noexcept -- Model::~Model ne wrappe pas delete en try/catch.");
     // Libere tous les Mesh* alloues via new : sinon fuite memoire complete
     // de la hierarchie modele (chaque processMesh + le debug bounding box mesh
-    // restent sur le tas jusqu'a la fin du process). m_importer detruit le
-    // aiScene et les aiNode automatiquement (son destructeur propre gere ca),
-    // mais les Mesh* que nous avons convertis en C++ doivent etre deletes ici.
+    // restent sur le tas jusqu'a la fin du process). Les Mesh* que nous
+    // avons convertis en C++ doivent etre deletes ici.
     for (Mesh* mesh : m_meshes) {
         delete mesh;
     }
@@ -177,25 +179,19 @@ bool Model::raycast(const glm::vec3& origin, const glm::vec3& direction,
 
 void Model::loadModel(const std::string& path) {
     m_processedMeshIndices.clear();  // reset dedup entre deux load successifs (defensif)
-    m_scene = m_importer.ReadFile(path,
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile(path,
         aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals
-        // Pas de LimBoneWeights (on garde MAX_BONE_INFLUENCE=4 dans le shader)
-        // Les poids sont deja normalises par Assimp : sum ~= 1.0.
     );
-    const aiScene* scene = m_scene;
 
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-        std::cerr << "ERREUR::ASSIMP::" << m_importer.GetErrorString() << std::endl;
+        std::cerr << "ERREUR::ASSIMP::" << importer.GetErrorString() << std::endl;
         return;
     }
 
     // Stocker le dossier physique du fichier .obj
     std::filesystem::path p = path;
     m_directory = p.parent_path().string(); // ex: "./res/models/backpack"
-
-    // Skinning / animations : on extrait les bones par mesh et les animations
-    // du scene apres que tous les meshes ont ete processe (ainsi la boneInfoMap
-    // partage la meme numerotation pour tous les meshes du modele).
 
     processNode(scene->mRootNode, scene);
 }
@@ -276,8 +272,8 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     // Textures
     if (mesh->mMaterialIndex >= 0) {
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-        auto diffuse = loadMaterialTextures(material, aiTextureType_DIFFUSE);
-        auto specular = loadMaterialTextures(material, aiTextureType_SPECULAR);
+        auto diffuse = loadMaterialTextures(material, aiTextureType_DIFFUSE, scene);
+        auto specular = loadMaterialTextures(material, aiTextureType_SPECULAR, scene);
 
         // 1. Si aucune diffuse, on met un fallback (ex: texture blanche ou debug)
         if (diffuse.empty()) {
@@ -311,15 +307,10 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         (unsigned int)VertexAttribute::NORMAL |
         (unsigned int)VertexAttribute::TEXCOORD;
 
-    // IMPORTANT : le peuplement des bone IDs / weights doit avoir lieu AVANT
-    // la construction du Mesh (qui appelle glBufferData avec sizeof(Vertex)).
-    // Sinon la VBO GPU serait uploadee avec tous bone IDs a 0 et le shader
-    // skinned recevrait une identite -> l'animation ne produirait aucun effet.
-
     return new Mesh(vertices, indices, mask, textureIDs);
 }
 
-std::vector<unsigned int> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type) {
+std::vector<unsigned int> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type, const aiScene* scene) {
     std::vector<unsigned int> textureIDs;
 
     for (unsigned int i = 0; i < mat->GetTextureCount(type); i++) {
@@ -335,7 +326,7 @@ std::vector<unsigned int> Model::loadMaterialTextures(aiMaterial* mat, aiTexture
         // stbi_load echouait -> texture magenta de fallback {255,0,255} ->
         // clignotement rose/rouge sous la flashlight.
         if (!texPath.empty() && texPath[0] == '*') {
-            const aiTexture* emb = m_scene ? m_scene->GetEmbeddedTexture(texPath.c_str()) : nullptr;
+            const aiTexture* emb = scene ? scene->GetEmbeddedTexture(texPath.c_str()) : nullptr;
             if (emb) {
                 textureIDs.push_back(loadEmbeddedTexture(emb, texPath));
             }

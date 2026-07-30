@@ -26,6 +26,8 @@ LeftClick::LeftClick(Player* player, MenuManager* menuManager) : Key(player, "Le
 		// Stoppe tout drag en cours (isDragging = false) une fois le bouton relache
 		m_menuManager->updateDrag(mouseX, mouseY, false);
 	});
+	setIfPressedAction(InputContext::GAME, [this]() {
+		});
 	setOnReleaseAction(InputContext::GAME, [this]() {
 	});
 }

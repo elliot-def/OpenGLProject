@@ -91,6 +91,7 @@ void Menu::draw() {
 
     // Dessiner les sliders (label a gauche + widget)
     for (const auto* range : m_ranges) {
+        if (!range || !range->input) continue;
         glm::vec2 pos = range->input->getPosition();
         glm::vec2 size = range->input->getSize();
         if (!range->label.empty()) {
@@ -111,6 +112,7 @@ void Menu::draw() {
 
     // Dessiner les checkbox (label a gauche + widget)
     for (const auto* checkbox : m_checkboxes) {
+        if (!checkbox || !checkbox->input) continue;
         glm::vec2 pos = checkbox->input->getPosition();
         float size = checkbox->input->getSize();
         if (!checkbox->label.empty()) {
@@ -123,6 +125,7 @@ void Menu::draw() {
 
     // Dessiner les select (label a gauche, valeur selectionnee, options si ouvert)
     for (const auto* select : m_selects) {
+        if (!select || !select->input) continue;
         glm::vec2 pos = select->input->getPosition();
         if (!select->label.empty()) {
             float labelX = pos.x - 20.0f;
@@ -175,6 +178,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
 
     // Checkbox : un clic dedans bascule son etat (le callback est appele dans toggle())
     for (auto* checkbox : m_checkboxes) {
+        if (!checkbox || !checkbox->input) continue;
         if (checkbox->input->isPointInside(mouseX, mouseY)) {
             checkbox->input->toggle();
             Sound* clickSound = m_soundManager->get("menu_click_sound");
@@ -187,6 +191,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
 
     // Select : ouvre/ferme la liste ou selectionne une option (handleClick gere tout, y compris le clic en dehors qui referme)
     for (auto* select : m_selects) {
+        if (!select || !select->input) continue;
         bool wasOpen = select->input->isOpen();
         select->input->handleClick(mouseX, mouseY);
         if (wasOpen || select->input->isOpen()) {
@@ -200,6 +205,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
 
     // Range : un simple clic (sans drag) positionne aussi la valeur - le drag continu passe par updateDrag()
     for (auto* range : m_ranges) {
+        if (!range || !range->input) continue;
         if (range->input->isPointInside(mouseX, mouseY)) {
             range->input->update(mouseX, mouseY, true);
             return true;

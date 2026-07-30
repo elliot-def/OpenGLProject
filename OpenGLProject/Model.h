@@ -1,15 +1,12 @@
 #pragma once
 
-#include <assimp/Importer.hpp>
 #include <assimp/scene.h>
-#include <assimp/postprocess.h>
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 
-#include "SkinningData.h"
 #include "Vertex.h"
 
 class Shader;
@@ -80,13 +77,6 @@ public:
     const BoundingBox& getBoundingBox() const { return m_boundingBox; }
     const BoundingSphere& getBoundingSphere() const { return m_boundingSphere; }
 
-    // Acces a l'aiScene root vivant (l'Importer reste en vie tant que le
-    // Model existe -> le aiScene* + aiNode* et les aiAnimation* sont
-    // toujours valides). Utilise par Animator::setup pour snapshoter la
-    // hierarchie d'os et permettre la lecture bone-par-bone des clips.
-    const aiScene* getScene() const { return m_scene; }
-    const aiNode*  getRootNode() const { return m_scene ? m_scene->mRootNode : nullptr; }
-
     // Obtenir la bounding box transform�e
     BoundingBox getTransformedBoundingBox(const glm::mat4& modelMatrix) const;
     BoundingSphere getTransformedBoundingSphere(const glm::mat4& modelMatrix) const;
@@ -109,12 +99,6 @@ private:
 
     std::unordered_map<std::string, unsigned int> m_loadedTextures;
     std::vector<Mesh*> m_meshes;
-
-    // Importer assimp + scene : conserves en vie au dela de loadModel() pour
-    // que le aiNode* reste adressable (utilise par Animator). L'Importe detient
-    // le scene et le detruit automatiquement quand le Model est detruit.
-    Assimp::Importer m_importer;
-    const aiScene*   m_scene = nullptr;
 
     // Hitbox du mod�le entier
     BoundingBox m_boundingBox;
@@ -150,5 +134,5 @@ private:
 
     // Helpers pour les textures
     std::vector<unsigned int> loadMaterialTextures(aiMaterial* mat,
-        aiTextureType type);
+        aiTextureType type, const aiScene* scene);
 };

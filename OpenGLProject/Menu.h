@@ -187,7 +187,7 @@ public:
     // Necessaire pour que les sliders (RangeInput) puissent etre glisses (drag).
     void updateDrag(double mouseX, double mouseY, bool mousePressed) {
         for (auto* range : m_ranges) {
-            range->input->update(mouseX, mouseY, mousePressed);
+            if (range && range->input) range->input->update(mouseX, mouseY, mousePressed);
         }
     }
 

@@ -13,7 +13,7 @@
 
 
 Mouse::Mouse(Player* player, MenuManager* menuManager) : m_player(player), m_menuManager(menuManager), m_xpos(0.0), m_ypos(0.0),
-    m_sensitivity(ConfigKeys::DEFAULT_MOUSE_SENSITIVITY), m_context(InputContext::MENU) {
+    m_sensitivity(ConfigKeys::DEFAULT_MOUSE_SENSITIVITY) {
     // Initialization of keys map with mouse buttons
     m_keys["LeftClick"] = new LeftClick(m_player, m_menuManager);
 
@@ -59,14 +59,14 @@ bool Mouse::update(InputContext context, double xpos, double ypos) {
         int state = glfwGetMouseButton(glfwGetCurrentContext(), key->getKey());
         bool wasPressed = key->getStatus();
         if (state == GLFW_PRESS) {
-            key->ifPressed(m_context);
+            key->ifPressed(context);
 			actionPerformed = true;
         }
         if (state == GLFW_PRESS && !wasPressed) {
-            key->onPress(m_context);
+            key->onPress(context);
         }
         else if (state == GLFW_RELEASE && wasPressed) {
-            key->onRelease(m_context);
+            key->onRelease(context);
         }
     }
     return actionPerformed;

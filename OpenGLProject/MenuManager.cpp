@@ -68,6 +68,8 @@ Menu* MenuManager::getCurrentMenu() {
         return m_pauseMenu;
     case STATE_OPTIONS:
         return m_optionsMenu;
+	case STATE_PLAYING:
+		return nullptr; // Aucun menu à afficher pendant le jeu
     default:
         printf("Aucun menu a afficher\n");
 		return m_mainMenu;
@@ -76,15 +78,18 @@ Menu* MenuManager::getCurrentMenu() {
 }
 
 void MenuManager::updateHover(double mouseX, double mouseY) {
-    getCurrentMenu()->updateHover(mouseX, mouseY);
+    Menu* menu = getCurrentMenu();
+    if (menu) menu->updateHover(mouseX, mouseY);
 }
 
 void MenuManager::handleClick(double mouseX, double mouseY) {
-    getCurrentMenu()->handleClick(mouseX, mouseY);
+    Menu* menu = getCurrentMenu();
+    if (menu) menu->handleClick(mouseX, mouseY);
 }
 
 void MenuManager::updateDrag(double mouseX, double mouseY, bool mousePressed) {
-    getCurrentMenu()->updateDrag(mouseX, mouseY, mousePressed);
+    Menu* menu = getCurrentMenu();
+    if (menu) menu->updateDrag(mouseX, mouseY, mousePressed);
 }
 
 void MenuManager::update() {

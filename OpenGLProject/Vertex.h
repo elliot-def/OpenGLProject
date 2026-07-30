@@ -27,8 +27,7 @@ static_assert(sizeof(int)   == 4,  "Vertex layout : sizeof(int) doit rester 4");
  * - m_nx, m_ny, m_nz : normale
  * - m_r, m_g, m_b : couleur (RGB)
  * - m_s, m_t : coordonnées de texture (UV)
- * - m_boneIDs[4] + m_weights[4] : skinning (optionnel, zero pour mesh non-rigges)
- */
+*/
 class Vertex
 {
 public:
@@ -104,17 +103,7 @@ private:
     float m_r, m_g, m_b;        ///< Couleur RGB
     float m_s, m_t;
 
-    // Optionnels skinning jusqu'a MAX_BONE_INFLUENCE influences par vertex.
-    // Pour les mesh non-rigges (Cube, backpack sans squelette), ces champs
-    // restent a 0 : somme des weights nulle, le shader skinned retombe sur
-    // la transformation identite (voir res/shaders/skinned/skinned.vert).
-    public: // Acces direct requis par Mesh::draw (offsetof non-standard-layout impossible,
-       // glVertexAttribIPointer a besoin du pointeur membre) et Model::extractBoneDataFromMesh
-       // (patching direct des influences par bone avant Mesh(...)). Champs positionnes en
-       // fin de classe : ils sont les data carriers du VBO layout, declares publics pour eviter
-       // 4 accesseurs + 1 friend declaration redondants.
-    int   m_boneIDs[4] = {0, 0, 0, 0};
-    float m_weights [4] = {0.0f, 0.0f, 0.0f, 0.0f};             ///< Coordonnées de texture UV
+
 };
 
 // Post-definition : le stride total doit rester 76 octets pour la coherence
@@ -123,6 +112,6 @@ private:
 // casse la compilation au lieu de deriver silencieusement en bug GPU.
 // (offsetof(Vertex, ...) est UB sur classe non-standard-layout ; refuse par
 // MSVC par defaut ; sizeof(Vertex) est portable et suffit a detecter le drift.)
-static_assert(sizeof(Vertex) == 11 * sizeof(float) + 4 * sizeof(int) + 4 * sizeof(float),
-              "Stride Vertex doit etre 11 floats + 4 ints + 4 floats (= 76 octets) -- "
+static_assert(sizeof(Vertex) == 11 * sizeof(float),
+              "Stride Vertex doit etre 11 floats (= 44 octets) -- "
               "tout drift casse la sync CPU<->GPU via glBufferData(sizeof(Vertex)).");

@@ -5,7 +5,6 @@
 #include <limits>
 
 #include "Vertex.h"   // Structure d'un sommet (position, couleur, UV)
-#include "Texture.h"  // Classe pour gerer les textures
 
 enum class VertexAttribute {
     POSITION = 1 << 0,  // 0001
@@ -61,13 +60,6 @@ public:
 
 	std::vector<Vertex> getVertices() const { return m_vertices; }
     std::vector<unsigned int> getIndices() const { return m_indices; }
-
-    // Acces non-const : permet a Model::extractBoneDataFromMesh de patcher les
-    // bone IDs/weights apres construction. A utiliser avec precaution (les
-    // buffers GPU ne seront PAS mis a jour : appeler reloadGPU() ensuite si
-    // necessaire — pour le skinning, les vertex skinned sont remplis AVANT
-    // setupMesh, donc les donnees GPU refle bien les nouveaux champs).
-    std::vector<Vertex>& getWritableVertices() { return m_vertices; }
 
     glm::vec3 getLocalAABBMin() const { return m_aabbMin; }
     glm::vec3 getLocalAABBMax() const { return m_aabbMax; }
