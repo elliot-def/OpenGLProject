@@ -1,28 +1,30 @@
 #include "Camera.h"
 
 Camera::Camera(glm::vec3 position, Direction* direction) :
-    m_position(position),                     // Position de d�part de la cam�ra
-    m_direction(direction),                   // Point regard�
-    m_upVector(glm::vec3(0.0f, 1.0f, 0.0f)),  // D�finit l'axe vertical (Y+)
-    m_renderer(nullptr)                       // Pas encore li� � un renderer
+    m_position(position),
+    m_direction(direction),
+    m_upVector(glm::vec3(0.0f, 1.0f, 0.0f)),
+    m_renderer(nullptr)
 {
-    // Ici tu peux ajouter d�autres initialisations si n�cessaire
 }
 
 void Camera::update(Entity* entity) {
-    // On place la cam�ra � la position et la direction de l�entit�
-    m_position = entity->getPosition() + Constants::PLAYER_EYE_HEIGHT;
-
     m_front = entity->getDirectionVector();
+
+    if (m_isThirdPerson) {
+        // Troisieme personne : camera derriere le joueur, regardant vers lui
+        glm::vec3 behind = entity->getPosition() - m_front * Constants::CAMERA_THIRD_PERSON_DISTANCE;
+        m_position = behind + glm::vec3(0.0f, Constants::CAMERA_THIRD_PERSON_HEIGHT, 0.0f);
+        m_lookTarget = entity->getPosition() + Constants::PLAYER_EYE_HEIGHT;
+    } else {
+        // Premiere personne : camera a hauteur des yeux
+        m_position = entity->getPosition() + Constants::PLAYER_EYE_HEIGHT;
+    }
 }
 
 glm::mat4 Camera::getViewMatrix() const {
-    // Petit debug dans la console pour voir la position de la cam�ra
-    /*std::cout << "Camera Position: ("
-        << m_position.x << ", "
-        << m_position.y << ", "
-        << m_position.z << ")\n";*/
-
-        // glm::lookAt cr�e une matrice View en utilisant position, target et upVector
+    if (m_isThirdPerson) {
+        return glm::lookAt(m_position, m_lookTarget, m_upVector);
+    }
     return glm::lookAt(m_position, m_position + m_front, m_upVector);
 }

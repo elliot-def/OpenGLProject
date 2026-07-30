@@ -31,6 +31,10 @@ public:
     // entity : objet � suivre (ex : le joueur)
     void update(Entity* entity);
 
+    // Bascule entre vue premi�re personne et troisi�me personne
+    void toggleCameraMode() { m_isThirdPerson = !m_isThirdPerson; }
+    bool isThirdPerson() const { return m_isThirdPerson; }
+
 private:
     Renderer* m_renderer;     // Pointeur vers le renderer pour acc�der au rendu (non utilis� ici)
     Direction* m_direction;   // Contient yaw et pitch pour orienter la cam�ra
@@ -38,4 +42,7 @@ private:
     glm::vec3 m_position = glm::vec3(3.0f, 3.0f, 3.0f); // Position actuelle de la cam�ra
     glm::vec3 m_front = glm::vec3(1.0f, 1.0f, 0.0f);    // Direction dans laquelle la cam�ra regarde
     glm::vec3 m_upVector = glm::vec3(0.0f, 1.0f, 0.0f); // Vecteur "haut" de la cam�ra, pour l'orientation
+
+    bool m_isThirdPerson = false; // false = premi�re personne, true = troisi�me personne
+    glm::vec3 m_lookTarget = glm::vec3(0.0f); // Cible du lookAt en 3e personne
 };

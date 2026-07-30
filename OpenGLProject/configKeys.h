@@ -17,6 +17,7 @@ namespace ConfigKeys {
     inline const int KEY_SPRINT = GLFW_KEY_LEFT_SHIFT;   // Courir
     inline const int KEY_ESCAPE = GLFW_KEY_ESCAPE;       // Ouvrir le menu ou quitter
     inline const int KEY_FLASHLIGHT = GLFW_KEY_T;
+    inline const int KEY_THIRD_PERSON = GLFW_KEY_C;
 
     inline const int MOUSE_LEFT_CLICK = GLFW_MOUSE_BUTTON_LEFT;         // Aller a droite
     inline const int MOUSE_RIGHT_CLICK = GLFW_MOUSE_BUTTON_RIGHT;       // Aller a droite

@@ -11,6 +11,7 @@
 #include "Escape.h"
 #include "Mouse.h"
 #include "Flashlight.h"
+#include "ThirdPerson.h"
 #include "LeftClick.h"
 #include "Window.h"
 
@@ -38,6 +39,7 @@ void InputManager::loadKeys() {
 	m_keys["Jump"] = new Jump(m_player);
 	m_keys["Sprint"] = new Sprint(m_player);
 	m_keys["Flashlight"] = new Flashlight(m_player);
+	m_keys["ThirdPerson"] = new ThirdPerson(m_player);
 	m_keys["Escape"] = new Escape(m_game);
 	
 	m_mouse = new Mouse(m_player, m_menuManager);

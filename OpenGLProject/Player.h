@@ -7,6 +7,7 @@
 #include "Entity.h"
 
 class CollisionManager;
+class Camera;
 
 // Classe Player : repr�sente le joueur dans le jeu
 // H�rite de Entity et g�re le d�placement, la vue et le rendu
@@ -41,7 +42,12 @@ public:
     // pitch : rotation verticale
     void processMouseMovements(double yaw, double pitch);
 
+    inline void setCamera(Camera* camera) { m_camera = camera; }
+
     inline void processFlashLightKey() { m_isFlashlightEnabled = !m_isFlashlightEnabled; };
+
+    void processThirdPersonKey();
+    bool isThirdPerson() const;;
 
     inline void setIsSprinting(bool isSprinting) { m_isSprinting = isSprinting; };
 
@@ -55,6 +61,7 @@ public:
 
     glm::vec3 getEyePosition() const { return m_position + Constants::PLAYER_EYE_HEIGHT; }
 private:
+    Camera* m_camera = nullptr;
     bool m_isFlashlightEnabled = false;
     bool m_isSprinting = false;
 	bool m_wantsToMove = false;

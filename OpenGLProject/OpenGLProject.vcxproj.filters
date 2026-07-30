@@ -192,6 +192,9 @@
     <ClCompile Include="Flashlight.cpp">
       <Filter>Fichiers sources\Inputs</Filter>
     </ClCompile>
+    <ClCompile Include="ThirdPerson.cpp">
+      <Filter>Fichiers sources\Inputs</Filter>
+    </ClCompile>
     <ClCompile Include="Model.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
@@ -384,6 +387,9 @@
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="Flashlight.h">
+      <Filter>Fichiers d%27en-tête\Inputs</Filter>
+    </ClInclude>
+    <ClInclude Include="ThirdPerson.h">
       <Filter>Fichiers d%27en-tête\Inputs</Filter>
     </ClInclude>
     <ClInclude Include="Model.h">

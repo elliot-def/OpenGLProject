@@ -31,6 +31,7 @@ void Game::initialize() {
     m_cursorManager     = std::make_unique<CursorManager>(m_window.get());
     m_shaderManager     = std::make_unique<ShaderManager>(m_camera.get());
     m_player            = std::make_unique<Player>(m_collisionManager.get(), m_renderer.get());
+    m_player->setCamera(m_camera.get());
     m_lightManager      = std::make_unique<LightManager>(m_renderer.get(), m_player.get());
     m_textRenderers     = std::make_unique<std::vector<std::unique_ptr<TextRenderer>>>();
     m_menuManager       = std::make_unique<MenuManager>(this, m_soundManager.get(), m_renderer.get(), m_textRenderers.get(), m_textureManager.get(), m_shaderManager.get(), m_cursorManager.get());

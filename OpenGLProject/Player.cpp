@@ -2,6 +2,7 @@
 #include "Renderer.h"
 #include "Direction.h"
 #include "CollisionManager.h"
+#include "Camera.h"
 
 void Player::update() {
 	updatePositionFromEnvironment(m_renderer->getDeltaTime());
@@ -41,6 +42,16 @@ void Player::processDirectionKey(int direction) {
             m_frameMovement += glm::vec3(0.0f, 1.0f, 0.0f) * distance;
         if (direction == EntityRelativeDirection::DOWN)
             m_frameMovement -= glm::vec3(0.0f, 1.0f, 0.0f) * distance;
+    }
+}
+
+bool Player::isThirdPerson() const {
+    return m_camera ? m_camera->isThirdPerson() : false;
+}
+
+void Player::processThirdPersonKey() {
+    if (m_camera) {
+        m_camera->toggleCameraMode();
     }
 }
 
