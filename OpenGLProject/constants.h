@@ -26,8 +26,7 @@ namespace Constants {
     inline constexpr glm::vec3 PLAYER_EYE_HEIGHT = glm::vec3(0.0f, 1.0f, 0.0f); // Hauteur des yeux du joueur par rapport à sa position (en unités de jeu)
 
     // Camera third-person
-    inline constexpr float CAMERA_THIRD_PERSON_DISTANCE = 5.0f;  // Distance derrière le joueur en 3e personne
-    inline constexpr float CAMERA_THIRD_PERSON_HEIGHT   = 2.0f;  // Hauteur au-dessus du joueur en 3e personne
+    inline constexpr float CAMERA_THIRD_PERSON_DISTANCE = 2.5f;  // Distance orbitale en 3e personne
 
 
     // Collision Manager

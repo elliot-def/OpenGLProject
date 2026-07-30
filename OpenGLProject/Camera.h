@@ -9,6 +9,8 @@
 #include "Direction.h" // Classe pour stocker les angles de rotation de la cam�ra
 
 // Classe Camera : gere la vue 3D dans le jeu
+class CollisionManager;
+
 class Camera {
 public:
     // Constructeur
@@ -35,6 +37,9 @@ public:
     void toggleCameraMode() { m_isThirdPerson = !m_isThirdPerson; }
     bool isThirdPerson() const { return m_isThirdPerson; }
 
+    void setCollisionManager(CollisionManager* cm) { m_collisionManager = cm; }
+    void setRenderer(Renderer* r) { m_renderer = r; }
+
 private:
     Renderer* m_renderer;     // Pointeur vers le renderer pour acc�der au rendu (non utilis� ici)
     Direction* m_direction;   // Contient yaw et pitch pour orienter la cam�ra
@@ -43,6 +48,8 @@ private:
     glm::vec3 m_front = glm::vec3(1.0f, 1.0f, 0.0f);    // Direction dans laquelle la cam�ra regarde
     glm::vec3 m_upVector = glm::vec3(0.0f, 1.0f, 0.0f); // Vecteur "haut" de la cam�ra, pour l'orientation
 
+    CollisionManager* m_collisionManager = nullptr;
+
     bool m_isThirdPerson = false; // false = premi�re personne, true = troisi�me personne
-    glm::vec3 m_lookTarget = glm::vec3(0.0f); // Cible du lookAt en 3e personne
+    bool m_wasFirstPerson = true; // Pour snap au moment du toggle
 };
