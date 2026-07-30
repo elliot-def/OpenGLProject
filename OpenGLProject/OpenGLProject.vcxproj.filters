@@ -118,9 +118,6 @@
     <Filter Include="Fichiers sources\Collision">
       <UniqueIdentifier>{e5e80e73-48f9-472b-99b0-86a2fdfd054e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Fichiers de ressources\shaders\skinned">
-      <UniqueIdentifier>{4f1a7e15-530a-448d-88a0-39be2c6b05df}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -187,6 +184,9 @@
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="TextureManager.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="FirstPersonArms.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="Flashlight.cpp">
@@ -386,6 +386,9 @@
     <ClInclude Include="Direction.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
+    <ClInclude Include="FirstPersonArms.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
     <ClInclude Include="Flashlight.h">
       <Filter>Fichiers d%27en-tête\Inputs</Filter>
     </ClInclude>
@@ -555,12 +558,6 @@
     </None>
     <None Include="res\shaders\image\masque\mask.vert">
       <Filter>Fichiers de ressources\shaders\image\mask</Filter>
-    </None>
-    <None Include="res\shaders\skinned\skinned.frag">
-      <Filter>Fichiers de ressources\shaders\skinned</Filter>
-    </None>
-    <None Include="res\shaders\skinned\skinned.vert">
-      <Filter>Fichiers de ressources\shaders\skinned</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

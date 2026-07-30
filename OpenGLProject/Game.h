@@ -26,6 +26,7 @@ class Socket;
 class MenuManager;
 class TextRenderer;
 class ModelEntity;
+class FirstPersonArms;
 
 class Game {
 public:
@@ -56,6 +57,7 @@ private:
     std::unique_ptr<std::vector<std::unique_ptr<TextRenderer>>> m_textRenderers;
 
     ModelEntity* m_modelEntity;
+    std::unique_ptr<FirstPersonArms> m_firstPersonArms;
 
     bool m_isRunning = true;
 

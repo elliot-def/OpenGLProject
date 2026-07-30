@@ -154,6 +154,7 @@
     <ClCompile Include="Direction.cpp" />
     <ClCompile Include="DVDShape.cpp" />
     <ClCompile Include="Escape.cpp" />
+    <ClCompile Include="FirstPersonArms.cpp" />
     <ClCompile Include="Flashlight.cpp" />
     <ClCompile Include="ThirdPerson.cpp" />
     <ClCompile Include="Forward.cpp" />
@@ -218,6 +219,7 @@
     <ClInclude Include="DVDShape.h" />
     <ClInclude Include="Escape.h" />
     <ClInclude Include="File.h" />
+    <ClInclude Include="FirstPersonArms.h" />
     <ClInclude Include="Flashlight.h" />
     <ClInclude Include="ThirdPerson.h" />
     <ClInclude Include="Forward.h" />
@@ -286,8 +288,6 @@
     <None Include="res\shaders\model\model.vert" />
     <None Include="res\shaders\shape\shape.frag" />
     <None Include="res\shaders\shape\shape.vert" />
-    <None Include="res\shaders\skinned\skinned.frag" />
-    <None Include="res\shaders\skinned\skinned.vert" />
     <None Include="res\shaders\text\text.frag" />
     <None Include="res\shaders\text\text.vert" />
     <None Include="res\textures\crate\details.json" />

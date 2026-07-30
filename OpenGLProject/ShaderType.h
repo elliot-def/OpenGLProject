@@ -23,7 +23,6 @@ enum class ShaderType : uint8_t {
     LightSource,           // lightsource / cube/lightsource
     SeveralLights,         // severallights / cube/severallights
     Outline,               // outline — silhouette pleine couleur (pas de lumiere, pas de texture)
-    SkinnedModel,          // skinned — vertex shader avec bone palette (skin + PBR)
 };
 
 // Convertit le nom de fichier (ex: "shape/roundedTriangle") en ShaderType.
@@ -38,6 +37,5 @@ inline ShaderType extractShaderType(const std::string& name) {
     if (name == "severallights" ||
         name == "cube/severallights")         return ShaderType::SeveralLights;
     if (name == "outline")                    return ShaderType::Outline;
-    if (name == "skinned" || name == "skinnedmodel") return ShaderType::SkinnedModel;
     return ShaderType::Unknown;
 }

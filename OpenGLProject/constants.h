@@ -25,6 +25,15 @@ namespace Constants {
 	inline constexpr float DEFAULT_PLAYER_HEIGHT = 1.6f;
     inline constexpr glm::vec3 PLAYER_EYE_HEIGHT = glm::vec3(0.0f, 1.0f, 0.0f); // Hauteur des yeux du joueur par rapport à sa position (en unités de jeu)
 
+    // First-person arms
+    inline constexpr float FP_ARMS_OFFSET_X =  0.00f;
+    inline constexpr float FP_ARMS_OFFSET_Y = -0.30f;
+    inline constexpr float FP_ARMS_OFFSET_Z = -0.55f;
+    inline constexpr float FP_ARMS_SCALE    =  0.30f;
+
+    // Couleur de peau pour l'éclairage des bras (ambient ≈ diffuse * 0.5)
+    inline constexpr glm::vec3 FP_ARMS_SKIN_COLOR = glm::vec3(0.7f, 0.65f, 0.55f);
+
     // Camera third-person
     inline constexpr float CAMERA_THIRD_PERSON_DISTANCE = 2.5f;  // Distance orbitale en 3e personne
 

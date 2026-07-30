@@ -62,7 +62,7 @@ void Camera::update(Entity* entity) {
             m_position = targetPos;
         } else {
             float dt = m_renderer ? m_renderer->getDeltaTime() : 0.016f;
-            const float smoothSpeed = 10.0f;
+            const float smoothSpeed = 20.0f;
             float t = glm::clamp(smoothSpeed * dt, 0.0f, 1.0f);
             m_position = glm::mix(m_position, targetPos, t);
         }

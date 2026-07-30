@@ -93,6 +93,10 @@ void Game::initialize() {
     
     m_modelEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(), "./res/models/backpack/backpack.obj", m_textureManager.get());
 
+    // Bras en premiere personne
+    m_firstPersonArms = std::make_unique<FirstPersonArms>(m_camera.get(), m_lightManager.get(), 
+                                             "./res/rigging/arm/arms_rig.fbx", m_textureManager.get());
+
     // Decor statique, une seule fois
     m_collisionManager->addStaticMesh(m_cubes[0]->getMesh(), m_cubes[0]->getTransformation()->getMatrix(), "cube1");
     m_collisionManager->addStaticMesh(m_cubes[1]->getMesh(), m_cubes[1]->getTransformation()->getMatrix(), "cube2");
@@ -199,6 +203,12 @@ void Game::draw() {
 
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
+
+    // Bras en premiere personne (1P uniquement)
+    if (!m_camera->isThirdPerson() && m_firstPersonArms) {
+        glClear(GL_DEPTH_BUFFER_BIT);
+        m_firstPersonArms->draw(m_shaderManager->getShader("model"));
+    }
 }
 
 void Game::changeState(GameState newState) {
