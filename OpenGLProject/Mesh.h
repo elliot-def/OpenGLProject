@@ -61,6 +61,7 @@ public:
 	std::vector<Vertex> getVertices() const { return m_vertices; }
     std::vector<Vertex>& getWritableVertices() { return m_vertices; }
     std::vector<unsigned int> getIndices() const { return m_indices; }
+    const std::vector<unsigned int>& getTextureIDs() const { return m_textureIDs; }
 
     glm::vec3 getLocalAABBMin() const { return m_aabbMin; }
     glm::vec3 getLocalAABBMax() const { return m_aabbMax; }

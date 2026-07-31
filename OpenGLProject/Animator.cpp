@@ -1,5 +1,6 @@
 #include "Animator.h"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 
 void Animator::setup(Model* model) {
@@ -73,7 +74,17 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
         auto it = boneMap.find(nodeName);
         int boneId = it->second.id;
         if (boneId >= 0 && boneId < MAX_BONES) {
-            m_finalBoneMatrices[boneId] = globalTransform * it->second.offsetMatrix;
+            const glm::mat4 finalMat = globalTransform * it->second.offsetMatrix;
+            // Garde anti-NaN : keyframes pourries (quaternions degeneres) →
+            // matrice non-finie → vertices NaN → rendu invisible. On retombe
+            // sur la pose de repos (identite) plutot que d'envoyer du NaN au GPU.
+            bool finite = true;
+            for (int c = 0; c < 4 && finite; c++) {
+                for (int r = 0; r < 4; r++) {
+                    if (!std::isfinite(finalMat[c][r])) { finite = false; break; }
+                }
+            }
+            m_finalBoneMatrices[boneId] = finite ? finalMat : glm::mat4(1.0f);
         }
     }
 
@@ -98,64 +109,93 @@ glm::mat4 Animator::interpolateNodeTransform(const aiNodeAnim* channel, float an
 }
 
 glm::vec3 Animator::interpolateTranslation(float animTime, const aiNodeAnim* channel) const {
+    glm::vec3 result(0.0f);
+
     if (channel->mNumPositionKeys == 1) {
-        return glm::vec3(channel->mPositionKeys[0].mValue.x,
-                         channel->mPositionKeys[0].mValue.y,
-                         channel->mPositionKeys[0].mValue.z);
+        result = glm::vec3(channel->mPositionKeys[0].mValue.x,
+                           channel->mPositionKeys[0].mValue.y,
+                           channel->mPositionKeys[0].mValue.z);
+    } else {
+        unsigned int idx = findKeyIndex(animTime, channel->mPositionKeys, channel->mNumPositionKeys);
+        unsigned int nextIdx = (idx + 1) % channel->mNumPositionKeys;
+
+        float t0 = static_cast<float>(channel->mPositionKeys[idx].mTime);
+        float t1 = static_cast<float>(channel->mPositionKeys[nextIdx].mTime);
+        float factor = (t1 > t0) ? (animTime - t0) / (t1 - t0) : 0.0f;
+        factor = glm::clamp(factor, 0.0f, 1.0f);
+
+        aiVector3D v0 = channel->mPositionKeys[idx].mValue;
+        aiVector3D v1 = channel->mPositionKeys[nextIdx].mValue;
+
+        result = glm::mix(
+            glm::vec3(v0.x, v0.y, v0.z),
+            glm::vec3(v1.x, v1.y, v1.z),
+            factor
+        );
     }
 
-    unsigned int idx = findKeyIndex(animTime, channel->mPositionKeys, channel->mNumPositionKeys);
-    unsigned int nextIdx = (idx + 1) % channel->mNumPositionKeys;
-
-    float t0 = static_cast<float>(channel->mPositionKeys[idx].mTime);
-    float t1 = static_cast<float>(channel->mPositionKeys[nextIdx].mTime);
-    float factor = (t1 > t0) ? (animTime - t0) / (t1 - t0) : 0.0f;
-    factor = glm::clamp(factor, 0.0f, 1.0f);
-
-    aiVector3D v0 = channel->mPositionKeys[idx].mValue;
-    aiVector3D v1 = channel->mPositionKeys[nextIdx].mValue;
-
-    glm::vec3 result = glm::mix(
-        glm::vec3(v0.x, v0.y, v0.z),
-        glm::vec3(v1.x, v1.y, v1.z),
-        factor
-    );
+    // Garde anti-NaN : translation non-finie → 0 (position du noeud).
+    if (!std::isfinite(result.x) || !std::isfinite(result.y) || !std::isfinite(result.z)) {
+        return glm::vec3(0.0f);
+    }
     return result;
 }
 
 glm::quat Animator::interpolateRotation(float animTime, const aiNodeAnim* channel) const {
+    glm::quat result(1.0f, 0.0f, 0.0f, 0.0f);
+
     if (channel->mNumRotationKeys == 1) {
         aiQuaternion q = channel->mRotationKeys[0].mValue;
-        return glm::quat(q.w, q.x, q.y, q.z);
+        result = glm::quat(q.w, q.x, q.y, q.z);
+    } else {
+        unsigned int idx = findKeyIndex(animTime, channel->mRotationKeys, channel->mNumRotationKeys);
+        unsigned int nextIdx = (idx + 1) % channel->mNumRotationKeys;
+
+        float t0 = static_cast<float>(channel->mRotationKeys[idx].mTime);
+        float t1 = static_cast<float>(channel->mRotationKeys[nextIdx].mTime);
+        float factor = (t1 > t0) ? (animTime - t0) / (t1 - t0) : 0.0f;
+        factor = glm::clamp(factor, 0.0f, 1.0f);
+
+        aiQuaternion q0 = channel->mRotationKeys[idx].mValue;
+        aiQuaternion q1 = channel->mRotationKeys[nextIdx].mValue;
+
+        glm::quat a(q0.w, q0.x, q0.y, q0.z);
+        glm::quat b(q1.w, q1.x, q1.y, q1.z);
+
+        // Normaliser AVANT slerp. Blender exporte parfois des quaternions
+        // non-unitaires voire (0,0,0,0) pour des canaux non-animes ; dans
+        // mat4_cast ils produisent des matrices d'echelle ~1e20 (mesure :
+        // boneMatrices a 7.4e19 !) → vertices hors frustum → bras invisibles.
+        const float lenA = glm::length(a);
+        const float lenB = glm::length(b);
+        a = (std::isfinite(lenA) && lenA > 0.0001f)
+                ? (a / lenA)
+                : glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+        b = (std::isfinite(lenB) && lenB > 0.0001f)
+                ? (b / lenB)
+                : glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+
+        // Éviter NaN de slerp quand les quaternions sont (quasi-)identiques
+        // dot ≈ ±1.0 → sin(θ) ≈ 0 → division par zéro dans slerp.
+        // Si dot < 0, on négocie b pour prendre le chemin court (même rotation).
+        float dotProd = glm::dot(a, b);
+        if (dotProd < 0.0f) {
+            b = -b;
+            dotProd = -dotProd;
+        }
+        if (dotProd > 0.9999f) {
+            result = a;
+        } else {
+            result = glm::slerp(a, b, factor);
+        }
     }
 
-    unsigned int idx = findKeyIndex(animTime, channel->mRotationKeys, channel->mNumRotationKeys);
-    unsigned int nextIdx = (idx + 1) % channel->mNumRotationKeys;
-
-    float t0 = static_cast<float>(channel->mRotationKeys[idx].mTime);
-    float t1 = static_cast<float>(channel->mRotationKeys[nextIdx].mTime);
-    float factor = (t1 > t0) ? (animTime - t0) / (t1 - t0) : 0.0f;
-    factor = glm::clamp(factor, 0.0f, 1.0f);
-
-    aiQuaternion q0 = channel->mRotationKeys[idx].mValue;
-    aiQuaternion q1 = channel->mRotationKeys[nextIdx].mValue;
-
-    glm::quat a(q0.w, q0.x, q0.y, q0.z);
-    glm::quat b(q1.w, q1.x, q1.y, q1.z);
-
-    // Éviter NaN de slerp quand les quaternions sont (quasi-)identiques
-    // dot ≈ ±1.0 → sin(θ) ≈ 0 → division par zéro dans slerp.
-    // Si dot < 0, on négocie b pour prendre le chemin court (même rotation).
-    float dotProd = glm::dot(a, b);
-    if (dotProd < 0.0f) {
-        b = -b;
-        dotProd = -dotProd;
+    // Garde finale : quaternion non-fini ou (quasi-)nul → identite.
+    const float len = glm::length(result);
+    if (!std::isfinite(len) || len < 0.0001f) {
+        return glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
     }
-    if (dotProd > 0.9999f) {
-        return a;
-    }
-
-    return glm::slerp(a, b, factor);
+    return glm::normalize(result);
 }
 
 glm::vec3 Animator::interpolateScale(float animTime, const aiNodeAnim* channel) const {

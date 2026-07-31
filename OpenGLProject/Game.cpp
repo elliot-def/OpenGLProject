@@ -94,8 +94,12 @@ void Game::initialize() {
     m_modelEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(), "./res/models/backpack/backpack.obj", m_textureManager.get());
 
     // Bras en premiere personne
+    // .glb: texture embarquee, autosuffisant (pas de chemins absolus casses
+    // comme le .fbx qui pointait vers G:\Models\ps2\...). 52 joints = MAX_BONES.
     m_firstPersonArms = std::make_unique<FirstPersonArms>(m_camera.get(), m_lightManager.get(), 
-                                             "./res/rigging/arm/arms_rig.fbx", m_textureManager.get());
+                                             "./res/rigging/arm/arms_rig.glb", m_textureManager.get());
+    // Branche le clic gauche sur l'animation de tir des bras
+    m_inputManager->setFirstPersonArms(m_firstPersonArms.get());
 
     // Decor statique, une seule fois
     m_collisionManager->addStaticMesh(m_cubes[0]->getMesh(), m_cubes[0]->getTransformation()->getMatrix(), "cube1");
@@ -209,9 +213,9 @@ void Game::draw() {
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
 
-    // Bras en premiere personne (1P uniquement)
-    if (!m_camera->isThirdPerson() && m_firstPersonArms) {
-        glClear(GL_DEPTH_BUFFER_BIT);
+    // Bras — viewmodel 1P (overlay, depth buffer vide dans draw) / world-space
+    // 3P (attaches au corps du joueur, occlus par le decor normalement)
+    if (m_firstPersonArms) {
         m_firstPersonArms->draw(m_shaderManager->getShader("skinned"));
     }
 }

@@ -1,4 +1,4 @@
-#include "FirstPersonArms.h"
+﻿#include "FirstPersonArms.h"
 #include "Model.h"
 #include "Mesh.h"
 #include "Shader.h"
@@ -8,6 +8,9 @@
 
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <cfloat>   // FLT_MAX pour la AABB de debug
+#include <cmath>    // isnan / isinf
+#include <cstdio>
 
 FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
                                  const std::string& modelPath, TextureManager* textureManager)
@@ -22,20 +25,45 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
         m_boneUniformNames.push_back("uBoneMatrices[" + std::to_string(i) + "]");
     }
 
-    // Jouer l'idle par défaut (chercher "guard_idle" par nom)
+    // Jouer l'idle par défaut (chercher "rest" par nom)
     const aiScene* scene = m_model->getScene();
     if (scene) {
-        printf("[FPArms] scene OK, animations=%u, bones=%zu\n",
-               scene->mNumAnimations, m_model->getBoneInfoMap().size());
-        for (unsigned int i = 0; i < scene->mNumAnimations; i++) {
-            std::string name(scene->mAnimations[i]->mName.C_Str());
-            if (name.find("guard_idle") != std::string::npos) {
-                m_animator->playAnimation(i, true);
-                break;
+        const auto& meshes  = m_model->getMeshes();
+        const auto& boneMap = m_model->getBoneInfoMap();
+        printf("[FPArms] scene OK, animations=%u, meshes=%zu, bones=%zu\n",
+               scene->mNumAnimations, meshes.size(), boneMap.size());
+        if (meshes.empty()) {
+            printf("[FPArms] ERREUR: 0 mesh extrait! (FBX charge mais aucun mesh a dessiner)\n");
+        } else {
+            printf("[FPArms] mesh 0: %zu vertices, %zu indices\n",
+                   meshes[0]->getVertices().size(), meshes[0]->getIndices().size());
+        }
+        if (boneMap.empty()) {
+            printf("[FPArms] ATTENTION: 0 bone extrait — le rig est-il present dans le FBX?\n");
+        } else {
+            const auto& firstBone = *boneMap.begin();
+            printf("[FPArms] premier bone: \"%s\" (id=%d), MAX_BONES=%d\n",
+                   firstBone.first.c_str(), firstBone.second.id, MAX_BONES);
+            if (boneMap.size() > static_cast<size_t>(MAX_BONES)) {
+                printf("[FPArms] ATTENTION: %zu bones > MAX_BONES (%d) — "
+                       "les bones au-dela seront ignores (vertus degenerees possibles)!\n",
+                       boneMap.size(), MAX_BONES);
             }
         }
-        if (!m_animator->isPlaying() && scene->mNumAnimations > 0) {
-            printf("[FPArms] guard_idle pas trouve, fallback anim 0\n");
+        for (unsigned int i = 0; i < scene->mNumAnimations; i++) {
+            std::string name(scene->mAnimations[i]->mName.C_Str());
+            printf("[FPArms] anim %u: \"%s\"\n", i, name.c_str());
+            if (name.find("rest") != std::string::npos) {
+                m_idleAnimIndex = i;
+            }
+            if (name.find("finger_gun_fire") != std::string::npos) {
+                m_fireAnimIndex = i;
+            }
+        }
+        if (m_idleAnimIndex >= 0) {
+            m_animator->playAnimation(m_idleAnimIndex, true);
+        } else if (scene->mNumAnimations > 0) {
+            printf("[FPArms] rest pas trouve, fallback anim 0\n");
             m_animator->playAnimation(0, true);
         }
     } else {
@@ -57,7 +85,20 @@ FirstPersonArms::~FirstPersonArms() {
 }
 
 void FirstPersonArms::update(float deltaTime, const glm::vec3& playerPos, bool isSprinting) {
+    m_playerPos = playerPos;
     m_animator->update(deltaTime);
+
+    // Apres la fin de l'animation de tir (non-loop), retour a l'idle
+    if (m_fireAnimIndex >= 0 && m_animator->isFinished() &&
+        m_animator->getCurrentAnimationName().find("finger_gun_fire") != std::string::npos) {
+        m_animator->playAnimation(m_idleAnimIndex >= 0 ? m_idleAnimIndex : 0, true);
+    }
+}
+
+void FirstPersonArms::triggerFire() {
+    if (m_fireAnimIndex >= 0 && m_animator) {
+        m_animator->playAnimation(m_fireAnimIndex, false);
+    }
 }
 
 const std::vector<Mesh*>& FirstPersonArms::getMeshes() {
@@ -66,20 +107,59 @@ const std::vector<Mesh*>& FirstPersonArms::getMeshes() {
 
 void FirstPersonArms::draw(Shader* shader) {
     auto& meshes = m_model->getMeshes();
-    glm::mat4 armModel = glm::mat4(1.0f);
-    armModel = glm::translate(armModel, glm::vec3(
-        Constants::FP_ARMS_OFFSET_X,
-        Constants::FP_ARMS_OFFSET_Y,
-        Constants::FP_ARMS_OFFSET_Z));
-    armModel = glm::rotate(armModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    armModel = glm::scale(armModel, glm::vec3(Constants::FP_ARMS_SCALE));
+    const bool thirdPerson = m_camera && m_camera->isThirdPerson();
+
+    glm::mat4 armModel;
+    glm::mat4 view;
+    glm::vec3 viewPos;
+
+    if (thirdPerson) {
+        // ── 3e personne : bras attachés au corps du joueur (world-space) ──
+        // Le rig est un personnage debout (épaules y≈1.6, bras pendants). On le
+        // place à la position du joueur, épaules alignées sur le torse (~1.4 m),
+        // orienté dans la direction de vue du joueur (même convention que
+        // ModelEntity : yaw = atan2(front.x, front.z) aligne +Z du rig sur le front).
+        glm::vec3 front = m_camera->getFront();
+        float yaw = atan2(front.x, front.z);
+        armModel = glm::mat4(1.0f);
+        armModel = glm::translate(armModel, m_playerPos + glm::vec3(0.0f, Constants::FP_ARMS_3P_OFFSET_Y, 0.0f));
+        armModel = glm::rotate(armModel, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
+        armModel = glm::scale(armModel, glm::vec3(Constants::FP_ARMS_3P_SCALE));
+        view = m_camera->getViewMatrix();
+        viewPos = m_camera->getPosition();
+    } else {
+        // ── 1re personne : overlay viewmodel en espace caméra ──
+        // Rotation Y 180° : +X rig (main GAUCHE du personnage) -> ecran GAUCHE
+        // (-X) : gauche/droite corrects (pas d'effet miroir), et +Z rig (paumes)
+        // pointe dans l'ecran (on voit le dos des mains, comme en vraie 1re
+        // personne). PAS de rotation autour de X : le rig reste a l'endroit (Y
+        // vers le haut), donc en pose "rest" les bras pendent des epaules vers
+        // les COINS INFERIEURS de l'ecran (constantes dans constants.h).
+        armModel = glm::mat4(1.0f);
+        armModel = glm::translate(armModel, glm::vec3(
+            Constants::FP_ARMS_OFFSET_X,
+            Constants::FP_ARMS_OFFSET_Y,
+            Constants::FP_ARMS_OFFSET_Z));
+        armModel = glm::rotate(armModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        // Echelle non-uniforme (voir constants.h) : pose "rest" = bras le long
+        // du corps (mains a x=+-0.75 rig). X=0.65 pousse les mains vers les
+        // coins inferieurs, Y/Z=0.50 conservent hauteur et profondeur.
+        armModel = glm::scale(armModel, glm::vec3(
+            Constants::FP_ARMS_SCALE_X,
+            Constants::FP_ARMS_SCALE_Y,
+            Constants::FP_ARMS_SCALE_Z));
+        view = glm::mat4(1.0f);
+        viewPos = glm::vec3(0.0f);
+        // Overlay : les bras passent devant le monde → on vide le depth buffer
+        glClear(GL_DEPTH_BUFFER_BIT);
+    }
 
     shader->use();
 
     shader->setMat4("model", armModel);
-    shader->setMat4("view", glm::mat4(1.0f));
+    shader->setMat4("view", view);
     shader->setMat4("projection", shader->getProjection());
-    shader->setVec3("viewPos", glm::vec3(0.0f));
+    shader->setVec3("viewPos", viewPos);
 
     // Envoyer les matrices des bones au shader (noms pré-calculés)
     const auto& boneMats = m_animator->getFinalBoneMatrices();
@@ -88,23 +168,39 @@ void FirstPersonArms::draw(Shader* shader) {
         shader->setMat4(m_boneUniformNames[i].c_str(), boneMats[i]);
     }
 
-    // Désactiver les lumières monde
-    shader->setVec3("dirLight.ambient",  glm::vec3(0.0f));
-    shader->setVec3("dirLight.diffuse",  glm::vec3(0.0f));
-    shader->setVec3("dirLight.specular", glm::vec3(0.0f));
-    shader->setVec3("spotLight.ambient",  glm::vec3(0.0f));
-    shader->setVec3("spotLight.diffuse",  glm::vec3(0.0f));
-    shader->setVec3("spotLight.specular", glm::vec3(0.0f));
+    if (thirdPerson) {
+        // 3P : on utilise les lumières du monde (point lights + flashlight)
+        m_lightManager->applyToShader(shader);
+        // Scene sombre (horreur) : on garantit un ambient minimum sur les bras
+        // pour que la texture de peau reste lisible. Ne touche QUE le shader
+        // skinned (utilise uniquement par les bras), pas le reste de la scene.
+        shader->setVec3("dirLight.ambient", glm::vec3(0.45f, 0.42f, 0.38f));
+    } else {
+        // 1P : eclairage local en espace camera (le viewmodel suit la camera).
+        // IMPORTANT : renseigner direction/position/cutOff de TOUTES les
+        // lumieres. Les zeros par defaut (0,0,0) font normalize(vec3(0)) -> NaN
+        // dans CalcDirLight/CalcSpotLight, et 0*NaN=NaN -> TOUT le viewmodel
+        // devient NOIR quelle que soit la texture. C'etait la cause du "bras noir".
+        shader->setVec3("dirLight.direction", glm::vec3(0.0f, 0.0f, 1.0f)); // depuis l'ecran
+        shader->setVec3("dirLight.ambient",  Constants::FP_ARMS_SKIN_COLOR * 0.8f);
+        shader->setVec3("dirLight.diffuse",  Constants::FP_ARMS_SKIN_COLOR * 0.5f);
+        shader->setVec3("dirLight.specular", glm::vec3(0.3f));
 
-    // Lumière locale en espace caméra
-    shader->setInt("numberLightSources", 1);
-    shader->setVec3("lightSources[0].position", glm::vec3(0.2f, 0.8f, -0.3f));
-    shader->setVec3("lightSources[0].ambient",  Constants::FP_ARMS_SKIN_COLOR * 0.5f);
-    shader->setVec3("lightSources[0].diffuse",  Constants::FP_ARMS_SKIN_COLOR);
-    shader->setVec3("lightSources[0].specular", glm::vec3(0.15f));
-    shader->setFloat("lightSources[0].constant",  1.0f);
-    shader->setFloat("lightSources[0].linear",    0.14f);
-    shader->setFloat("lightSources[0].quadratic", 0.07f);
+        // spotLight desactive mais avec des champs valides (pas de NaN)
+        shader->setVec3("spotLight.position",  glm::vec3(0.0f, 0.0f, -0.5f));
+        shader->setVec3("spotLight.direction", glm::vec3(0.0f, 0.0f, -1.0f));
+        shader->setVec3("spotLight.ambient",   glm::vec3(0.0f));
+        shader->setVec3("spotLight.diffuse",   glm::vec3(0.0f));
+        shader->setVec3("spotLight.specular",  glm::vec3(0.0f));
+        shader->setFloat("spotLight.constant",     1.0f);
+        shader->setFloat("spotLight.linear",       0.09f);
+        shader->setFloat("spotLight.quadratic",    0.032f);
+        shader->setFloat("spotLight.cutOff",       glm::radians(10.0f));
+        shader->setFloat("spotLight.outerCutOff",  glm::radians(15.0f));
+
+        // Pas de point light en 1P : la dirLight frontale suffit
+        shader->setInt("numberLightSources", 0);
+    }
 
     // Fallback texture blanche
     glActiveTexture(GL_TEXTURE0);
@@ -114,6 +210,74 @@ void FirstPersonArms::draw(Shader* shader) {
 
     shader->setInt("texture_diffuse", 0);
     shader->setInt("texture_specular", 1);
+
+    // Diagnostique au premier draw : où finissent les bras en espace caméra ?
+    // Replique le calcul GPU sur CPU (boneTransform pondéré + armModel) et
+    // affiche la AABB résultat : si tout est hors frustum, on voit le problème.
+    static bool s_armsDebugPrinted = false;
+    if (!s_armsDebugPrinted) {
+        s_armsDebugPrinted = true;
+        printf("[FPArms] draw() appele, meshes=%zu\n", meshes.size());
+        if (!meshes.empty()) {
+            const auto& dbgTex = meshes[0]->getTextureIDs();
+            printf("[FPArms] mesh 0 textures=%zu (slot0=%u, slot1=%u) — slot0 doit etre la peau\n",
+                   dbgTex.size(), dbgTex.size() > 0 ? dbgTex[0] : 0u, dbgTex.size() > 1 ? dbgTex[1] : 0u);
+            const auto& boneMatsDbg = m_animator->getFinalBoneMatrices();
+
+            // Cause classique d'invisibilité : matrices de bones NaN/Inf.
+            // Les vertices deviennent NaN → aucun raster, rien a l'ecran.
+            bool hasNaN = false;
+            for (size_t i = 0; i < boneMatsDbg.size(); i++) {
+                for (int c = 0; c < 4; c++) {
+                    for (int r = 0; r < 4; r++) {
+                        const float v = boneMatsDbg[i][c][r];
+                        if (std::isnan(v) || std::isinf(v)) { hasNaN = true; break; }
+                    }
+                }
+            }
+            printf("[FPArms] bones=%zu, NaN/Inf dans boneMatrices: %s\n",
+                   boneMatsDbg.size(), hasNaN ? "OUI !!!" : "non");
+            if (!boneMatsDbg.empty()) {
+                printf("[FPArms] bone[0] (root) col0: (%.4f, %.4f, %.4f, %.4f)\n",
+                       boneMatsDbg[0][0][0], boneMatsDbg[0][1][0],
+                       boneMatsDbg[0][2][0], boneMatsDbg[0][3][0]);
+            }
+
+            glm::vec3 mn(FLT_MAX), mx(-FLT_MAX);
+            for (const Vertex& v : meshes[0]->getVertices()) {
+                glm::mat4 bt(0.0f);
+                float wsum = 0.0f;
+                for (int i = 0; i < 4; i++) {
+                    const int id = v.m_boneIDs[i];
+                    const float w = v.m_weights[i];
+                    wsum += w;
+                    if (id >= 0 && id < static_cast<int>(boneMatsDbg.size()) && w > 0.0001f) {
+                        bt += boneMatsDbg[id] * w;
+                    }
+                }
+                if (wsum < 0.001f) bt = glm::mat4(1.0f);
+                const glm::vec4 p = armModel * (bt * glm::vec4(v.getPositions(), 1.0f));
+                mn = glm::min(mn, glm::vec3(p));
+                mx = glm::max(mx, glm::vec3(p));
+            }
+            printf("[FPArms] AABB espace-camera: min=(%.3f, %.3f, %.3f) max=(%.3f, %.3f, %.3f)\n",
+                   mn.x, mn.y, mn.z, mx.x, mx.y, mx.z);
+            // Frustum perspective 60°V, near=0.1 : z doit etre dans [-100, -0.1],
+            // |x| <= tan(30°)*|z|*aspect, |y| <= tan(30°)*|z|.
+            const float aspect = (float)Constants::WINDOW_WIDTH / (float)Constants::WINDOW_HEIGHT;
+            const float halfH = tanf(glm::radians(30.0f)) * std::max(std::abs(mx.z), std::abs(mn.z));
+            const float halfW = halfH * aspect;
+            printf("[FPArms] test frustum: z=[%.3f, %.3f] (ok si < -0.1), "
+                   "|x|<%.2f ok=%d, |y|<%.2f ok=%d\n",
+                   mn.z, mx.z, halfW, (std::max(std::abs(mx.x), std::abs(mn.x)) < halfW),
+                   halfH, (std::max(std::abs(mx.y), std::abs(mn.y)) < halfH));
+        }
+        GLenum err = glGetError();
+        while (err != GL_NO_ERROR) {
+            printf("[FPArms] glGetError: 0x%04X\n", err);
+            err = glGetError();
+        }
+    }
 
     for (auto* mesh : meshes) {
         mesh->draw();

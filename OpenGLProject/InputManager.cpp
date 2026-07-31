@@ -14,6 +14,7 @@
 #include "ThirdPerson.h"
 #include "LeftClick.h"
 #include "Window.h"
+#include "FirstPersonArms.h"
 
 InputManager::~InputManager() {
 	for (auto& pair : m_keys) {
@@ -28,6 +29,12 @@ Key* InputManager::getKey(const std::string& name) {
 		return it->second;
 	}
 	throw std::out_of_range("Key not found: " + name);
+}
+
+void InputManager::setFirstPersonArms(FirstPersonArms* arms) {
+	if (m_mouse) {
+		m_mouse->setFirstPersonArms(arms);
+	}
 }
 
 void InputManager::loadKeys() {

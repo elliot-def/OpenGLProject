@@ -1,4 +1,4 @@
-Matthieu Nebra & Openclassroom for the basics : https://openclassrooms.com
+Matthieu Nebra & Openclassroom for the C++ basics : https://openclassrooms.com
 
 OpenGL tutorial by Joey de Vries : https://learnopengl.com/
 

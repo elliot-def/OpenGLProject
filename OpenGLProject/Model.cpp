@@ -274,14 +274,28 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     if (mesh->mMaterialIndex >= 0) {
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
         auto diffuse = loadMaterialTextures(material, aiTextureType_DIFFUSE, scene);
+        // glTF2/GLB : Assimp >= 5.2 mappe baseColorTexture sur
+        // aiTextureType_BASE_COLOR (=12) et NON sur DIFFUSE. Sans ce fallback,
+        // le slot diffuse reste vide -> seule la texture NOIRE du specular est
+        // poussee -> le modele est rendu tout NOIR (bras, personnages rigges).
+        if (diffuse.empty()) {
+            diffuse = loadMaterialTextures(material, aiTextureType_BASE_COLOR, scene);
+        }
         auto specular = loadMaterialTextures(material, aiTextureType_SPECULAR, scene);
 
-        // 1. Si aucune diffuse, on met un fallback (ex: texture blanche ou debug)
-        if (diffuse.empty()) {
-            // Optionnel : tu peux lui assigner une texture par d�faut si vide
+        // 1. Diffuse : texture du modele, sinon fallback BLANC 1x1 (jamais noir)
+        if (!diffuse.empty()) {
+            textureIDs.push_back(diffuse[0]);
         }
         else {
-            textureIDs.push_back(diffuse[0]);
+            unsigned int whiteTextureID;
+            glGenTextures(1, &whiteTextureID);
+            glBindTexture(GL_TEXTURE_2D, whiteTextureID);
+            unsigned char whitePixel[] = { 255, 255, 255, 255 };
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, whitePixel);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            textureIDs.push_back(whiteTextureID);
         }
 
         // 2. CORRECTION : Si aucune sp�culaire n'est trouv�e, on g�n�re/affecte un ID de texture noire
@@ -376,6 +390,17 @@ std::vector<unsigned int> Model::loadMaterialTextures(aiMaterial* mat, aiTexture
                 // n'ajoutera pas de slot (Mesh::draw() gere le cas < 2 textures).
             }
             continue;
+        }
+
+        // FBX exporté depuis un autre poste : Assimp donne parfois des chemins
+        // ABSOLUS de la machine d'origine (ex: "G:\Models\ps2\hand rig\...\arms_01.png").
+        // Ces chemins n'existent pas ici -> stbi_load échoue -> texture magenta de debug.
+        // On ne garde que le nom de fichier, résolu depuis le dossier du modèle.
+        std::filesystem::path texFsPath(texPath);
+        const bool isAbsolute = texFsPath.is_absolute() ||
+                                (texPath.size() > 1 && texPath[1] == ':'); // lecteur Windows "G:\..."
+        if (isAbsolute) {
+            texPath = texFsPath.filename().string();
         }
 
         std::string fullPath = m_directory + "/" + texPath;

@@ -19,17 +19,20 @@ struct PointLight {
     float quadratic;
 };
 
+// Champs alignes sur Spotlight::applyToShader (cutOff, pas innerCutOff) :
+// sinon les uniforms spotLight.cutOff restent -1 et la flashlight n'echaire
+// jamais le modele (no-op silencieux). Identique a model.frag.
 struct SpotLight {
     vec3 position;
+    vec3 direction;
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
-    vec3 direction;
-    float innerCutOff;
-    float outerCutOff;
     float constant;
     float linear;
     float quadratic;
+    float cutOff;
+    float outerCutOff;
 };
 
 #define MAX_LIGHTS 10
@@ -100,7 +103,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec
 {
     vec3 lightDir = normalize(light.position - fragPos);
     float theta = dot(lightDir, normalize(-light.direction));
-    float epsilon = light.innerCutOff - light.outerCutOff;
+    float epsilon = light.cutOff - light.outerCutOff;
     float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
     float diff = max(dot(normal, lightDir), 0.0);
     vec3 reflectDir = reflect(-lightDir, normal);

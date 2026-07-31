@@ -29,6 +29,13 @@ public:
     // Vérifie si une animation est en cours
     bool isPlaying() const { return m_currentAnimation != nullptr; }
 
+    // Vérifie si une animation NON-loop est arrivée à son terme (pour
+    // enchaîner sur l'idle après un tir, par exemple)
+    bool isFinished() const {
+        return m_currentAnimation != nullptr && !m_loop &&
+               m_currentTime >= static_cast<float>(m_currentAnimation->mDuration);
+    }
+
     // Retourne le nom de l'animation en cours
     const std::string& getCurrentAnimationName() const { return m_currentAnimName; }
 
