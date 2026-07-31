@@ -59,6 +59,7 @@ public:
     void draw() const;
 
 	std::vector<Vertex> getVertices() const { return m_vertices; }
+    std::vector<Vertex>& getWritableVertices() { return m_vertices; }
     std::vector<unsigned int> getIndices() const { return m_indices; }
 
     glm::vec3 getLocalAABBMin() const { return m_aabbMin; }

@@ -103,7 +103,9 @@ private:
     float m_r, m_g, m_b;        ///< Couleur RGB
     float m_s, m_t;
 
-
+public:
+    int   m_boneIDs[4] = {0, 0, 0, 0};
+    float m_weights[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 };
 
 // Post-definition : le stride total doit rester 76 octets pour la coherence
@@ -112,6 +114,6 @@ private:
 // casse la compilation au lieu de deriver silencieusement en bug GPU.
 // (offsetof(Vertex, ...) est UB sur classe non-standard-layout ; refuse par
 // MSVC par defaut ; sizeof(Vertex) est portable et suffit a detecter le drift.)
-static_assert(sizeof(Vertex) == 11 * sizeof(float),
-              "Stride Vertex doit etre 11 floats (= 44 octets) -- "
+static_assert(sizeof(Vertex) == 11 * sizeof(float) + 4 * sizeof(int) + 4 * sizeof(float),
+              "Stride Vertex doit etre 11 floats + 4 ints + 4 floats (= 76 octets) -- "
               "tout drift casse la sync CPU<->GPU via glBufferData(sizeof(Vertex)).");

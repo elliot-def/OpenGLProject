@@ -1,7 +1,11 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
+#include <cstddef>
+#include <type_traits>
+
 #include "Mesh.h"
+#include "SkinningData.h"
 
 
 Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, unsigned int attributesMask, const std::vector<unsigned int>& textureIDs) 
@@ -71,6 +75,26 @@ void Mesh::setupMesh(unsigned int attributesMask = 0b0101) {
         glEnableVertexAttribArray(3);
         glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
             (void*)(9 * sizeof(float)));
+    }
+
+    // Bone IDs + Weights (toujours configurés : zéro pour les mesh non-riggés)
+    {
+        struct SkinLayoutProbe {
+            char  pre[11 * sizeof(float)];
+            int   boneIDs[MAX_BONE_INFLUENCE];
+            float weights[MAX_BONE_INFLUENCE];
+        };
+        static_assert(std::is_standard_layout<SkinLayoutProbe>::value,
+                      "SkinLayoutProbe doit etre standard-layout pour offsetof");
+        static_assert(sizeof(SkinLayoutProbe) == sizeof(Vertex),
+                      "Vertex layout drift: skin stride != sizeof(Vertex)");
+
+        glEnableVertexAttribArray(4);
+        glVertexAttribIPointer(4, MAX_BONE_INFLUENCE, GL_INT, sizeof(Vertex),
+                               (void*)offsetof(SkinLayoutProbe, boneIDs));
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, MAX_BONE_INFLUENCE, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                              (void*)offsetof(SkinLayoutProbe, weights));
     }
 
     glBindVertexArray(0); // D�bind pour �viter les erreurs plus tard

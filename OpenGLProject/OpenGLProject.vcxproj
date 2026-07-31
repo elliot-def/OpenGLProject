@@ -144,6 +144,7 @@
   <ItemGroup>
     <ClCompile Include="AABB.h" />
     <ClCompile Include="Outlineable.h" />
+    <ClCompile Include="Animator.cpp" />
     <ClCompile Include="Backward.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CheckboxInput.cpp" />
@@ -204,6 +205,7 @@
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Animator.h" />
     <ClInclude Include="Backward.h" />
     <ClInclude Include="BVHNode.h" />
     <ClInclude Include="Camera.h" />
@@ -252,6 +254,7 @@
     <ClInclude Include="SelectInput.h" />
     <ClInclude Include="Shape.h" />
     <ClInclude Include="SharedQuad.h" />
+    <ClInclude Include="SkinningData.h" />
     <ClInclude Include="Socket.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Renderer.h" />
@@ -288,6 +291,8 @@
     <None Include="res\shaders\model\model.vert" />
     <None Include="res\shaders\shape\shape.frag" />
     <None Include="res\shaders\shape\shape.vert" />
+    <None Include="res\shaders\skinned\skinned.frag" />
+    <None Include="res\shaders\skinned\skinned.vert" />
     <None Include="res\shaders\text\text.frag" />
     <None Include="res\shaders\text\text.vert" />
     <None Include="res\textures\crate\details.json" />

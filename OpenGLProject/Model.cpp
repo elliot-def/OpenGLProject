@@ -6,9 +6,6 @@
 #include "Camera.h"
 #include "LightManager.h"
 
-#include <assimp/Importer.hpp>
-#include <assimp/postprocess.h>
-
 #include <iostream>
 #include <exception>
 #include <utility> // std::declval pour le static_assert(noexcept(Mesh::~Mesh)).
@@ -178,22 +175,23 @@ bool Model::raycast(const glm::vec3& origin, const glm::vec3& direction,
 }
 
 void Model::loadModel(const std::string& path) {
-    m_processedMeshIndices.clear();  // reset dedup entre deux load successifs (defensif)
-    Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(path,
+    m_processedMeshIndices.clear();
+    m_boneInfoMap.clear();
+    m_boneCounter = 0;
+
+    m_scene = m_importer.ReadFile(path,
         aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals
     );
 
-    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-        std::cerr << "ERREUR::ASSIMP::" << importer.GetErrorString() << std::endl;
+    if (!m_scene || m_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !m_scene->mRootNode) {
+        std::cerr << "ERREUR::ASSIMP::" << m_importer.GetErrorString() << std::endl;
         return;
     }
 
-    // Stocker le dossier physique du fichier .obj
     std::filesystem::path p = path;
-    m_directory = p.parent_path().string(); // ex: "./res/models/backpack"
+    m_directory = p.parent_path().string();
 
-    processNode(scene->mRootNode, scene);
+    processNode(m_scene->mRootNode, m_scene);
 }
 
 void Model::processNode(aiNode* node, const aiScene* scene) {
@@ -261,6 +259,9 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         vertices.push_back(vertex);
     }
 
+    // Extraire les données de bones (offset matrices + poids par vertex)
+    extractBoneDataFromMesh(mesh, vertices);
+
     // Indices
     for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
         aiFace face = mesh->mFaces[i];
@@ -308,6 +309,43 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         (unsigned int)VertexAttribute::TEXCOORD;
 
     return new Mesh(vertices, indices, mask, textureIDs);
+}
+
+void Model::extractBoneDataFromMesh(aiMesh* mesh, std::vector<Vertex>& vertices) {
+    for (unsigned int b = 0; b < mesh->mNumBones; b++) {
+        aiBone* bone = mesh->mBones[b];
+        std::string boneName(bone->mName.C_Str());
+
+        int boneId = -1;
+        auto it = m_boneInfoMap.find(boneName);
+        if (it == m_boneInfoMap.end()) {
+            boneId = m_boneCounter++;
+            BoneInfo info;
+            info.id = boneId;
+            info.offsetMatrix = aiMatrixToGlm(bone->mOffsetMatrix);
+            m_boneInfoMap[boneName] = info;
+        } else {
+            boneId = it->second.id;
+        }
+
+        if (boneId >= MAX_BONES) continue;
+
+        for (unsigned int w = 0; w < bone->mNumWeights; w++) {
+            unsigned int vertexId = bone->mWeights[w].mVertexId;
+            float weight = bone->mWeights[w].mWeight;
+
+            if (vertexId >= vertices.size()) continue;
+
+            Vertex& v = vertices[vertexId];
+            for (int i = 0; i < MAX_BONE_INFLUENCE; i++) {
+                if (v.m_weights[i] == 0.0f) {
+                    v.m_boneIDs[i] = boneId;
+                    v.m_weights[i] = weight;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 std::vector<unsigned int> Model::loadMaterialTextures(aiMaterial* mat, aiTextureType type, const aiScene* scene) {

@@ -34,6 +34,16 @@ namespace Constants {
     // Couleur de peau pour l'éclairage des bras (ambient ≈ diffuse * 0.5)
     inline constexpr glm::vec3 FP_ARMS_SKIN_COLOR = glm::vec3(0.7f, 0.65f, 0.55f);
 
+    // Bobbing (oscillation) des bras en première personne pendant la marche
+    inline constexpr float FP_ARMS_BOB_SPEED     = 5.0f;   // Fréquence d'oscillation (rad/s)
+    inline constexpr float FP_ARMS_BOB_AMPLITUDE = 0.04f;  // Amplitude verticale (mètres)
+
+    // Animation de course : oscillation plus rapide et plus ample
+    inline constexpr float FP_ARMS_RUN_SPEED       = 10.0f;  // Fréquence course (rad/s)
+    inline constexpr float FP_ARMS_RUN_AMPLITUDE   = 0.07f;  // Amplitude verticale course (m)
+    inline constexpr float FP_ARMS_RUN_Z_SWING     = 0.06f;  // Balancement avant/arrière (m)
+    inline constexpr float FP_ARMS_RUN_PITCH       = 8.0f;   // Rotation avant/arrière (degrés)
+
     // Camera third-person
     inline constexpr float CAMERA_THIRD_PERSON_DISTANCE = 2.5f;  // Distance orbitale en 3e personne
 

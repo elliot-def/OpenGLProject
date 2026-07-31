@@ -169,6 +169,11 @@ void Game::update() {
     m_soundManager->update();
 
     m_collisionManager->updateDynamic("backpack", m_modelEntity->getModel()->getMeshes(), m_modelEntity->getModelMatrix());
+
+    // Mise à jour du bobbing des bras en première personne
+    if (m_firstPersonArms) {
+        m_firstPersonArms->update(m_renderer->getDeltaTime(), m_player->getPosition(), m_player->getIsSprinting());
+    }
 }
 
 void Game::draw() {
@@ -207,7 +212,7 @@ void Game::draw() {
     // Bras en premiere personne (1P uniquement)
     if (!m_camera->isThirdPerson() && m_firstPersonArms) {
         glClear(GL_DEPTH_BUFFER_BIT);
-        m_firstPersonArms->draw(m_shaderManager->getShader("model"));
+        m_firstPersonArms->draw(m_shaderManager->getShader("skinned"));
     }
 }
 

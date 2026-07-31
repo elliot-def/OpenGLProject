@@ -1,6 +1,8 @@
 #pragma once
 
+#include <assimp/Importer.hpp>
 #include <assimp/scene.h>
+#include <assimp/postprocess.h>
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>
@@ -8,6 +10,7 @@
 #include <unordered_set>
 
 #include "Vertex.h"
+#include "SkinningData.h"
 
 class Shader;
 class Mesh;
@@ -73,6 +76,11 @@ public:
 
     const std::vector<Mesh*>& getMeshes() const { return m_meshes; }
 
+    // Accès au skeleton et animations
+    const aiScene* getScene() const { return m_scene; }
+    const aiNode*  getRootNode() const { return m_scene ? m_scene->mRootNode : nullptr; }
+    const std::unordered_map<std::string, BoneInfo>& getBoneInfoMap() const { return m_boneInfoMap; }
+
     // Getters pour les hitbox
     const BoundingBox& getBoundingBox() const { return m_boundingBox; }
     const BoundingSphere& getBoundingSphere() const { return m_boundingSphere; }
@@ -107,6 +115,14 @@ private:
     // Mesh pour visualiser la bounding box
     Mesh* m_debugBoundingBoxMesh;
 
+    // Importer + scene conservés pour que le aiScene* reste adressable
+    Assimp::Importer m_importer;
+    const aiScene*   m_scene = nullptr;
+
+    // Bone mapping global partagé par tous les meshes du modèle
+    std::unordered_map<std::string, BoneInfo> m_boneInfoMap;
+    int m_boneCounter = 0;
+
     // D�duplication : certains exports GLB/GLTF r�f�rencent le m�me aiMesh
     // depuis plusieurs nœuds (fr�quent avec Mixamo/Blender). Sans ce set,
     // deux Mesh* identiques sont pouss�s dans m_meshes → z-fighting � l'�cran.
@@ -122,6 +138,7 @@ private:
     // cacheKey = le chemin "*N" original (sert de cle de cache partagee).
     unsigned int loadEmbeddedTexture(const aiTexture* texture, const std::string& cacheKey);
     void loadModel(const std::string& path);
+    void extractBoneDataFromMesh(aiMesh* mesh, std::vector<Vertex>& vertices);
     void processNode(aiNode* node, const aiScene* scene);
     Mesh* processMesh(aiMesh* mesh, const aiScene* scene);
 
