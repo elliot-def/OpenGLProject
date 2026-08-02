@@ -118,6 +118,12 @@
     <Filter Include="Fichiers sources\Collision">
       <UniqueIdentifier>{e5e80e73-48f9-472b-99b0-86a2fdfd054e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Fichiers de ressources\shaders\skinned">
+      <UniqueIdentifier>{6c9b3241-bd8b-40e2-bc15-f6de2bfa6989}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Fichiers d%27en-tête\Constants">
+      <UniqueIdentifier>{6c017516-054f-451c-9fa6-a68414c51533}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -300,15 +306,18 @@
     <ClCompile Include="Outlineable.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClCompile>
+    <ClCompile Include="Animator.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="constants\texture.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="Window.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="constants.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="Renderer.h">
@@ -500,6 +509,48 @@
     <ClInclude Include="BVHNode.h">
       <Filter>Fichiers d%27en-tête\Collision</Filter>
     </ClInclude>
+    <ClInclude Include="Animator.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinningData.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\color.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\material.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\window.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\firstPersonArms.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\renderer.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\player.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\menu.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\network.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\camera.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\physics.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\shader.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
+    <ClInclude Include="constants\file.h">
+      <Filter>Fichiers d%27en-tête\Constants</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\cube\cube.frag">
@@ -558,6 +609,12 @@
     </None>
     <None Include="res\shaders\image\masque\mask.vert">
       <Filter>Fichiers de ressources\shaders\image\mask</Filter>
+    </None>
+    <None Include="res\shaders\skinned\skinned.frag">
+      <Filter>Fichiers de ressources\shaders\skinned</Filter>
+    </None>
+    <None Include="res\shaders\skinned\skinned.vert">
+      <Filter>Fichiers de ressources\shaders\skinned</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

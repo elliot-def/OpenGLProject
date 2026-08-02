@@ -1,10 +1,15 @@
 #pragma once
+
+#include "Entity.h"
+
+#include "constants/player.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 #include <glm/glm.hpp>
 
-#include "Entity.h"
+
 
 class CollisionManager;
 class Camera;
@@ -59,7 +64,7 @@ public:
 
     // Retourne la position des yeux du joueur (pour la cam�ra)
 
-    glm::vec3 getEyePosition() const { return m_position + Constants::PLAYER_EYE_HEIGHT; }
+    glm::vec3 getEyePosition() const { return m_position + Constants::Player::PLAYER_EYE_HEIGHT; }
 private:
     Camera* m_camera = nullptr;
     bool m_isFlashlightEnabled = false;

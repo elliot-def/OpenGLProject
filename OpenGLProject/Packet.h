@@ -6,7 +6,7 @@
 #include <winsock2.h>
 #include <stdexcept>
 
-#include "constants.h"
+#include "constants/network.h"
 
 // Types de paquets
 enum class PacketType : uint16_t {

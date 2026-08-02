@@ -13,7 +13,7 @@ void Player::draw(Shader* shader)
 }
 
 void Player::processDirectionKey(int direction) {
-    float velocity = m_isSprinting ? Constants::PLAYER_SPRINTING_SPEED : Constants::PLAYER_WALKING_SPEED;
+    float velocity = m_isSprinting ? Constants::Player::PLAYER_SPRINTING_SPEED : Constants::Player::PLAYER_WALKING_SPEED;
     float deltaTime = m_renderer->getDeltaTime();
     float distance = velocity * deltaTime;
 
@@ -58,7 +58,7 @@ void Player::processThirdPersonKey() {
 void Player::processJump() {
     // Délègue au CollisionManager : il appliquera l'impulsion uniquement
     // si le joueur est actuellement au sol (m_isPlayerGrounded).
-    m_collisionManager->tryJump(Constants::PLAYER_JUMP_VELOCITY);
+    m_collisionManager->tryJump(Constants::Player::PLAYER_JUMP_VELOCITY);
 }
 
 void Player::processMouseMovements(double yaw, double pitch) {

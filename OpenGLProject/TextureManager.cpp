@@ -1,5 +1,10 @@
 #include "TextureManager.h"
 #include "Texture.h"
+
+#include "constants/texture.h"
+#include "constants/material.h"
+#include "constants/file.h"
+
 #include <fstream>
 #include <glad/glad.h>
 
@@ -19,7 +24,7 @@ Texture* TextureManager::getTexture(const std::string& path) {
     std::string part;
     TextureNode* current = &m_root;
 
-    char sep = static_cast<char>(Constants::PREFERED_SEPARATOR_PATH);
+    char sep = static_cast<char>(Constants::File::PREFERED_SEPARATOR_PATH);
     while (std::getline(ss, part, sep)) {
         auto it = current->children.find(part);
         if (it == current->children.end()) {
@@ -39,7 +44,7 @@ float TextureManager::loadTextureProperties(const std::filesystem::path& jsonPat
     try {
         std::ifstream jsonFile(jsonPath);
         json jsonData = json::parse(jsonFile);
-        return jsonData.value("shininess", Materials::PLASTIC_GLOSSY);
+        return jsonData.value("shininess", Constants::Material::PLASTIC_GLOSSY);
     }
     catch (const json::exception& e) {
         std::cerr << "Erreur parsing JSON " << jsonPath << ": " << e.what() << std::endl;
@@ -48,7 +53,7 @@ float TextureManager::loadTextureProperties(const std::filesystem::path& jsonPat
         std::cerr << "Erreur ouverture JSON " << jsonPath << ": " << e.what() << std::endl;
     }
 
-    return Materials::PLASTIC_GLOSSY;
+    return Constants::Material::PLASTIC_GLOSSY;
 }
 
 // Fonction pour récupérer les informations d'une texture depuis un dossier
@@ -67,7 +72,7 @@ TextureInfo TextureManager::getTextureInfoFromFolder(const std::filesystem::path
     }
     else {
         std::cerr << "Fichier de propriétés manquant pour " << folderName << ": " << info.shininessPath << std::endl;
-        info.shininess = Materials::PLASTIC_GLOSSY;
+        info.shininess = Constants::Material::PLASTIC_GLOSSY;
 	}
 
     return info;
@@ -134,7 +139,7 @@ bool TextureManager::loadTextureFromFolder(const std::filesystem::path& folderPa
 void TextureManager::loadTextures(std::span<const char* const> texturesFolderPath) {
     size_t count = std::size(texturesFolderPath);
 
-    int textureIDCounter = Constants::FIRST_TEXTURE_ID;
+    int textureIDCounter = Constants::Texture::FIRST_TEXTURE_ID;
     
     for (int i = 0; i < count; i++) {
         const char* path = texturesFolderPath[i];

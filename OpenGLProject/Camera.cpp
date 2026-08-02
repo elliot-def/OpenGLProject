@@ -1,6 +1,9 @@
 #include "Camera.h"
 #include "CollisionManager.h"
 
+#include "constants/camera.h"
+#include "constants/player.h"
+
 Camera::Camera(glm::vec3 position, Direction* direction) :
     m_position(position),
     m_direction(direction),
@@ -18,8 +21,8 @@ void Camera::update(Entity* entity) {
         m_wasFirstPerson = false;
 
         // Position desiree : orbite autour du joueur selon son angle de visee
-        glm::vec3 playerEye = entity->getPosition() + Constants::PLAYER_EYE_HEIGHT;
-        glm::vec3 desiredPos = playerEye - m_front * Constants::CAMERA_THIRD_PERSON_DISTANCE;
+        glm::vec3 playerEye = entity->getPosition() + Constants::Player::PLAYER_EYE_HEIGHT;
+        glm::vec3 desiredPos = playerEye - m_front * Constants::Camera::CAMERA_THIRD_PERSON_DISTANCE;
 
         // Sphere trace du joueur vers la position desiree
         glm::vec3 targetPos = desiredPos;
@@ -69,7 +72,7 @@ void Camera::update(Entity* entity) {
     } else {
         m_wasFirstPerson = true;
         // Premiere personne : camera a hauteur des yeux
-        m_position = entity->getPosition() + Constants::PLAYER_EYE_HEIGHT;
+        m_position = entity->getPosition() + Constants::Player::PLAYER_EYE_HEIGHT;
     }
 }
 

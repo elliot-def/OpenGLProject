@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <string>
 
-#include "constants.h"
+#include "constants/shader.h"
 
 class Shader;
 class LightSource;
@@ -42,7 +42,7 @@ private:
     };
     std::vector<LightUniformStrings> m_lightUniformNames;
 
-    static constexpr int MAX_POINT_LIGHTS = Constants::MAX_LIGHTS_SOURCES;
+    static constexpr int MAX_POINT_LIGHTS = Constants::Shader::MAX_LIGHTS_SOURCES;
     std::vector<LightSource*> m_lightSources;
     Spotlight* m_flashlight;
     Player* m_player;

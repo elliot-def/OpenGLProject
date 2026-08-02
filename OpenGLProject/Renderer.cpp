@@ -1,5 +1,7 @@
 #include "Renderer.h"
-#include "constants.h"
+
+#include "constants/renderer.h"
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -9,8 +11,8 @@
 Renderer::Renderer()
     : m_lastTime(glfwGetTime()), m_deltaTime(0.0f),
     m_frameCount(0), m_fpsTimer(0.0),
-    m_capFPS(Constants::DEFAULT_IS_FPS_CAPPING),
-    m_targetFPS(Constants::DEFAULT_FPS_CAPPING)
+    m_capFPS(Constants::Renderer::DEFAULT_IS_FPS_CAPPING),
+    m_targetFPS(Constants::Renderer::DEFAULT_FPS_CAPPING)
 {
     // Rien a faire de plus : on initialise juste les variables
 }

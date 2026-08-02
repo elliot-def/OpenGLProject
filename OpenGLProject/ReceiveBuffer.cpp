@@ -22,7 +22,7 @@ bool ReceiveBuffer::extractPacket(Packet& outPacket) {
     header.length = ntohl(header.length);
 
     // Vérifier le magic
-    if (header.magic != Constants::PACKET_MAGIC) {
+    if (header.magic != Constants::Network::PACKET_MAGIC) {
         // Données corrompues, vider le buffer
         m_buffer.clear();
         throw std::runtime_error("Magic number invalide - buffer corrompu");

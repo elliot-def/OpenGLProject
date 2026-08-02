@@ -1,6 +1,8 @@
 #include "Socket.h"
 #include "Packet.h"
 
+#include "constants/network.h"
+
 void Socket::connectToServerAsync(const ServerInfo& serverInfo) {
     std::thread([this, serverInfo]() {
         connectToServer(serverInfo);
@@ -115,7 +117,7 @@ bool Socket::pollEvent(ClientEvent& event) {
 // Thread qui tourne en fond
 
 void Socket::networkLoop() {
-    char buffer[Constants::MAX_PACKET_SIZE];
+    char buffer[Constants::Network::MAX_PACKET_SIZE];
 
     while (m_running.load()) {
         // Recevoir les données du serveur

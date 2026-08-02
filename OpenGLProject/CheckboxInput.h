@@ -36,7 +36,6 @@ public:
     void draw();
 
 private:
-    CursorManager* m_cursorManager;
     class Rectangle* m_box;   // Cadre exterieur
     class Rectangle* m_check; // Coche interieure (visible seulement si m_value == true)
 

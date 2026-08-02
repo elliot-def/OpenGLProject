@@ -1,6 +1,6 @@
 #include "CheckboxInput.h"
 #include "Rectangle.h"
-#include "constants.h"
+#include "constants/color.h"
 
 CheckboxInput::CheckboxInput(Shader* shader, float x, float y, float size,
     bool defaultValue, std::function<void(bool)> onValueChanged)
@@ -8,7 +8,7 @@ CheckboxInput::CheckboxInput(Shader* shader, float x, float y, float size,
 {
     m_box = new Rectangle(shader, x, y, size, size, glm::vec3(0.3f, 0.3f, 0.3f));
     // La coche est un peu plus petite que le cadre, avec une marge interieure
-    m_check = new Rectangle(shader, x, y, size * 0.6f, size * 0.6f, Colors::TROPICAL_TEAL);
+    m_check = new Rectangle(shader, x, y, size * 0.6f, size * 0.6f, Constants::Color::TROPICAL_TEAL);
 }
 
 CheckboxInput::~CheckboxInput() {

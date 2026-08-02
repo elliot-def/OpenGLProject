@@ -6,7 +6,9 @@
 #include <glm/glm.hpp>
 #include <map>
 
-#include "constants.h"
+#include "constants/window.h"
+#include "constants/menu.h"
+
 #include "Shape.h"
 #include "RangeInput.h"
 #include "CheckboxInput.h"
@@ -102,14 +104,14 @@ protected:
 
 public:
     Menu(Game* game, SoundManager* soundManager, std::vector<std::unique_ptr<TextRenderer>>* textRenderers = nullptr, ShaderManager* shaderManager = nullptr, CursorManager* cursorManager = nullptr, const std::string& t = "", bool bg = true)
-        : m_game(game), m_soundManager(soundManager), m_textRenderers(textRenderers), m_shaderManager(shaderManager), m_cursorManager(cursorManager), m_title(t), m_titleX(Constants::MENU_TITLE_X), m_titleY(Constants::MENU_TITLE_Y), m_titleWidth(Constants::MENU_TITLE_W), m_titleHeight(Constants::MENU_TITLE_H), m_drawBackground(bg) {
+        : m_game(game), m_soundManager(soundManager), m_textRenderers(textRenderers), m_shaderManager(shaderManager), m_cursorManager(cursorManager), m_title(t), m_titleX(Constants::Menu::MENU_TITLE_X), m_titleY(Constants::Menu::MENU_TITLE_Y), m_titleWidth(Constants::Menu::MENU_TITLE_W), m_titleHeight(Constants::Menu::MENU_TITLE_H), m_drawBackground(bg) {
     }
 
     ~Menu() {
         clear();
     }
 
-    void addItem(const std::string& text, float x = Constants::WINDOW_WIDTH / 2, float y = Constants::WINDOW_HEIGHT / 2, float width = 100, float height = 30, std::function<void()> callback = {}) {
+    void addItem(const std::string& text, float x = Constants::Window::WINDOW_WIDTH / 2, float y = Constants::Window::WINDOW_HEIGHT / 2, float width = 100, float height = 30, std::function<void()> callback = {}) {
         m_items.emplace_back(text, x, y, width, height, callback);
     }
 

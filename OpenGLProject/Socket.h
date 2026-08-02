@@ -10,13 +10,13 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-#include "constants.h"
+#include "constants/network.h"
 
 class Packet; // Déclaration anticipée
 
 struct ServerInfo {
-    std::string ip = "127.0.0.1";
-    int port = 3333;
+    std::string ip = Constants::Network::SERVER_IP;
+    int port = Constants::Network::SERVER_PORT;
 };
 
 enum class EventType {

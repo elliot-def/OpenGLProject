@@ -1,6 +1,10 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include "CollisionManager.h"
 #include "Mesh.h"
+
+#include "constants/physics.h"
+#include "constants/player.h"
+
 #include <algorithm>
 #include <iostream>
 #include <cmath>
@@ -243,8 +247,8 @@ glm::vec3 CollisionManager::sweepSphere(glm::vec3 start,
 // ─────────────────────────────────────────────────────────────────────────────
 glm::vec3 CollisionManager::pushPlayerAway(glm::vec3 currentPlayerPos) {
     
-	float radius = Constants::DEFAULT_PLAYER_RADIUS;
-	float height = Constants::DEFAULT_PLAYER_HEIGHT;
+	float radius = Constants::Player::DEFAULT_PLAYER_RADIUS;
+	float height = Constants::Player::DEFAULT_PLAYER_HEIGHT;
     
     glm::vec3 pos = currentPlayerPos;
     
@@ -302,7 +306,7 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
 
     if (gravityEnabled) {
         // Accélération de la vélocité verticale par la gravité
-        m_verticalVelocity += Constants::GRAVITY * deltaTime;
+        m_verticalVelocity += Constants::Physics::GRAVITY * deltaTime;
     }
     else {
         m_isPlayerGrounded = false;

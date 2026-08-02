@@ -1,3 +1,9 @@
+#include "Shader.h"
+#include "constants/window.h"
+#include "Camera.h"
+
+
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -6,10 +12,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "Shader.h"
-#include "Constants.h"
-#include "Camera.h"
-#include <filesystem>
 
 Shader::Shader(const std::string& vertexSource, const std::string& fragmentSource, Camera* camera, bool isFile) {
     m_model = glm::mat4(1.0f);
@@ -26,14 +28,14 @@ Shader::Shader(const std::string& vertexSource, const std::string& fragmentSourc
     // Projection en perspective : effet 3D avec champ de vision de 60�
     m_projection = glm::perspective(
         glm::radians(60.0f),
-        (float)Constants::WINDOW_WIDTH / (float)Constants::WINDOW_HEIGHT,
+        (float)Constants::Window::WINDOW_WIDTH / (float)Constants::Window::WINDOW_HEIGHT,
         0.1f, 100.0f
     );
 
     m_projection2D = glm::ortho(
         0.0f,
-        (float)Constants::WINDOW_WIDTH,
-        (float)Constants::WINDOW_HEIGHT,
+        (float)Constants::Window::WINDOW_WIDTH,
+        (float)Constants::Window::WINDOW_HEIGHT,
         0.0f,
         -1.0f,
         1.0f

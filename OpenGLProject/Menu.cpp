@@ -9,6 +9,9 @@
 #include "Rectangle.h"
 #include "Triangle.h"
 
+#include "constants/window.h"
+#include "constants/color.h"
+
 #include "cstdio"
 
 void Menu::drawTextCentered(const std::string& text, float centerX, float centerY, int textRendererIndex, glm::vec3 color, float scale) {
@@ -63,11 +66,11 @@ void Menu::addSelect(const std::string& label, float x, float y, float width, fl
 
 void Menu::draw() {
 	// Draw background
-    Rectangle background = Rectangle(m_shaderManager->getShader("shape"), Constants::WINDOW_WIDTH / 2, Constants::WINDOW_HEIGHT / 2, Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT, Colors::SHADOW_GREY);
+    Rectangle background = Rectangle(m_shaderManager->getShader("shape"), Constants::Window::WINDOW_WIDTH / 2, Constants::Window::WINDOW_HEIGHT / 2, Constants::Window::WINDOW_WIDTH, Constants::Window::WINDOW_HEIGHT, Constants::Color::SHADOW_GREY);
     background.draw();
     // Dessiner le titre si présent
     if (!m_title.empty()) {
-        drawTextCentered(m_title, m_titleX, m_titleY, 1, Colors::LINEN);
+        drawTextCentered(m_title, m_titleX, m_titleY, 1, Constants::Color::LINEN);
     }
 
     // Dessiner les items du menu
@@ -78,10 +81,10 @@ void Menu::draw() {
         float centerY = item.y + item.height / 2.0f;
 
         if (item.isHovered) {
-            drawTextCentered(item.text, centerX, centerY, 0, Colors::TOMATO_JAM);
+            drawTextCentered(item.text, centerX, centerY, 0, Constants::Color::TOMATO_JAM);
         }
         else {
-            drawTextCentered(item.text, centerX, centerY, 0, Colors::LINEN);
+            drawTextCentered(item.text, centerX, centerY, 0, Constants::Color::LINEN);
 
         }
     }
@@ -100,12 +103,12 @@ void Menu::draw() {
             float labelX = pos.x - size.x / 2.0f - 20.0f;
             float valueX = pos.x + size.x / 2.0f + 20.0f;
             //float labelX = pos.x - size.x - 20.0f;
-            drawTextRightAligned(range->label, labelX, pos.y - range->input->getSize().y / 2.0f, 0, Colors::LINEN);
+            drawTextRightAligned(range->label, labelX, pos.y - range->input->getSize().y / 2.0f, 0, Constants::Color::LINEN);
 
             float val = range->input->getValue();
             ss << std::fixed << std::setprecision(2) << val;
 
-            drawTextLeftAligned(ss.str(), valueX, pos.y - range->input->getSize().y / 2.0f, 0, Colors::LINEN);
+            drawTextLeftAligned(ss.str(), valueX, pos.y - range->input->getSize().y / 2.0f, 0, Constants::Color::LINEN);
         }
         range->input->draw();
     }
@@ -118,7 +121,7 @@ void Menu::draw() {
         if (!checkbox->label.empty()) {
             float labelX = pos.x - size / 2.0f - 20.0f;
             // float labelX = pos.x - size - 20.0f;
-            drawTextRightAligned(checkbox->label, labelX, pos.y - size / 2.0f, 0, Colors::LINEN);
+            drawTextRightAligned(checkbox->label, labelX, pos.y - size / 2.0f, 0, Constants::Color::LINEN);
         }
         checkbox->input->draw();
     }
@@ -129,18 +132,18 @@ void Menu::draw() {
         glm::vec2 pos = select->input->getPosition();
         if (!select->label.empty()) {
             float labelX = pos.x - 20.0f;
-            drawTextRightAligned(select->label, labelX, pos.y - 30.0f, 0, Colors::LINEN, 0.4f);
+            drawTextRightAligned(select->label, labelX, pos.y - 30.0f, 0, Constants::Color::LINEN, 0.4f);
         }
         select->input->draw();
 
         // Valeur selectionnee, toujours visible sur la case fermee
-        drawTextCentered(select->input->getSelectedLabel(), pos.x, pos.y, 0, Colors::LINEN, 0.4f);
+        drawTextCentered(select->input->getSelectedLabel(), pos.x, pos.y, 0, Constants::Color::LINEN, 0.4f);
 
         // Libelles des options, seulement si la liste est ouverte
         if (select->input->isOpen()) {
             for (size_t i = 0; i < select->input->getOptionCount(); ++i) {
                 glm::vec2 optPos = select->input->getOptionPosition(i);
-                drawTextCentered(select->input->getOptionLabel(i), optPos.x, optPos.y, 0, Colors::LINEN, 0.4f);
+                drawTextCentered(select->input->getOptionLabel(i), optPos.x, optPos.y, 0, Constants::Color::LINEN, 0.4f);
             }
         }
     }

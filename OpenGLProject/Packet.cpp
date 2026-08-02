@@ -4,7 +4,7 @@
 std::vector<char> Packet::serialize() const {
     PacketHeader header;
 
-    header.magic = htons(Constants::PACKET_MAGIC);
+    header.magic = htons(Constants::Network::PACKET_MAGIC);
     header.type = htons(static_cast<uint16_t>(m_type));
     header.length = htonl(static_cast<uint32_t>(m_payload.size()));
 
@@ -44,7 +44,7 @@ Packet Packet::deserialize(const char* data, size_t size) {
     header.length = ntohl(header.length);
 
     // Vérifier le magic number
-    if (header.magic != Constants::PACKET_MAGIC) {
+    if (header.magic != Constants::Network::PACKET_MAGIC) {
         throw std::runtime_error("Magic number invalide");
     }
 

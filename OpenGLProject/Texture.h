@@ -3,7 +3,7 @@
 #include <iostream>
 #include <filesystem>
 
-#include "Constants.h"
+#include "constants/texture.h"
 
 class Shader;
 
@@ -43,7 +43,7 @@ private:
     std::string m_fileSpecularPath;                                     // Chemin du fichier source de la texture
     unsigned int m_textureID;                                           // ID OpenGL de la texture
     unsigned int m_specularTextureID;                                   // ID OpenGL de la texture
-	unsigned int m_defaultSpecularID = Constants::BLACK_TEXTURE_ID;     // ID OpenGL de la texture spéculaire par défaut
+	unsigned int m_defaultSpecularID = Constants::Texture::BLACK_TEXTURE_ID;     // ID OpenGL de la texture spéculaire par défaut
 
     int m_width, m_height;         // Dimensions de la texture
     int m_nrChannels;              // Nombre de canaux (ex: 3 pour RGB, 4 pour RGBA)

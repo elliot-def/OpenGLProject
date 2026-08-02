@@ -6,6 +6,9 @@
 #include "LightManager.h"
 #include "Animator.h"
 
+#include "constants/firstpersonarms.h"
+#include "constants/window.h"
+
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cfloat>   // FLT_MAX pour la AABB de debug
@@ -122,9 +125,9 @@ void FirstPersonArms::draw(Shader* shader) {
         glm::vec3 front = m_camera->getFront();
         float yaw = atan2(front.x, front.z);
         armModel = glm::mat4(1.0f);
-        armModel = glm::translate(armModel, m_playerPos + glm::vec3(0.0f, Constants::FP_ARMS_3P_OFFSET_Y, 0.0f));
+        armModel = glm::translate(armModel, m_playerPos + glm::vec3(0.0f, Constants::FirstPersonArms::FP_ARMS_3P_OFFSET_Y, 0.0f));
         armModel = glm::rotate(armModel, yaw, glm::vec3(0.0f, 1.0f, 0.0f));
-        armModel = glm::scale(armModel, glm::vec3(Constants::FP_ARMS_3P_SCALE));
+        armModel = glm::scale(armModel, glm::vec3(Constants::FirstPersonArms::FP_ARMS_3P_SCALE));
         view = m_camera->getViewMatrix();
         viewPos = m_camera->getPosition();
     } else {
@@ -137,17 +140,17 @@ void FirstPersonArms::draw(Shader* shader) {
         // les COINS INFERIEURS de l'ecran (constantes dans constants.h).
         armModel = glm::mat4(1.0f);
         armModel = glm::translate(armModel, glm::vec3(
-            Constants::FP_ARMS_OFFSET_X,
-            Constants::FP_ARMS_OFFSET_Y,
-            Constants::FP_ARMS_OFFSET_Z));
+            Constants::FirstPersonArms::FP_ARMS_OFFSET_X,
+            Constants::FirstPersonArms::FP_ARMS_OFFSET_Y,
+            Constants::FirstPersonArms::FP_ARMS_OFFSET_Z));
         armModel = glm::rotate(armModel, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
         // Echelle non-uniforme (voir constants.h) : pose "rest" = bras le long
         // du corps (mains a x=+-0.75 rig). X=0.65 pousse les mains vers les
         // coins inferieurs, Y/Z=0.50 conservent hauteur et profondeur.
         armModel = glm::scale(armModel, glm::vec3(
-            Constants::FP_ARMS_SCALE_X,
-            Constants::FP_ARMS_SCALE_Y,
-            Constants::FP_ARMS_SCALE_Z));
+            Constants::FirstPersonArms::FP_ARMS_SCALE_X,
+            Constants::FirstPersonArms::FP_ARMS_SCALE_Y,
+            Constants::FirstPersonArms::FP_ARMS_SCALE_Z));
         view = glm::mat4(1.0f);
         viewPos = glm::vec3(0.0f);
         // Overlay : les bras passent devant le monde → on vide le depth buffer
@@ -182,8 +185,8 @@ void FirstPersonArms::draw(Shader* shader) {
         // dans CalcDirLight/CalcSpotLight, et 0*NaN=NaN -> TOUT le viewmodel
         // devient NOIR quelle que soit la texture. C'etait la cause du "bras noir".
         shader->setVec3("dirLight.direction", glm::vec3(0.0f, 0.0f, 1.0f)); // depuis l'ecran
-        shader->setVec3("dirLight.ambient",  Constants::FP_ARMS_SKIN_COLOR * 0.8f);
-        shader->setVec3("dirLight.diffuse",  Constants::FP_ARMS_SKIN_COLOR * 0.5f);
+        shader->setVec3("dirLight.ambient",  Constants::FirstPersonArms::FP_ARMS_SKIN_COLOR * 0.8f);
+        shader->setVec3("dirLight.diffuse",  Constants::FirstPersonArms::FP_ARMS_SKIN_COLOR * 0.5f);
         shader->setVec3("dirLight.specular", glm::vec3(0.3f));
 
         // spotLight desactive mais avec des champs valides (pas de NaN)
@@ -264,7 +267,7 @@ void FirstPersonArms::draw(Shader* shader) {
                    mn.x, mn.y, mn.z, mx.x, mx.y, mx.z);
             // Frustum perspective 60°V, near=0.1 : z doit etre dans [-100, -0.1],
             // |x| <= tan(30°)*|z|*aspect, |y| <= tan(30°)*|z|.
-            const float aspect = (float)Constants::WINDOW_WIDTH / (float)Constants::WINDOW_HEIGHT;
+            const float aspect = (float)Constants::Window::WINDOW_WIDTH / (float)Constants::Window::WINDOW_HEIGHT;
             const float halfH = tanf(glm::radians(30.0f)) * std::max(std::abs(mx.z), std::abs(mn.z));
             const float halfW = halfH * aspect;
             printf("[FPArms] test frustum: z=[%.3f, %.3f] (ok si < -0.1), "

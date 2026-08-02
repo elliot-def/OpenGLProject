@@ -1,6 +1,8 @@
 #include "TextRenderer.h"
 #include "ShaderManager.h"
 
+#include "constants/window.h"
+
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb/stb_truetype.h>
 #include <fstream>
@@ -11,9 +13,9 @@
 
 TextRenderer::TextRenderer(ShaderManager* shaderManager)
     : m_shaderManager(shaderManager), m_fontSize(48.0f), m_VAO(0), m_VBO(0), m_shaderProgram(0),
-    m_screenWidth(Constants::WINDOW_WIDTH), m_screenHeight(Constants::WINDOW_HEIGHT) {
+    m_screenWidth(Constants::Window::WINDOW_WIDTH), m_screenHeight(Constants::Window::WINDOW_HEIGHT) {
 
-    // Cr�er le shader
+    // Creer le shader
 	m_shaderProgram = m_shaderManager->getShader("text")->getID();
 
     // Configuration du VAO/VBO

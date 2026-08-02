@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 
-#include "Constants.h"
+#include "constants/player.h"
 #include "BVHNode.h"
 #include "AABB.h"
 
@@ -108,8 +108,8 @@ public:
         glm::vec3 desiredMovement,
         float     deltaTime,
         bool      gravityEnabled,
-        float     radius = Constants::DEFAULT_PLAYER_RADIUS,
-        float     height = Constants::DEFAULT_PLAYER_HEIGHT);
+        float     radius = Constants::Player::DEFAULT_PLAYER_RADIUS,
+        float     height = Constants::Player::DEFAULT_PLAYER_HEIGHT);
 
     glm::vec3 pushPlayerAway(glm::vec3 currentPlayerPos);
 
@@ -121,7 +121,7 @@ public:
      * redescendre le joueur, procurant un temps en l'air de quelques secondes.
      *
      * @param jumpVelocity Vélocité verticale initiale (positive, unités/s).
-     *                     En pratique : Constants::PLAYER_JUMP_VELOCITY.
+     *                     En pratique : Constants::Player::PLAYER_JUMP_VELOCITY.
      * @return true si le saut a été déclenché, false sinon (pas grounded).
      */
     bool tryJump(float jumpVelocity);

@@ -1,7 +1,8 @@
 #include "RangeInput.h"
 #include "Rectangle.h"
 #include "CursorManager.h"
-#include "constants.h"
+
+#include "constants/color.h"
 
 #include <algorithm>
 
@@ -15,13 +16,13 @@ RangeInput::RangeInput(Shader* shader, float x, float y, float width, float heig
     m_onValueChanged(onValueChanged)
 {
     // Piste de fond
-    m_track = new Rectangle(shader, x, y, width, height, Colors::SHADOW_GREY);
+    m_track = new Rectangle(shader, x, y, width, height, Constants::Color::SHADOW_GREY);
 
     // Remplissage : sa largeur/position sera recalculee dans updateHandlePosition()
-    m_fill = new Rectangle(shader, x, y, width, height, Colors::TROPICAL_TEAL);
+    m_fill = new Rectangle(shader, x, y, width, height, Constants::Color::TROPICAL_TEAL);
 
     // Curseur
-    m_handle = new Rectangle(shader, x, y, m_handleWidth, height * 1.4f, Colors::VANILLA_CUSTARD);
+    m_handle = new Rectangle(shader, x, y, m_handleWidth, height * 1.4f, Constants::Color::VANILLA_CUSTARD);
 
     updateHandlePosition();
 }

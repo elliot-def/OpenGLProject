@@ -1,8 +1,11 @@
 #include "OptionsMenu.h"
 #include "Game.h"
-#include "constants.h"
 #include "CursorManager.h"
 #include "File.h"
+
+#include "constants/window.h"
+#include "constants/file.h"
+
 #include <iostream>
 #include <nlohmann/json.hpp>
 
@@ -20,23 +23,23 @@ OptionsMenu::~OptionsMenu() {
 }
 
 void OptionsMenu::createOptions(bool isMuted, float volume) {
-    addCheckbox("Son", Constants::WINDOW_WIDTH / 2, 700, 40, !isMuted, [this](bool isChecked) {
+    addCheckbox("Son", Constants::Window::WINDOW_WIDTH / 2, 700, 40, !isMuted, [this](bool isChecked) {
         m_soundManager->setMute(!isChecked);
         });
 
     // Note : Pense à adapter la valeur par défaut (ici récupérée via le SoundManager si possible, sinon 1.0f)
-    addRange("Volume", Constants::WINDOW_WIDTH / 2, 800, 300, 25, 0, 2, volume, [this](float volume) {
+    addRange("Volume", Constants::Window::WINDOW_WIDTH / 2, 800, 300, 25, 0, 2, volume, [this](float volume) {
         m_soundManager->setMasterVolume(volume);
         });
 
-    addItem("Retour", Constants::WINDOW_WIDTH / 2, 900, 200, 50, [this]() {
+    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 900, 200, 50, [this]() {
         m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU);
         exportJSON();
         });
 }
 
 void OptionsMenu::loadJSON() {
-    File optionFile(Constants::JSON_OPTION_PATH);
+    File optionFile(Constants::File::JSON_OPTION_PATH);
 
     // On vérifie directement si le fichier existe
     if (!optionFile.exists()) {
@@ -73,7 +76,7 @@ void OptionsMenu::loadJSON() {
 }
 
 void OptionsMenu::exportJSON() {
-    File optionFile(Constants::JSON_OPTION_PATH);
+    File optionFile(Constants::File::JSON_OPTION_PATH);
 
     try {
         json j;

@@ -6,15 +6,18 @@
 #include "Sound.h"
 #include "Renderer.h"
 
+#include "constants/window.h"
+#include "constants/menu.h"
+
 MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager, const std::string& t, bool bg) :
         Menu(game, soundManager, textRenderers, shaderManager, cursorManager, t, bg), m_renderer(renderer), m_colorDVDLogo(glm::vec3(1.0f, 1.0f, 1.0f)) {
-    addItem("Jouer", Constants::WINDOW_WIDTH / 2, 700, 200, 50, [this]() {
+    addItem("Jouer", Constants::Window::WINDOW_WIDTH / 2, 700, 200, 50, [this]() {
         m_game->changeState(STATE_PLAYING);
         });
-    addItem("Options", Constants::WINDOW_WIDTH / 2, 800, 200, 50, [this]() {
+    addItem("Options", Constants::Window::WINDOW_WIDTH / 2, 800, 200, 50, [this]() {
         m_game->changeState(STATE_OPTIONS);
         });
-    addItem("Quitter", Constants::WINDOW_WIDTH / 2, 900, 200, 50, [this]() {
+    addItem("Quitter", Constants::Window::WINDOW_WIDTH / 2, 900, 200, 50, [this]() {
         m_game->stop();
         });
     // Dans la classe qui instancie le menu :
@@ -51,7 +54,7 @@ MainMenu::~MainMenu() {
 
 void MainMenu::update(bool isAFK) {
     auto now = std::chrono::system_clock::now();
-    if (std::chrono::duration<float>(now - m_lastWeirdSoundPlayed).count() > Constants::WEIRD_SOUND_INTERVAL) {
+    if (std::chrono::duration<float>(now - m_lastWeirdSoundPlayed).count() > Constants::Menu::WEIRD_SOUND_INTERVAL) {
         Sound* weirdSound = m_weirdSounds[std::rand() % m_weirdSounds.size()];
         weirdSound->play();
         m_lastWeirdSoundPlayed = now;
@@ -63,7 +66,7 @@ void MainMenu::update(bool isAFK) {
         if (it == m_shapes.end()) return;
 
         DVDShape* dvd = static_cast<DVDShape*>(it->second->shape);
-        dvd->update(Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT);
+        dvd->update(Constants::Window::WINDOW_WIDTH, Constants::Window::WINDOW_HEIGHT);
 
         dvd->setIsVisible(true);
 
@@ -75,8 +78,8 @@ void MainMenu::update(bool isAFK) {
 
         DVDShape* dvd = static_cast<DVDShape*>(it->second->shape);
         dvd->setIsVisible(false);
-        dvd->setPosition(static_cast<float>(std::rand() % (Constants::WINDOW_WIDTH - static_cast<int>(dvd->getSize().x))),
-            static_cast<float>(std::rand() % (Constants::WINDOW_HEIGHT - static_cast<int>(dvd->getSize().y))));
+        dvd->setPosition(static_cast<float>(std::rand() % (Constants::Window::WINDOW_WIDTH - static_cast<int>(dvd->getSize().x))),
+            static_cast<float>(std::rand() % (Constants::Window::WINDOW_HEIGHT - static_cast<int>(dvd->getSize().y))));
     }
 }
 

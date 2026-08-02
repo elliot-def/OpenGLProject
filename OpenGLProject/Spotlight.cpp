@@ -25,7 +25,7 @@ void Spotlight::update(glm::vec3 position, Direction* direction) {
 }
 
 void Spotlight::update(Player* player) {
-	m_position = player->getPosition() + Constants::PLAYER_EYE_HEIGHT;
+	m_position = player->getPosition() + Constants::Player::PLAYER_EYE_HEIGHT;
 	m_direction = player->getDirection();
 }
 

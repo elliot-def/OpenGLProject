@@ -211,6 +211,14 @@ les transparents sont triés par distance caméra puis dessinés avec `glDepthMa
 ## 5. Conventions de code
 
 ### Style C++
+- **Ordre des includes** : classes du projet en premier, puis constantes, puis bibliothèques externes. Exemple :
+  ```cpp
+  #include "Player.h"          // 1. Classes du projet
+  #include "constants.h"       // 2. Constantes
+  #include <glm/vec3.hpp>      // 3. Bibliothèques externes
+  #include <glad/glad.h>
+  ```
+  Dans les `.cpp`, le header correspondant vient toujours en premier.
 - **Membres** préfixés par `m_`.
 - **Getters inline courts** dans le header ; calcul plus long → déclaration dans le `.h`, définition dans le `.cpp`.
 - **Forward declarations** dans les headers pour limiter la surcharge ; `class Foo;` est préféré à `#include "Foo.h"`.
@@ -308,6 +316,23 @@ Le `PostBuildEvent` du `.vcxproj` copie `dependencies\bin\*.dll` vers `$(OutDir)
 - DLLs **runtime Visual C++** (vcredist) — à installer une fois sur le poste.
 
 Si vous déplacez l'exécutable sur une machine vierge sans ces DLLs, le programme crash au démarrage.
+
+### 8.bis.1 Pourquoi les constantes sont divisées en plusieurs fichiers
+
+Les constantes étaient historiquement regroupées dans un seul fichier `constants.h`.
+Elles sont désormais réparties dans des fichiers séparés sous `OpenGLProject/constants/`
+(`window.h`, `colors.h`, `materials.h`, etc.) et incluses par le fichier racine
+`OpenGLProject/constants.h`.
+
+**Motivation :** chaque modification d'une constante provoquait la recompilation de
+tous les fichiers qui incluent `constants.h`. En divisant les constantes par domaine,
+seuls les fichiers qui incluent le sous-header modifié sont recompilés, ce qui réduit
+le temps de build incrémental.
+
+**Règle :** lorsqu'on ajoute une constante, on la place dans le sous-fichier existant
+le plus pertinent (ex. `window.h` pour les constantes de fenêtre) ou on crée un
+nouveau fichier `constants/<domaine>.h` si aucun ne correspond. On inclut ensuite
+ce nouveau fichier depuis `OpenGLProject/constants.h`.
 
 ### 8.ter Référence rapide API ↔ implémentation
 

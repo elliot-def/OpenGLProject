@@ -1,7 +1,6 @@
 // Buffer de réception pour gérer la fragmentation
 
 #include "packet.h"
-#include "constants.h"
 
 class ReceiveBuffer {
 public:

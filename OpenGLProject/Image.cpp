@@ -3,7 +3,7 @@
 #include "Mesh.h"
 #include "Shader.h"
 #include "SharedQuad.h"
-#include "constants.h"
+#include "constants/window.h"
 
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -55,8 +55,8 @@ void Image::draw() {
     if (m_textureID == 0) return;
 
     glm::mat4 projection = glm::ortho(
-        0.0f, static_cast<float>(Constants::WINDOW_WIDTH),
-        static_cast<float>(Constants::WINDOW_HEIGHT), 0.0f,
+        0.0f, static_cast<float>(Constants::Window::WINDOW_WIDTH),
+        static_cast<float>(Constants::Window::WINDOW_HEIGHT), 0.0f,
         -1.0f, 1.0f
     );
 

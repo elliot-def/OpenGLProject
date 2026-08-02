@@ -3,13 +3,13 @@
 
 #include "Window.h"
 #include "SoundManager.h"
-#include "constants.h"
+#include "constants/window.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <stb/stb_image.h>
 
-Window::Window() : m_width(Constants::WINDOW_WIDTH), m_height(Constants::WINDOW_HEIGHT), m_title(Constants::WINDOW_TITLE), m_window(nullptr) {
+Window::Window() : m_width(Constants::Window::WINDOW_WIDTH), m_height(Constants::Window::WINDOW_HEIGHT), m_title(Constants::Window::WINDOW_TITLE), m_window(nullptr) {
     if (!init()) {
         std::cerr << "Failed to initialize Window\n";
         std::exit(EXIT_FAILURE);
@@ -65,7 +65,7 @@ bool Window::init() {
     GLFWmonitor* monitor = nullptr;
     const GLFWvidmode* mode = nullptr;
 
-    if (Constants::IS_WINDOW_FULLSCREEN) {
+    if (Constants::Window::IS_WINDOW_FULLSCREEN) {
         monitor = glfwGetPrimaryMonitor();
         mode = glfwGetVideoMode(monitor);
         if (!mode) {

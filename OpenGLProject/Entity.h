@@ -4,7 +4,6 @@
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 
-#include "constants.h"
 #include "Outlineable.h"
 
 class CollisionManager;

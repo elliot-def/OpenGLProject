@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Menu.h"
-#include "constants.h"
 #include "chrono"
 
 class Game;
@@ -12,7 +11,7 @@ class Renderer;
 
 class MainMenu : public Menu {
 public:
-	MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager, const std::string& t = Constants::WINDOW_TITLE, bool bg = true);
+	MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager, const std::string& t = Constants::Window::WINDOW_TITLE, bool bg = true);
 	~MainMenu();
 	
 	void update(bool isAFK);

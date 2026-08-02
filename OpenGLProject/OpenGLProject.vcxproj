@@ -143,6 +143,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AABB.h" />
+    <ClCompile Include="constants\texture.h" />
     <ClCompile Include="Outlineable.h" />
     <ClCompile Include="Animator.cpp" />
     <ClCompile Include="Backward.cpp" />
@@ -213,7 +214,18 @@
     <ClInclude Include="CollisionManager.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="configKeys.h" />
-    <ClInclude Include="constants.h" />
+    <ClInclude Include="constants\camera.h" />
+    <ClInclude Include="constants\color.h" />
+    <ClInclude Include="constants\file.h" />
+    <ClInclude Include="constants\firstPersonArms.h" />
+    <ClInclude Include="constants\material.h" />
+    <ClInclude Include="constants\menu.h" />
+    <ClInclude Include="constants\network.h" />
+    <ClInclude Include="constants\physics.h" />
+    <ClInclude Include="constants\player.h" />
+    <ClInclude Include="constants\renderer.h" />
+    <ClInclude Include="constants\shader.h" />
+    <ClInclude Include="constants\window.h" />
     <ClInclude Include="Crouch.h" />
     <ClInclude Include="Cube.h" />
     <ClInclude Include="CursorManager.h" />

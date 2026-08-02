@@ -8,7 +8,8 @@
 #include <unordered_map>
 
 #include "Shader.h"
-#include "constants.h"
+#include "constants/shader.h"
+#include "constants/file.h"
 
 // Structure représentant un noeud dans l'arborescence des shaders
 struct ShaderNode {
@@ -49,7 +50,7 @@ public:
         std::string part;
         ShaderNode* current = &m_root;
 
-        char sep = static_cast<char>(Constants::PREFERED_SEPARATOR_PATH);
+        char sep = static_cast<char>(Constants::File::PREFERED_SEPARATOR_PATH);
         while (std::getline(ss, part, sep)) {
             auto it = current->children.find(part);
             if (it == current->children.end()) {
@@ -70,9 +71,9 @@ private:
 
     /**
      * @brief Charge tous les shaders depuis le dossier donné et construit l'arborescence
-     * @param shadersFolderPath Dossier racine des shaders (défaut : Constants::SHADERS_FOLDER_PATH)
+     * @param shadersFolderPath Dossier racine des shaders (défaut : Constants::Shader::SHADERS_FOLDER_PATH)
      */
-    void loadShaders(std::string shadersFolderPath = Constants::SHADERS_FOLDER_PATH) {
+    void loadShaders(std::string shadersFolderPath = Constants::Shader::SHADERS_FOLDER_PATH) {
         if (!std::filesystem::is_directory(shadersFolderPath)) {
             std::cerr << "Le dossier des shaders n’existe pas: " << shadersFolderPath << std::endl;
             return;

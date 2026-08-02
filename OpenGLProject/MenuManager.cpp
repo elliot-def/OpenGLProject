@@ -10,7 +10,7 @@
 #include "Sound.h"
 #include "InputManager.h"
 #include "Renderer.h"
-#include "constants.h"
+#include "constants/menu.h"
 
 #include <glad/glad.h>  // dessin 2D des menus: glEnable / glDisable / glBlendFunc
 #include <chrono>
@@ -99,7 +99,7 @@ void MenuManager::update() {
         auto now = std::chrono::system_clock::now();
         auto sec = std::chrono::duration<float>(now - lastInput).count();
 
-        m_mainMenu->update(sec > Constants::MAINMENU_AFK_THRESHOLD);
+        m_mainMenu->update(sec > Constants::Menu::MAINMENU_AFK_THRESHOLD);
     }
     else if (m_currentState == STATE_PAUSED) {
         m_pauseMenu->update();

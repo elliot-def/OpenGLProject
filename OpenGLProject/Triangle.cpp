@@ -3,6 +3,8 @@
 #include "Mesh.h"
 #include "Vertex.h"
 
+#include "constants/window.h"
+
 Triangle::Triangle(Shader* shader, float x, float y, float width, float height, glm::vec3 color)
     : Shape(shader, x, y, width, height) {
     setColor(color.r, color.g, color.b);
@@ -45,7 +47,7 @@ void Triangle::draw() {
     m_shader->setVec3("color", m_color);
     if (m_shader->getType() == ShaderType::RoundedTriangle) {
         m_shader->setFloat("radius", 1.0f);
-        m_shader->setVec2("resolution", glm::vec2(Constants::WINDOW_WIDTH, Constants::WINDOW_HEIGHT));
+        m_shader->setVec2("resolution", glm::vec2(Constants::Window::WINDOW_WIDTH, Constants::Window::WINDOW_HEIGHT));
     }
 
     m_mesh->draw();

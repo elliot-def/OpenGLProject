@@ -4,6 +4,8 @@
 #include "ShaderType.h"
 #include "Image.h"
 
+#include "constants/window.h"
+
 #include <glad/glad.h>  // GL_TRUE/GL_FALSE/glDepthMask - requise par l'outline pass
 
 MaskImage::MaskImage(Shader* shader, const std::string& texturePath, float x, float y, float width, float height)
@@ -15,8 +17,8 @@ void MaskImage::draw(glm::vec3 color) {
     if (m_textureID == 0) return;
 
     glm::mat4 projection = glm::ortho(
-        0.0f, static_cast<float>(Constants::WINDOW_WIDTH),
-        static_cast<float>(Constants::WINDOW_HEIGHT), 0.0f,
+        0.0f, static_cast<float>(Constants::Window::WINDOW_WIDTH),
+        static_cast<float>(Constants::Window::WINDOW_HEIGHT), 0.0f,
         -1.0f, 1.0f
     );
 

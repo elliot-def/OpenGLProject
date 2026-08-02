@@ -32,5 +32,3 @@
 #include "FirstPersonArms.h"
 #include "CollisionManager.h"
 #include "SharedQuad.h"
-
-#include "constants.h"

@@ -47,7 +47,7 @@ void Game::initialize() {
 	m_textRenderers->at(0)->loadFont("res/fonts/armana/Amarna-Bold.ttf", 96.0f);
     m_textRenderers->at(1)->loadFont("res/fonts/Gnocchi.ttf", 282.0f);
 
-    m_socket->connectToServerAsync(ServerInfo(Constants::SERVER_IP, Constants::SERVER_PORT));
+    m_socket->connectToServerAsync(ServerInfo());
 
     Texture* containerTexture = m_textureManager->getTexture("container");
 

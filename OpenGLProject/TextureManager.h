@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <nlohmann/json.hpp>
 
-#include "constants.h"
+#include "constants/Texture.h"
 
 using json = nlohmann::json;
 
@@ -87,7 +87,7 @@ public:
     void printTextureTree() const;
 private:
     TextureNode m_root; ///< Racine de l'arborescence des textures
-    unsigned int m_defaultSpecularID = Constants::BLACK_TEXTURE_ID;  // Texture par défaut
+    unsigned int m_defaultSpecularID = Constants::Texture::BLACK_TEXTURE_ID;  // Texture par défaut
 
     /**
      * @brief Charge toutes les textures depuis des dossiers donnés
@@ -98,7 +98,7 @@ private:
      * 2. Parcourt tous les fichiers récursivement
      * 3. Pour chaque fichier .png, crée un objet Texture et l'ajoute à l'arborescence
      */
-    void loadTextures(std::span<const char* const> texturesFolderPath = Constants::TEXTURES_FOLDER_PATHS);
+    void loadTextures(std::span<const char* const> texturesFolderPath = Constants::Texture::TEXTURES_FOLDER_PATHS);
 
     void createDefaultTextures();
 
