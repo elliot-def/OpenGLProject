@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <assimp/scene.h>
 #include <vector>
 #include <string>
@@ -39,6 +40,17 @@ public:
     // Retourne le nom de l'animation en cours
     const std::string& getCurrentAnimationName() const { return m_currentAnimName; }
 
+    // Applique un offset local supplémentaire à un bone par son nom (ex:
+    // décaler un bras). L'offset est composé avec la transformation du bone
+    // à chaque frame, entre la transformation globale et l'offsetMatrix.
+    // Passer glm::mat4(1.0f) retire l'offset du bone.
+    void addBoneOffset(const std::string& boneName, const glm::mat4& offset) {
+        m_boneOffsets[boneName] = offset;
+    }
+
+    // Supprime tous les offsets manuels
+    void clearBoneOffsets() { m_boneOffsets.clear(); }
+
 private:
     Model* m_model = nullptr;
     const aiScene* m_scene = nullptr;
@@ -50,17 +62,40 @@ private:
 
     std::vector<glm::mat4> m_finalBoneMatrices;
 
-    // Trouve la transformation d'un nœud à un instant donné dans l'animation
-    glm::mat4 interpolateNodeTransform(const aiNodeAnim* channel, float animTime) const;
+    // Offsets manuels optionnels appliqués par nom de bone (voir addBoneOffset)
+    std::unordered_map<std::string, glm::mat4> m_boneOffsets;
+
+    // Cache des canaux d'animation par nom de nœud (reconstruit à chaque
+    // playAnimation) : évite la recherche linéaire dans mNumChannels à chaque
+    // frame, et permet d'animer TOUS les nœuds canalisés (pas seulement les
+    // bones) — un conteneur figé désynchronise sa hiérarchie d'enfants.
+    std::unordered_map<std::string, const aiNodeAnim*> m_channelMap;
+
+    // Assimp 5.4.3 corrompt les clés de rotation à l'import (1 valide sur 4,
+    // le reste = bruit). Filtre les clés valides (temps fini dans [0, durée],
+    // quaternion unitaire, monotonie) et les compacte. À appeler dans
+    // playAnimation, avant le remplissage de m_channelMap.
+    void repairRotationKeys(const aiAnimation* anim);
+
+    // Trouve la transformation d'un nœud à un instant donné dans l'animation.
+    // node sert de fallback : si le canal n'a pas de clé pour un composant
+    // (position/rotation), on utilise la transformation de repos (bind pose)
+    // du nœud au lieu de (0,0,0)/identité — sinon les bones se collent au
+    // centre du rig ou pivotent vers +Y (bras collés / pointant vers le haut).
+    glm::mat4 interpolateNodeTransform(const aiNode* node, const aiNodeAnim* channel, float animTime) const;
 
     // Calcule récursivement les matrices globales des bones
     void computeBoneTransform(const aiNode* node, const glm::mat4& parentTransform, float animTime);
 
-    // Helper : interpolation de translation
-    glm::vec3 interpolateTranslation(float animTime, const aiNodeAnim* channel) const;
+    // Helper : interpolation de translation (defaultValue = bind pose du nœud,
+    // utilisée si le canal n'a pas de clé de position)
+    glm::vec3 interpolateTranslation(float animTime, const aiNodeAnim* channel,
+                                     const glm::vec3& defaultValue) const;
 
-    // Helper : interpolation de rotation
-    glm::quat interpolateRotation(float animTime, const aiNodeAnim* channel) const;
+    // Helper : interpolation de rotation (defaultValue = bind pose du nœud,
+    // utilisée si le canal n'a pas de clé de rotation)
+    glm::quat interpolateRotation(float animTime, const aiNodeAnim* channel,
+                                  const glm::quat& defaultValue) const;
 
     // Helper : interpolation de scale
     glm::vec3 interpolateScale(float animTime, const aiNodeAnim* channel) const;

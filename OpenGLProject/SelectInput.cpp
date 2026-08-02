@@ -1,6 +1,6 @@
 #include "SelectInput.h"
 #include "Rectangle.h"
-#include "constants.h"
+#include "constants/color.h"
 
 #include <algorithm>
 
@@ -17,7 +17,7 @@ SelectInput::SelectInput(Shader* shader, float x, float y, float width, float he
     // Une rangee par option, empilee juste en dessous de la case principale
     for (size_t i = 0; i < m_options.size(); ++i) {
         glm::vec2 pos = getOptionPosition(i);
-        m_optionBoxes.push_back(new Rectangle(shader, pos.x, pos.y, width, height, Colors::SHADOW_GREY));
+        m_optionBoxes.push_back(new Rectangle(shader, pos.x, pos.y, width, height, Constants::Color::SHADOW_GREY));
     }
 }
 

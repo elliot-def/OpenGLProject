@@ -23,12 +23,16 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
 
     m_animator->setup(m_model.get());
 
+    // Pose commune 1P/3P : applyViewmodelOffsets() relève et écarte les
+    // deux bras. Le placement, l'échelle et la caméra restent différents
+    // selon le mode, mais les angles de pose sont identiques.
+
     // Pré-calculer les noms d'uniforms des bones
     for (int i = 0; i < MAX_BONES; i++) {
         m_boneUniformNames.push_back("uBoneMatrices[" + std::to_string(i) + "]");
     }
 
-    // Jouer l'idle par défaut (chercher "rest" par nom)
+    // Jouer l'idle par défaut (chercher "finger_gun_idle" par nom)
     const aiScene* scene = m_model->getScene();
     if (scene) {
         const auto& meshes  = m_model->getMeshes();
@@ -47,6 +51,11 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
             const auto& firstBone = *boneMap.begin();
             printf("[FPArms] premier bone: \"%s\" (id=%d), MAX_BONES=%d\n",
                    firstBone.first.c_str(), firstBone.second.id, MAX_BONES);
+            // Lister TOUS les noms de bones — ce sont les noms exacts à
+            // passer à m_animator->addBoneOffset("<nom>", offset).
+            for (const auto& [name, info] : boneMap) {
+                printf("[FPArms]   bone: \"%s\" (id=%d)\n", name.c_str(), info.id);
+            }
             if (boneMap.size() > static_cast<size_t>(MAX_BONES)) {
                 printf("[FPArms] ATTENTION: %zu bones > MAX_BONES (%d) — "
                        "les bones au-dela seront ignores (vertus degenerees possibles)!\n",
@@ -56,7 +65,11 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
         for (unsigned int i = 0; i < scene->mNumAnimations; i++) {
             std::string name(scene->mAnimations[i]->mName.C_Str());
             printf("[FPArms] anim %u: \"%s\"\n", i, name.c_str());
-            if (name.find("rest") != std::string::npos) {
+            // Idle 1P/3P : "finger_gun_idle" (bras droit déjà levé en position
+            // de visée par l'animation elle-même — doigts en "finger gun", pose
+            // bien plus naturelle que rest+offsets). L'anim "rest" = bras le
+            // long du corps (inutilisable en 1P, les mains resteraient en bas).
+            if (name.find("finger_gun_idle") != std::string::npos) {
                 m_idleAnimIndex = i;
             }
             if (name.find("finger_gun_fire") != std::string::npos) {
@@ -66,7 +79,7 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
         if (m_idleAnimIndex >= 0) {
             m_animator->playAnimation(m_idleAnimIndex, true);
         } else if (scene->mNumAnimations > 0) {
-            printf("[FPArms] rest pas trouve, fallback anim 0\n");
+            printf("[FPArms] finger_gun_idle pas trouve, fallback anim 0\n");
             m_animator->playAnimation(0, true);
         }
     } else {
@@ -89,6 +102,16 @@ FirstPersonArms::~FirstPersonArms() {
 
 void FirstPersonArms::update(float deltaTime, const glm::vec3& playerPos, bool isSprinting) {
     m_playerPos = playerPos;
+
+    // Pose commune aux deux modes : les mêmes offsets d'élévation et
+    // d'écartement sont conservés en 1P comme en 3P. Seuls le placement du
+    // modèle, l'échelle et la matrice de vue changent entre les modes.
+    // L'animation finger_gun_fire conserve donc aussi cette pose pendant le tir.
+    if (!m_viewmodelOffsetsActive) {
+        applyViewmodelOffsets();
+        m_viewmodelOffsetsActive = true;
+    }
+
     m_animator->update(deltaTime);
 
     // Apres la fin de l'animation de tir (non-loop), retour a l'idle
@@ -102,6 +125,37 @@ void FirstPersonArms::triggerFire() {
     if (m_fireAnimIndex >= 0 && m_animator) {
         m_animator->playAnimation(m_fireAnimIndex, false);
     }
+}
+
+void FirstPersonArms::applyViewmodelOffsets() {
+    // Pose commune 1P/3P : bras DROIT déjà levé par l'anim finger_gun_idle
+    // (doigts en "finger gun"), bras GAUCHE relevé en miroir par les offsets.
+    //  - upper_arm.L : élévation (RotX +60°) PUIS écartement (RotZ +spread) → la
+    //    main gauche arrive à ~(-0.16,-0.19,-0.89) espace caméra (fix_search.py).
+    //  - forearm.L   : pli du coude (RotX +70°).
+    //  - upper_arm.R : écartement opposé (RotZ −spread) uniquement → écarte la main
+    //    droite de l'axe de visée (la pose elle-même vient de l'animation).
+    // Signe OPPOSÉ au bras gauche : les repères locaux des deux bras sont en
+    // miroir (même signe des deux côtés rapprocherait les mains — simulation
+    // spread_test.py). L'axe local X du bras gauche pointe vers le
+    // haut-extérieur (angles POSITIFS = élévation vers l'avant) ; l'axe local
+    // Z fait l'abduction. Angles réglables dans constants/firstPersonArms.h.
+    const float upperArm = glm::radians(Constants::FirstPersonArms::FP_ARMS_BONE_UPPER_ARM_DEG);
+    const float forearm  = glm::radians(Constants::FirstPersonArms::FP_ARMS_BONE_FOREARM_DEG);
+    const float spread   = glm::radians(Constants::FirstPersonArms::FP_ARMS_SPREAD_DEG);
+    const float spacing  = Constants::FirstPersonArms::FP_ARMS_SPACING;
+    const glm::vec3 axisX(1.0f, 0.0f, 0.0f);
+    const glm::vec3 axisZ(0.0f, 0.0f, 1.0f);
+    // La translation d'écartement est indépendante des rotations : modifier
+    // FP_ARMS_SPACING déplace les bras sans changer les angles de pose.
+    // Même ordre de composition que la simulation : off = T(spacing) @ Rx(élév) @ Rz(spread)
+    m_animator->addBoneOffset("upper_arm.L",
+        glm::translate(glm::mat4(1.0f), glm::vec3(spacing, 0.0f, 0.0f)) *
+        glm::rotate(glm::rotate(glm::mat4(1.0f), upperArm, axisX), spread, axisZ));
+    m_animator->addBoneOffset("forearm.L", glm::rotate(glm::mat4(1.0f), forearm, axisX));
+    m_animator->addBoneOffset("upper_arm.R",
+        glm::translate(glm::mat4(1.0f), glm::vec3(-spacing, 0.0f, 0.0f)) *
+        glm::rotate(glm::mat4(1.0f), -spread, axisZ));
 }
 
 const std::vector<Mesh*>& FirstPersonArms::getMeshes() {
@@ -136,8 +190,9 @@ void FirstPersonArms::draw(Shader* shader) {
         // (-X) : gauche/droite corrects (pas d'effet miroir), et +Z rig (paumes)
         // pointe dans l'ecran (on voit le dos des mains, comme en vraie 1re
         // personne). PAS de rotation autour de X : le rig reste a l'endroit (Y
-        // vers le haut), donc en pose "rest" les bras pendent des epaules vers
-        // les COINS INFERIEURS de l'ecran (constantes dans constants.h).
+        // vers le haut). La pose idle (finger_gun_idle) a deja le bras droit
+        // leve devant la poitrine ; les offsets (elevation bras gauche +
+        // abduction des deux epaules) sont ajoutes par applyViewmodelOffsets().
         armModel = glm::mat4(1.0f);
         armModel = glm::translate(armModel, glm::vec3(
             Constants::FirstPersonArms::FP_ARMS_OFFSET_X,
@@ -265,6 +320,27 @@ void FirstPersonArms::draw(Shader* shader) {
             }
             printf("[FPArms] AABB espace-camera: min=(%.3f, %.3f, %.3f) max=(%.3f, %.3f, %.3f)\n",
                    mn.x, mn.y, mn.z, mx.x, mx.y, mx.z);
+
+            // Positions VISUELLES des articulations (espace rig) : la pose 1P
+            // attendue (simulation fix_search.py) est main.D≈(-0.25,1.57,0.24)
+            // et main.G≈(0.22,1.57,0.35) — comparer ce dump au log pour vérifier.
+            static const char* kDbgBones[] = {
+                "shoulder.R", "upper_arm.R", "forearm.R", "hand.R",
+                "shoulder.L", "upper_arm.L", "forearm.L", "hand.L",
+            };
+            const auto& dbgMap = m_model->getBoneInfoMap();
+            for (const char* nm : kDbgBones) {
+                auto bit = dbgMap.find(nm);
+                if (bit == dbgMap.end() || bit->second.id < 0 ||
+                    bit->second.id >= static_cast<int>(boneMatsDbg.size())) {
+                    continue;
+                }
+                // finalMat * O^-1 = transformée VISIBLE du bone (G, et G*offset
+                // pour les bones avec offset). La colonne 3 = position du joint.
+                const glm::mat4 vis = boneMatsDbg[bit->second.id] * glm::inverse(bit->second.offsetMatrix);
+                printf("[FPArms]   joint %-12s rig=(%.3f, %.3f, %.3f)\n",
+                       nm, vis[3][0], vis[3][1], vis[3][2]);
+            }
             // Frustum perspective 60°V, near=0.1 : z doit etre dans [-100, -0.1],
             // |x| <= tan(30°)*|z|*aspect, |y| <= tan(30°)*|z|.
             const float aspect = (float)Constants::Window::WINDOW_WIDTH / (float)Constants::Window::WINDOW_HEIGHT;
