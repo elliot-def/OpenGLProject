@@ -79,6 +79,7 @@ public:
     // Accès au skeleton et animations
     const aiScene* getScene() const { return m_scene; }
     const aiNode*  getRootNode() const { return m_scene ? m_scene->mRootNode : nullptr; }
+    const std::string& getSourcePath() const { return m_sourcePath; }
     const std::unordered_map<std::string, BoneInfo>& getBoneInfoMap() const { return m_boneInfoMap; }
 
     // Getters pour les hitbox
@@ -98,6 +99,7 @@ public:
         const glm::mat4& modelMatrix, float& distance) const;
 
 private:
+    std::string m_sourcePath;
     std::string m_directory;
     std::string m_texturesDirectory;
 

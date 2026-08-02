@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "SkinningData.h"
 #include "Model.h"
@@ -60,6 +61,12 @@ private:
     float m_ticksPerSecond = 30.0f;
     bool m_loop = true;
 
+    // État du diagnostic périodique : limité à un message par seconde.
+    float m_debugTimer = 0.0f;
+    float m_debugLastTime = 0.0f;
+    glm::quat m_debugLastRotation{ 1.0f, 0.0f, 0.0f, 0.0f };
+    bool m_debugHasLastRotation = false;
+
     std::vector<glm::mat4> m_finalBoneMatrices;
 
     // Offsets manuels optionnels appliqués par nom de bone (voir addBoneOffset)
@@ -71,10 +78,15 @@ private:
     // bones) — un conteneur figé désynchronise sa hiérarchie d'enfants.
     std::unordered_map<std::string, const aiNodeAnim*> m_channelMap;
 
-    // Assimp 5.4.3 corrompt les clés de rotation à l'import (1 valide sur 4,
-    // le reste = bruit). Filtre les clés valides (temps fini dans [0, durée],
-    // quaternion unitaire, monotonie) et les compacte. À appeler dans
-    // playAnimation, avant le remplissage de m_channelMap.
+    // Les animations sont partagées entre plusieurs transitions fire -> idle.
+    // Éviter de retrier/reparcourir leurs clés à chaque transition : ce travail
+    // est nécessaire une seule fois par aiAnimation après son import.
+    std::unordered_set<const aiAnimation*> m_repairedAnimations;
+    std::unordered_set<const aiAnimation*> m_debugPrintedAnimations;
+
+    // Filtre les clés dont le temps ou le quaternion sont manifestement
+    // invalides, garde les rotations non normalisées valides en les normalisant,
+    // puis compacte le tableau. À appeler dans playAnimation, avant le cache.
     void repairRotationKeys(const aiAnimation* anim);
 
     // Trouve la transformation d'un nœud à un instant donné dans l'animation.
@@ -99,6 +111,9 @@ private:
 
     // Helper : interpolation de scale
     glm::vec3 interpolateScale(float animTime, const aiNodeAnim* channel) const;
+
+    // Diagnostic de l'animation courante (aucun effet sur le rendu).
+    void printAnimationDebug() const;
 
     // Trouve l'index de la keyframe pour un temps donné
     unsigned int findKeyIndex(float animTime, const aiVectorKey* keys, unsigned int numKeys) const;

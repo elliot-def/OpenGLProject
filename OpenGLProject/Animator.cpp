@@ -8,6 +8,9 @@
 void Animator::setup(Model* model) {
     m_model = model;
     m_scene = model->getScene();
+    m_channelMap.clear();
+    m_repairedAnimations.clear();
+    m_debugPrintedAnimations.clear();
     m_finalBoneMatrices.resize(MAX_BONES, glm::mat4(1.0f));
 }
 
@@ -20,23 +23,18 @@ void Animator::playAnimation(unsigned int animIndex, bool loop) {
     m_currentAnimName = m_currentAnimation->mName.C_Str();
     m_currentTime = 0.0f;
 
-    // Assimp peut rapporter 0.0 (ou une valeur aberrante) pour FBX/glTF :
-    // fallback 25 t/s. glTF2 (GLB) → 1000 t/s avec temps en ms, FBX → 30.
+    // Assimp peut rapporter 0.0 (ou une valeur aberrante) : fallback 25 t/s.
+    // Pour le GLB, on conserve impérativement la cadence fournie par Assimp,
+    // car Assimp peut avoir converti les temps glTF en ticks internes.
     const double ticks = m_currentAnimation->mTicksPerSecond;
     m_ticksPerSecond = (ticks > 0.001) ? static_cast<float>(ticks) : 25.0f;
 
-    // Assimp 5.4.3 corrompt les clés de ROTATION à l'import (1 clé valide sur
-    // 4, le reste = bruit : temps ~ -6e66, quaternions |q|~1e17). Sans ce
-    // nettoyage, l'interpolation échantillonne les clés pourries → poses
-    // aléatoires ("mouvements poltergeist"). À faire AVANT de remplir le cache.
-    //
-    // Limite connue du contournement : les 3/4 des échantillons sont perdus
-    // (données irrécupérables) → résolution temporelle ~7,5 im/s (idle quasi
-    // statique : aucun impact visuel ; tir/recul : 4 clés sur 500 ms, saccadé
-    // mais pose correcte). La mutation in-place de la scène est sûre : le
-    // aiScene appartient au Model et Animator en est l'unique consommateur,
-    // et la réparation est idempotente (canaux déjà propres inchangés).
-    repairRotationKeys(m_currentAnimation);
+    // Assimp 5.4.3 corrompt certaines clés de rotation à l'import. Le
+    // nettoyage est effectué une seule fois par animation : playAnimation()
+    // peut être appelé plusieurs fois lors des transitions fire -> idle.
+    if (m_repairedAnimations.insert(m_currentAnimation).second) {
+        repairRotationKeys(m_currentAnimation);
+    }
 
     // Cache des canaux par nom : évite la recherche linéaire à chaque frame.
     m_channelMap.clear();
@@ -46,8 +44,69 @@ void Animator::playAnimation(unsigned int animIndex, bool loop) {
     }
 
     m_loop = loop;
+    m_debugTimer = 0.0f;
+    m_debugLastTime = 0.0f;
+    m_debugHasLastRotation = false;
+
     std::cout << "[Animator] Playing: " << m_currentAnimName
               << " (duration=" << m_currentAnimation->mDuration / m_ticksPerSecond << "s)" << std::endl;
+    if (m_debugPrintedAnimations.insert(m_currentAnimation).second) {
+        printAnimationDebug();
+    }
+}
+
+void Animator::printAnimationDebug() const {
+    if (!m_currentAnimation) return;
+
+    unsigned int rotationChannels = 0;
+    unsigned int rotationKeys = 0;
+    unsigned int positionChannels = 0;
+    unsigned int positionKeys = 0;
+    double minRotationTime = DBL_MAX;
+    double maxRotationTime = -DBL_MAX;    const aiNodeAnim* upperArm = nullptr;
+
+
+    for (unsigned int i = 0; i < m_currentAnimation->mNumChannels; i++) {
+        const aiNodeAnim* channel = m_currentAnimation->mChannels[i];
+        if (channel->mNumRotationKeys > 0) {
+            rotationChannels++;
+            rotationKeys += channel->mNumRotationKeys;
+            minRotationTime = std::min(minRotationTime, channel->mRotationKeys[0].mTime);
+            maxRotationTime = std::max(maxRotationTime,
+                channel->mRotationKeys[channel->mNumRotationKeys - 1].mTime);
+        }
+        if (channel->mNumPositionKeys > 0) {
+            positionChannels++;
+            positionKeys += channel->mNumPositionKeys;
+        }
+        if (channel->mNodeName == aiString("upper_arm.R")) {
+            upperArm = channel;
+        }
+    }
+
+    printf("[AnimatorDebug] anim=\"%s\" loop=%d ticks=%.3f duration=%.3f seconds=%.3f "
+           "channels=%u rotChannels=%u rotKeys=%u posChannels=%u posKeys=%u "
+           "rotRange=[%.6f, %.6f] upper_arm.R_keys=%u\n",
+           m_currentAnimName.c_str(), m_loop ? 1 : 0, m_ticksPerSecond,
+           static_cast<float>(m_currentAnimation->mDuration),
+           static_cast<float>(m_currentAnimation->mDuration) / m_ticksPerSecond,
+           m_currentAnimation->mNumChannels, rotationChannels, rotationKeys,
+           positionChannels, positionKeys,
+           static_cast<float>(minRotationTime), static_cast<float>(maxRotationTime),
+           upperArm ? upperArm->mNumRotationKeys : 0u);
+
+    if (upperArm && upperArm->mNumRotationKeys > 0) {
+        const aiQuatKey& first = upperArm->mRotationKeys[0];
+        const aiQuatKey& last = upperArm->mRotationKeys[upperArm->mNumRotationKeys - 1];
+        const float firstLen = glm::length(glm::quat(first.mValue.w, first.mValue.x,
+                                                       first.mValue.y, first.mValue.z));
+        const float lastLen = glm::length(glm::quat(last.mValue.w, last.mValue.x,
+                                                      last.mValue.y, last.mValue.z));
+        printf("[AnimatorDebug] upper_arm.R firstTime=%.6f lastTime=%.6f "
+               "firstQuatLen=%.6f lastQuatLen=%.6f\n",
+               static_cast<float>(first.mTime), static_cast<float>(last.mTime),
+               firstLen, lastLen);
+    }
 }
 
 void Animator::repairRotationKeys(const aiAnimation* anim) {
@@ -61,10 +120,26 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
         const unsigned int n = ch->mNumRotationKeys;
         if (n == 0) continue;
 
+        // Assimp peut fournir les clés GLB dans un ordre non monotone. Sans
+        // tri, une clé tardive fait monter lastTime et toutes les clés
+        // suivantes sont rejetées, ce qui explique par exemple 15 clés au
+        // lieu de 60 pour upper_arm.R. Les temps non finis sont envoyés à la
+        // fin et seront rejetés par timeOk.
+        std::sort(ch->mRotationKeys, ch->mRotationKeys + n,
+            [](const aiQuatKey& a, const aiQuatKey& b) {
+                const bool aFinite = std::isfinite(a.mTime);
+                const bool bFinite = std::isfinite(b.mTime);
+                if (aFinite != bFinite) return aFinite;
+                if (!aFinite) return false;
+                return a.mTime < b.mTime;
+            });
+
         // Conserver les clés valides : temps fini dans [0, durée], quaternion
-        // unitaire, temps croissants (monotonie). Les clés pourries sont
-        // écartées et les bonnes compactées en tête de tableau.
+        // non nul et fini. Les clés corrompues sont écartées et les bonnes
+        // compactées en tête du tableau.
         unsigned int kept = 0;
+        unsigned int rejectedTime = 0;
+        unsigned int rejectedQuaternion = 0;
         float lastTime = -FLT_MAX;
         for (unsigned int i = 0; i < n; i++) {
             aiQuatKey& k = ch->mRotationKeys[i];
@@ -72,17 +147,37 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
             const glm::quat q(k.mValue.w, k.mValue.x, k.mValue.y, k.mValue.z);
             const float len = glm::length(q);
             const bool timeOk = std::isfinite(t) && t >= 0.0f && t <= duration + 1.0f && t >= lastTime;
-            const bool quatOk = std::isfinite(len) && len > 0.9f && len < 1.1f;
+            // Ne pas exiger une norme comprise entre 0.9 et 1.1 : certains
+            // exports fournissent des quaternions valides mais non normalisés.
+            // Les supprimer réduit fortement la fréquence des poses et rend
+            // l'animation saccadée. On garde donc toute rotation finie,
+            // non-nulle et raisonnable, puis on la normalise immédiatement.
+            // Les valeurs manifestement corrompues (ex: ~1e17) restent rejetées.
+            const bool quatOk = std::isfinite(len) && len > 0.0001f && len < 10.0f;
             if (timeOk && quatOk) {
                 if (kept != i) ch->mRotationKeys[kept] = k;
+                aiQuatKey& keptKey = ch->mRotationKeys[kept];
+                keptKey.mValue.w /= len;
+                keptKey.mValue.x /= len;
+                keptKey.mValue.y /= len;
+                keptKey.mValue.z /= len;
                 kept++;
                 lastTime = t;
+            } else if (!timeOk) {
+                rejectedTime++;
+            } else {
+                rejectedQuaternion++;
             }
         }
 
         if (kept != n) {
             repairedChannels++;
             repairedKeys += n - kept;
+            if (rejectedTime > 0 || rejectedQuaternion > 0) {
+                printf("[AnimatorDebug] repair node=\\\"%s\\\" total=%u kept=%u "
+                       "rejectedTime=%u rejectedQuaternion=%u\\n",
+                       ch->mNodeName.C_Str(), n, kept, rejectedTime, rejectedQuaternion);
+            }
         }
         if (kept == 0) {
             // Tout était du bruit : 0 clé → interpolateRotation retombe sur la
@@ -102,13 +197,49 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
 void Animator::update(float deltaTime) {
     if (!m_currentAnimation || !m_scene || !m_model) return;
 
+    // Un delta invalide peut contaminer le temps puis toutes les matrices.
+    if (!std::isfinite(deltaTime) || deltaTime < 0.0f) {
+        deltaTime = 0.0f;
+    }
     m_currentTime += deltaTime * m_ticksPerSecond;
 
-    float duration = static_cast<float>(m_currentAnimation->mDuration);
-    if (m_loop) {
-        m_currentTime = fmodf(m_currentTime, duration);
+    const float duration = static_cast<float>(m_currentAnimation->mDuration);
+    // Une animation vide ne doit jamais alimenter fmodf(..., 0) : cela
+    // fabriquerait un temps NaN et rendrait toutes les interpolations instables.
+    if (!std::isfinite(duration) || duration <= 0.0f) {
+        m_currentTime = 0.0f;
+    } else if (m_loop) {
+        m_currentTime = std::fmod(m_currentTime, duration);
     } else if (m_currentTime > duration) {
         m_currentTime = duration;
+    }
+
+    // Progression périodique après normalisation du temps : permet de voir si
+    // le temps avance réellement, si le cycle reboucle et si la pose change.
+    m_debugTimer += deltaTime;
+    if (m_debugTimer >= 1.0f) {
+        m_debugTimer = 0.0f;
+        const auto it = m_channelMap.find("upper_arm.R");
+        if (it != m_channelMap.end()) {
+            const aiNodeAnim* channel = it->second;
+            const glm::quat identity(1.0f, 0.0f, 0.0f, 0.0f);
+            const glm::quat rotation = interpolateRotation(m_currentTime, channel, identity);
+            const float deltaRotation = m_debugHasLastRotation
+                ? glm::length(rotation - m_debugLastRotation) : 0.0f;
+            const bool looped = m_currentTime < m_debugLastTime;
+            printf("[AnimatorDebug] sample anim=\"%s\" time=%.6f delta=%.6f "
+                   "looped=%d upper_arm.R=(%.5f,%.5f,%.5f,%.5f) quatDelta=%.6f\n",
+                   m_currentAnimName.c_str(), m_currentTime, deltaTime,
+                   looped ? 1 : 0, rotation.w, rotation.x, rotation.y, rotation.z,
+                   deltaRotation);
+            m_debugLastRotation = rotation;
+            m_debugHasLastRotation = true;
+        } else {
+            printf("[AnimatorDebug] sample anim=\"%s\" time=%.6f "
+                   "upper_arm.R channel ABSENT\n",
+                   m_currentAnimName.c_str(), m_currentTime);
+        }
+        m_debugLastTime = m_currentTime;
     }
 
     // Partir du RootNode d'Assimp (contient l'échelle FBX, souvent ×0.01)
@@ -237,24 +368,30 @@ glm::vec3 Animator::interpolateTranslation(float animTime, const aiNodeAnim* cha
         unsigned int idx = findKeyIndex(animTime, channel->mPositionKeys, channel->mNumPositionKeys);
         unsigned int nextIdx = idx + 1;
 
-        // CORRECTION : en fin de cycle, ne PAS boucler sur la première clé
-        // ((idx+1) % numKeys → 0) : on reste sur la dernière clé au lieu
-        // d'interpoler la dernière pose avec la première (saut/spasme).
+        // En boucle, la dernière clé doit être interpolée vers la première.
+        // Comme la première clé appartient au cycle suivant, on ajoute la
+        // durée de l'animation à son temps (ex: 95 -> 0 devient 95 -> 100),
+        // au lieu de figer la pose jusqu'au prochain reset de m_currentTime.
         if (nextIdx >= channel->mNumPositionKeys) {
-            const aiVector3D& v = channel->mPositionKeys[idx].mValue;
-            const glm::vec3 last(v.x, v.y, v.z);
-            if (!std::isfinite(last.x) || !std::isfinite(last.y) || !std::isfinite(last.z)) {
-                // Garde anti-NaN (comme en fin de fonction) : bind pose si finie.
-                if (std::isfinite(defaultValue.x) && std::isfinite(defaultValue.y) && std::isfinite(defaultValue.z)) {
-                    return defaultValue;
+            if (!m_loop) {
+                const aiVector3D& v = channel->mPositionKeys[idx].mValue;
+                const glm::vec3 last(v.x, v.y, v.z);
+                if (!std::isfinite(last.x) || !std::isfinite(last.y) || !std::isfinite(last.z)) {
+                    if (std::isfinite(defaultValue.x) && std::isfinite(defaultValue.y) && std::isfinite(defaultValue.z)) {
+                        return defaultValue;
+                    }
+                    return glm::vec3(0.0f);
                 }
-                return glm::vec3(0.0f);
+                return last;
             }
-            return last;
+            nextIdx = 0;
         }
 
         float t0 = static_cast<float>(channel->mPositionKeys[idx].mTime);
         float t1 = static_cast<float>(channel->mPositionKeys[nextIdx].mTime);
+        if (nextIdx == 0 && m_loop) {
+            t1 += static_cast<float>(m_currentAnimation->mDuration);
+        }
         float factor = (t1 > t0) ? (animTime - t0) / (t1 - t0) : 0.0f;
         factor = glm::clamp(factor, 0.0f, 1.0f);
 
@@ -295,17 +432,24 @@ glm::quat Animator::interpolateRotation(float animTime, const aiNodeAnim* channe
         unsigned int idx = findKeyIndex(animTime, channel->mRotationKeys, channel->mNumRotationKeys);
         unsigned int nextIdx = idx + 1;
 
-        // CORRECTION : en fin de cycle, ne PAS boucler sur la première clé
-        // (voir interpolateTranslation) — on reste sur la dernière clé.
+        // En boucle, interpoler la dernière rotation vers la première sur
+        // l'intervalle restant de l'animation. Sans ce wrap temporel, le code
+        // restait bloqué sur la dernière clé puis sautait à la première.
         if (nextIdx >= channel->mNumRotationKeys) {
-            const aiQuaternion& q = channel->mRotationKeys[idx].mValue;
-            const glm::quat res(q.w, q.x, q.y, q.z);
-            const float rl = glm::length(res);
-            return (std::isfinite(rl) && rl > 0.0001f) ? glm::normalize(res) : defaultValue;
+            if (!m_loop) {
+                const aiQuaternion& q = channel->mRotationKeys[idx].mValue;
+                const glm::quat res(q.w, q.x, q.y, q.z);
+                const float rl = glm::length(res);
+                return (std::isfinite(rl) && rl > 0.0001f) ? glm::normalize(res) : defaultValue;
+            }
+            nextIdx = 0;
         }
 
         float t0 = static_cast<float>(channel->mRotationKeys[idx].mTime);
         float t1 = static_cast<float>(channel->mRotationKeys[nextIdx].mTime);
+        if (nextIdx == 0 && m_loop) {
+            t1 += static_cast<float>(m_currentAnimation->mDuration);
+        }
         float factor = (t1 > t0) ? (animTime - t0) / (t1 - t0) : 0.0f;
         factor = glm::clamp(factor, 0.0f, 1.0f);
 
@@ -373,16 +517,24 @@ glm::vec3 Animator::interpolateScale(float animTime, const aiNodeAnim* channel) 
     unsigned int idx = findKeyIndex(animTime, channel->mScalingKeys, channel->mNumScalingKeys);
     unsigned int nextIdx = idx + 1;
 
-    // CORRECTION : en fin de cycle, ne PAS boucler sur la première clé.
+    // Même fermeture cyclique pour l'échelle. Cette fonction n'est pas
+    // utilisée actuellement (l'échelle d'animation est ignorée), mais garder
+    // les trois types cohérents évite une future saccade de fin de cycle.
     if (nextIdx >= channel->mNumScalingKeys) {
-        const aiVector3D& s = channel->mScalingKeys[idx].mValue;
-        const glm::vec3 last(s.x, s.y, s.z);
-        return (std::isfinite(last.x) && std::isfinite(last.y) && std::isfinite(last.z))
-               ? last : glm::vec3(1.0f);
+        if (!m_loop) {
+            const aiVector3D& s = channel->mScalingKeys[idx].mValue;
+            const glm::vec3 last(s.x, s.y, s.z);
+            return (std::isfinite(last.x) && std::isfinite(last.y) && std::isfinite(last.z))
+                   ? last : glm::vec3(1.0f);
+        }
+        nextIdx = 0;
     }
 
     float t0 = static_cast<float>(channel->mScalingKeys[idx].mTime);
     float t1 = static_cast<float>(channel->mScalingKeys[nextIdx].mTime);
+    if (nextIdx == 0 && m_loop) {
+        t1 += static_cast<float>(m_currentAnimation->mDuration);
+    }
     float factor = (t1 > t0) ? (animTime - t0) / (t1 - t0) : 0.0f;
     factor = glm::clamp(factor, 0.0f, 1.0f);
 

@@ -114,10 +114,18 @@ void FirstPersonArms::update(float deltaTime, const glm::vec3& playerPos, bool i
 
     m_animator->update(deltaTime);
 
-    // Apres la fin de l'animation de tir (non-loop), retour a l'idle
+    // Après la fin de l'animation de tir (non-loop), retour à l'idle.
+    // Animator::update() a déjà calculé les matrices de la dernière frame du
+    // tir avant que isFinished() ne soit testé. Sans recalcul ici, cette pose
+    // reste envoyée au GPU pendant une frame supplémentaire, puis l'idle est
+    // calculé seulement à la frame suivante : c'est le petit à-coup visible à
+    // la fin du tir. Les clés finales de fire correspondent à la première pose
+    // de idle ; on recalcule donc immédiatement la pose idle à t=0 sans faire
+    // avancer son temps.
     if (m_fireAnimIndex >= 0 && m_animator->isFinished() &&
         m_animator->getCurrentAnimationName().find("finger_gun_fire") != std::string::npos) {
         m_animator->playAnimation(m_idleAnimIndex >= 0 ? m_idleAnimIndex : 0, true);
+        m_animator->update(0.0f);
     }
 }
 
