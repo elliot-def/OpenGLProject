@@ -36,10 +36,45 @@ struct AABB {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// OBB (Oriented Bounding Box)
+// ─────────────────────────────────────────────────────────────────────────────
+// Boîte englobante ORIENTÉE : centre + demi-étendues le long des axes locaux +
+// matrice de rotation (colonnes = axes locaux du box, orthonormés).
+// Contrairement à l'AABB, elle suit la rotation de l'objet : c'est elle qu'il
+// faut utiliser pour les objets dynamiques qui pivotent (ex: cube qui tourne).
+struct OBB {
+    glm::vec3 center{ 0.0f };        // centre world
+    glm::vec3 halfExtents{ 0.0f };   // demi-étendues le long des axes locaux
+    glm::mat3 rotation{ 1.0f };      // rotation pure (Rᵀ = R⁻¹)
+
+    bool isValid() const {
+        return halfExtents.x > 0.0f && halfExtents.y > 0.0f && halfExtents.z > 0.0f;
+    }
+
+    // Passe un vecteur world dans le repère local du box (rotation pure →
+    // produit scalaire avec les colonnes = multiplication par Rᵀ).
+    glm::vec3 toLocal(const glm::vec3& world) const {
+        return glm::vec3(glm::dot(rotation[0], world),
+                         glm::dot(rotation[1], world),
+                         glm::dot(rotation[2], world));
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Entrée de collider statique
 // ─────────────────────────────────────────────────────────────────────────────
 
 struct StaticBox {
     std::string name;
     AABB        aabb;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Entrée de collider dynamique (objet mobile)
+// ─────────────────────────────────────────────────────────────────────────────
+// AABB : englobante rapide (debug/affichage). OBB : test de collision précis,
+// prend la rotation en compte (un cube incliné a enfin une hitbox inclinée).
+struct DynamicBox {
+    AABB aabb;
+    OBB  obb;
 };

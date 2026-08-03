@@ -13,6 +13,8 @@
 #include "Flashlight.h"
 #include "ThirdPerson.h"
 #include "LeftClick.h"
+#include "Push.h"
+#include "Grab.h"
 #include "Window.h"
 #include "FirstPersonArms.h"
 
@@ -35,6 +37,15 @@ void InputManager::setFirstPersonArms(FirstPersonArms* arms) {
 	if (m_mouse) {
 		m_mouse->setFirstPersonArms(arms);
 	}
+	// Branche aussi les touches R (push) et E (grab)
+	auto pushIt = m_keys.find("Push");
+	if (pushIt != m_keys.end()) {
+		static_cast<Push*>(pushIt->second)->setFirstPersonArms(arms);
+	}
+	auto grabIt = m_keys.find("Grab");
+	if (grabIt != m_keys.end()) {
+		static_cast<Grab*>(grabIt->second)->setFirstPersonArms(arms);
+	}
 }
 
 void InputManager::loadKeys() {
@@ -44,10 +55,11 @@ void InputManager::loadKeys() {
 	m_keys["Right"] = new Right(m_player);
 	m_keys["Crouch"] = new Crouch(m_player);
 	m_keys["Jump"] = new Jump(m_player);
-	m_keys["Sprint"] = new Sprint(m_player);
-	m_keys["Flashlight"] = new Flashlight(m_player);
-	m_keys["ThirdPerson"] = new ThirdPerson(m_player);
-	m_keys["Escape"] = new Escape(m_game);
+	m_keys["Sprint"] = new Sprint(m_player);    m_keys["Flashlight"] = new Flashlight(m_player);
+    m_keys["ThirdPerson"] = new ThirdPerson(m_player);
+    m_keys["Escape"] = new Escape(m_game);
+    m_keys["Push"] = new Push();
+    m_keys["Grab"] = new Grab();
 	
 	m_mouse = new Mouse(m_player, m_menuManager);
 }

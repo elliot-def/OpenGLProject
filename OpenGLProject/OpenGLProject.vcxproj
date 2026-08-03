@@ -185,6 +185,8 @@
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="PauseMenu.cpp" />
     <ClCompile Include="RangeInput.cpp" />
+    <ClCompile Include="Push.cpp" />
+    <ClCompile Include="Grab.cpp" />
     <ClCompile Include="ReceiveBuffer.cpp" />
     <ClCompile Include="Rectangle.cpp" />
     <ClCompile Include="SelectInput.cpp" />
@@ -261,6 +263,8 @@
     <ClInclude Include="PacketBuilder.h" />
     <ClInclude Include="PauseMenu.h" />
     <ClInclude Include="RangeInput.h" />
+    <ClInclude Include="Push.h" />
+    <ClInclude Include="Grab.h" />
     <ClInclude Include="ReceiveBuffer.h" />
     <ClInclude Include="Rectangle.h" />
     <ClInclude Include="SelectInput.h" />
@@ -287,6 +291,8 @@
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="res\armBones.json" />
+    <None Include="res\options.json" />
     <None Include="res\shaders\cube\cube.frag" />
     <None Include="res\shaders\cube\cube.vert" />
     <None Include="res\shaders\cube\lightsource\lightsource.frag" />
@@ -313,6 +319,9 @@
     <Image Include="res\textures\crate\container.png" />
     <Image Include="res\textures\crate\container_specular.png" />
     <Image Include="res\textures\glass\blue\blue.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="res\credits.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

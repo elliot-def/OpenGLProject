@@ -4,6 +4,8 @@
 #include "config.h"
 
 #include <glad/glad.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <cmath>
 #include <vector>
 
 
@@ -155,7 +157,17 @@ void Game::update() {
     m_camera->update(m_player.get());
 
 
-    m_cubes.at(2).get()->getTransformation()->rotate(glm::vec3(1, 0, 0), 10.0f * static_cast<float>(fmod(m_renderer->getDeltaTime(), 360.0)));
+    // Cube3 : rotation autour de SON centre (et non de l'origine du monde).
+    // Le mesh du Cube a ses sommets en coordonnées monde (centre + arête) et
+    // la Transformation démarre à l'identité : un rotate() simple faisait donc
+    // ORBITER le cube autour de l'origine (il plongeait sous le sol, incliné,
+    // injouable). Modèle = T(centre)·R(θ)·T(−centre) → spin sur place.
+    m_cube3AngleDeg = std::fmod(m_cube3AngleDeg + 10.0f * m_renderer->getDeltaTime(), 360.0f); // 10°/s
+    const glm::vec3 cube3Center = m_cubes[2]->getCenter();
+    m_cubes[2]->getTransformation()->setMatrix(
+        glm::translate(glm::mat4(1.0f), cube3Center) *
+        glm::rotate(glm::mat4(1.0f), glm::radians(m_cube3AngleDeg), glm::vec3(1.0f, 0.0f, 0.0f)) *
+        glm::translate(glm::mat4(1.0f), -cube3Center));
     for (auto& cube : m_cubes) {
         cube->update();
     }

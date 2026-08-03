@@ -6,25 +6,25 @@
 
 /**
  * @class Transformation
- * @brief Classe pour gérer les transformations 3D (translation, rotation, mise à l'échelle).
+ * @brief Classe pour gï¿½rer les transformations 3D (translation, rotation, mise ï¿½ l'ï¿½chelle).
  *
- * Cette classe encapsule une matrice 4x4 et fournit des méthodes pour appliquer
- * des transformations cumulatives de manière fluide.
+ * Cette classe encapsule une matrice 4x4 et fournit des mï¿½thodes pour appliquer
+ * des transformations cumulatives de maniï¿½re fluide.
  */
 class Transformation {
 public:
     /**
-     * @brief Constructeur par défaut.
+     * @brief Constructeur par dï¿½faut.
      *
-     * Initialise la matrice de transformation comme matrice identité.
+     * Initialise la matrice de transformation comme matrice identitï¿½.
      */
     Transformation() : m_trans(glm::mat4(1.0f)) {}
 
     /**
-     * @brief Applique une rotation autour d'un axe donné.
+     * @brief Applique une rotation autour d'un axe donnï¿½.
      * @param axes Vecteur indiquant l'axe de rotation (x, y, z).
-     * @param degrees Angle de rotation en degrés.
-     * @return Référence à l'objet pour chaînage de méthodes.
+     * @param degrees Angle de rotation en degrï¿½s.
+     * @return Rï¿½fï¿½rence ï¿½ l'objet pour chaï¿½nage de mï¿½thodes.
      */
     Transformation& rotate(glm::vec3 axes, float degrees) {
         m_trans = glm::rotate(m_trans, glm::radians(degrees), axes);
@@ -32,9 +32,9 @@ public:
     }
 
     /**
-     * @brief Applique une mise à l'échelle.
-     * @param scale Vecteur de mise à l'échelle pour chaque axe.
-     * @return Référence à l'objet pour chaînage de méthodes.
+     * @brief Applique une mise ï¿½ l'ï¿½chelle.
+     * @param scale Vecteur de mise ï¿½ l'ï¿½chelle pour chaque axe.
+     * @return Rï¿½fï¿½rence ï¿½ l'objet pour chaï¿½nage de mï¿½thodes.
      */
     Transformation& scale(glm::vec3 scale) {
         m_trans = glm::scale(m_trans, scale);
@@ -43,8 +43,8 @@ public:
 
     /**
      * @brief Applique une translation.
-     * @param translation Vecteur de déplacement.
-     * @return Référence à l'objet pour chaînage de méthodes.
+     * @param translation Vecteur de dï¿½placement.
+     * @return Rï¿½fï¿½rence ï¿½ l'objet pour chaï¿½nage de mï¿½thodes.
      */
     Transformation& translate(glm::vec3 translation) {
         m_trans = glm::translate(m_trans, translation);
@@ -52,11 +52,21 @@ public:
     }
 
     /**
-     * @brief Récupère la matrice de transformation actuelle.
+     * @brief Remplace la matrice de transformation actuelle.
+     * @param matrix Nouvelle matrice 4x4 glm::mat4.
+     * @return Rï¿½fï¿½rence ï¿½ l'objet pour chaï¿½nage de mï¿½thodes.
+     */
+    Transformation& setMatrix(const glm::mat4& matrix) {
+        m_trans = matrix;
+        return *this;
+    }
+
+    /**
+     * @brief Rï¿½cupï¿½re la matrice de transformation actuelle.
      * @return Matrice 4x4 glm::mat4.
      */
     glm::mat4 getMatrix() const { return m_trans; }
 
 private:
-    glm::mat4 m_trans; ///< Matrice de transformation cumulée
+    glm::mat4 m_trans; ///< Matrice de transformation cumulï¿½e
 };

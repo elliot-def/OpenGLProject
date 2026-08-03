@@ -14,12 +14,27 @@ void Animator::setup(Model* model) {
     m_finalBoneMatrices.resize(MAX_BONES, glm::mat4(1.0f));
 }
 
-void Animator::playAnimation(unsigned int animIndex, bool loop) {
+void Animator::playAnimation(unsigned int animIndex, bool loop, bool crossfade) {
     if (!m_scene || animIndex >= m_scene->mNumAnimations) {
         std::cerr << "[Animator] Animation index " << animIndex << " invalide" << std::endl;
         return;
     }
-    m_currentAnimation = m_scene->mAnimations[animIndex];
+    const aiAnimation* newAnim = m_scene->mAnimations[animIndex];
+
+    // Crossfade : on prend un instantané des transformées LOCALES de la
+    // dernière frame rendue (stockées dans m_currentLocalTransforms par
+    // computeBoneTransform). Le blend se fera dans computeBoneTransform()
+    // en slerpant/lerpant les transforms locales, PUIS en recomposant la
+    // hiérarchie → translation et rotation restent synchrones, pas d'overshoot.
+    if (crossfade && m_currentAnimation && m_currentAnimation != newAnim) {
+        m_prevLocalTransforms = m_currentLocalTransforms;
+        m_fadeTimer = 0.0f;
+        m_crossfading = true;
+    } else {
+        m_crossfading = false;
+    }
+
+    m_currentAnimation = newAnim;
     m_currentAnimName = m_currentAnimation->mName.C_Str();
     m_currentTime = 0.0f;
 
@@ -242,17 +257,33 @@ void Animator::update(float deltaTime) {
         m_debugLastTime = m_currentTime;
     }
 
+    // Progression du crossfade (si un fondu est en cours)
+    if (m_crossfading) {
+        m_fadeTimer += deltaTime;
+        if (m_fadeTimer >= kCrossfadeDuration) {
+            m_crossfading = false;
+        }
+    }
+    // Facteur de blend stocké pour computeBoneTransform() : utilisé à
+    // l'intérieur de la récursion pour blenders les transforms locales.
+    m_fade = m_crossfading
+        ? glm::smoothstep(0.0f, 1.0f, m_fadeTimer / kCrossfadeDuration)
+        : 1.0f;
+
     // Partir du RootNode d'Assimp (contient l'échelle FBX, souvent ×0.01)
     // et non du nœud "root" du squelette, sinon les matrices bone
     // manquent la transformation globale du fichier → échelle ×100 → clipping.
     if (m_model->getRootNode()) {
+        // Pose de l'animation courante (le crossfade est intégré DANS la
+        // récursion : computeBoneTransform() blend les transforms locales
+        // avant de recomposer la hiérarchie → plus de blend sur matrices finales)
         computeBoneTransform(m_model->getRootNode(), glm::mat4(1.0f), m_currentTime);
     }
 }
 
 void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentTransform, float animTime) {
     std::string nodeName(node->mName.C_Str());
-    auto& boneMap = m_model->getBoneInfoMap();
+    const auto& boneMap = m_model->getBoneInfoMap();
     bool isBone = (boneMap.find(nodeName) != boneMap.end());
 
     // Bind-pose par défaut (utilisé pour les nœuds non-bones comme ArmsRig,
@@ -268,6 +299,23 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
     auto chanIt = m_channelMap.find(nodeName);
     if (chanIt != m_channelMap.end()) {
         nodeTransform = interpolateNodeTransform(node, chanIt->second, animTime);
+    }
+
+    // ── Crossfade : blender les transforms LOCALES (T·R pur) ─────────────
+    // Stocker la transformée locale courante (servira d'instantané si un
+    // fondu est déclenché plus tard).
+    m_currentLocalTransforms[nodeName] = nodeTransform;
+
+    // Pendant un fondu, blender la transformée locale figée (instantané)
+    // vers la transformée courante de la nouvelle animation. Le blend se
+    // fait SUR DU T·R PUR (pas de contamination par l'offsetMatrix) → la
+    // translation et la rotation évoluent de façon synchrone, les doigts
+    // ne peuvent pas overshoot.
+    if (m_crossfading && m_fade < 1.0f) {
+        auto prevIt = m_prevLocalTransforms.find(nodeName);
+        if (prevIt != m_prevLocalTransforms.end()) {
+            nodeTransform = blendLocalTransforms(prevIt->second, nodeTransform, m_fade);
+        }
     }
 
     glm::mat4 globalTransform = parentTransform * nodeTransform;
@@ -313,6 +361,56 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
     for (unsigned int i = 0; i < node->mNumChildren; i++) {
         computeBoneTransform(node->mChildren[i], childTransform, animTime);
     }
+}
+
+glm::mat4 Animator::blendLocalTransforms(const glm::mat4& from, const glm::mat4& to, float t) {
+    // Blend de deux transformées LOCALES (T·R pur, relatif au parent).
+    // Contrairement à l'ancien mixBoneMatrices qui travaillait sur les
+    // matrices finales (globalTransform * offsetMatrix → colonne 3
+    // contaminée), ici from/to sont garanties T·R pur (pas d'offsetMatrix,
+    // pas d'échelle) → lerp translation + slerp rotation sont SYNCHRONES
+    // et ne peuvent pas overshoot les doigts.
+    if (t >= 1.0f) return to;
+    if (t <= 0.0f) return from;
+
+    // Translation : colonne 3 (position locale du nœud)
+    const glm::vec3 transFrom(from[3]);
+    const glm::vec3 transTo(to[3]);
+    const glm::vec3 transBlend = glm::mix(transFrom, transTo, t);
+
+    // Rotation : extraire le quaternion de la partie 3×3
+    const glm::quat rotFrom = glm::quat_cast(glm::mat3(from));
+    const glm::quat rotTo   = glm::quat_cast(glm::mat3(to));
+
+    // Chemin court (slerp) avec garde anti-singularité (dot ≈ 1 → nlerp)
+    float dot = glm::dot(rotFrom, rotTo);
+    glm::quat rotToAdj = rotTo;
+    if (dot < 0.0f) {
+        rotToAdj = -rotTo;
+        dot = -dot;
+    }
+    glm::quat rotBlend;
+    if (dot > 0.9999f) {
+        rotBlend = glm::normalize(glm::mix(rotFrom, rotToAdj, t));
+    } else {
+        rotBlend = glm::slerp(rotFrom, rotToAdj, t);
+    }
+
+    // Garde anti-NaN : si le blend produit des valeurs invalides, on
+    // bascule franchement sur la source ou la cible. Le return anticipé
+    // évite que la correction de rotation (rotBlend) soit écrasée par
+    // un éventuel fallback de translation.
+    const bool rotFinite = std::isfinite(rotBlend.w) && std::isfinite(rotBlend.x) &&
+                           std::isfinite(rotBlend.y) && std::isfinite(rotBlend.z);
+    const bool transFinite = std::isfinite(transBlend.x) && std::isfinite(transBlend.y) &&
+                              std::isfinite(transBlend.z);
+    if (!rotFinite || !transFinite) {
+        return (t < 0.5f) ? from : to;
+    }
+
+    const glm::mat4 T = glm::translate(glm::mat4(1.0f), transBlend);
+    const glm::mat4 R = glm::mat4_cast(rotBlend);
+    return T * R;
 }
 
 glm::mat4 Animator::interpolateNodeTransform(const aiNode* node, const aiNodeAnim* channel, float animTime) const {
@@ -481,7 +579,15 @@ glm::quat Animator::interpolateRotation(float animTime, const aiNodeAnim* channe
             dotProd = -dotProd;
         }
         if (dotProd > 0.9999f) {
-            result = a;
+            // Quaternions (quasi-)identiques : on NE fige PAS sur la clé de
+            // début de segment (ancien comportement : pose constante puis
+            // saut à la clé suivante → escalier "hold & jump"). Sur
+            // finger_gun_fire, les derniers segments de hand.R/forearm.R/
+            // upper_arm.R sont < 1.6° → la fin du tir s'arrêtait 2 frames
+            // puis sautait en revenant à l'idle (saccade/lag visible sur les
+            // doigts). Un nlerp (mix + normalisation) reste lisse et sans
+            // NaN : pas de division par sin(θ).
+            result = glm::normalize(glm::mix(a, b, factor));
         } else {
             result = glm::slerp(a, b, factor);
         }

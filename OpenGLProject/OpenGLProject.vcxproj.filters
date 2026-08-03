@@ -312,6 +312,12 @@
     <ClCompile Include="constants\texture.h">
       <Filter>Fichiers d%27en-tête\Constants</Filter>
     </ClCompile>
+    <ClCompile Include="Push.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Grab.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h">
@@ -551,6 +557,12 @@
     <ClInclude Include="constants\file.h">
       <Filter>Fichiers d%27en-tête\Constants</Filter>
     </ClInclude>
+    <ClInclude Include="Push.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="Grab.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\cube\cube.frag">
@@ -616,6 +628,12 @@
     <None Include="res\shaders\skinned\skinned.vert">
       <Filter>Fichiers de ressources\shaders\skinned</Filter>
     </None>
+    <None Include="res\armBones.json">
+      <Filter>Fichiers de ressources</Filter>
+    </None>
+    <None Include="res\options.json">
+      <Filter>Fichiers de ressources</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\textures\crate\container.png">
@@ -627,5 +645,10 @@
     <Image Include="res\textures\glass\blue\blue.png">
       <Filter>Fichiers de ressources\textures\glass\blue</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="res\credits.txt">
+      <Filter>Fichiers de ressources</Filter>
+    </Text>
   </ItemGroup>
 </Project>

@@ -20,7 +20,10 @@ public:
     void setup(Model* model);
 
     // Joue une animation par son index dans scene->mAnimations[]
-    void playAnimation(unsigned int animIndex, bool loop = true);
+    // crossfade=true : fond la pose de l'animation en cours vers la nouvelle
+    // sur kCrossfadeDuration (évite le "pop" entre idle et marche). Passer
+    // false pour une coupure franche (ex: le recul du tir).
+    void playAnimation(unsigned int animIndex, bool loop = true, bool crossfade = true);
 
     // Met à jour l'animation (à appeler chaque frame)
     void update(float deltaTime);
@@ -40,6 +43,10 @@ public:
 
     // Retourne le nom de l'animation en cours
     const std::string& getCurrentAnimationName() const { return m_currentAnimName; }
+
+    // Retourne l'animation en cours (pointeur, pour comparaison sans
+    // relancer playAnimation quand l'animation n'a pas changé)
+    const aiAnimation* getCurrentAnimation() const { return m_currentAnimation; }
 
     // Applique un offset local supplémentaire à un bone par son nom (ex:
     // décaler un bras). L'offset est composé avec la transformation du bone
@@ -84,6 +91,25 @@ private:
     std::unordered_set<const aiAnimation*> m_repairedAnimations;
     std::unordered_set<const aiAnimation*> m_debugPrintedAnimations;
 
+    // ── Crossfade (fondu entre deux animations) ──────────────────────────────
+    // Principe : chaque frame, computeBoneTransform() stocke la transformée
+    // LOCALE (T·R, relative au parent) de chaque nœud dans
+    // m_currentLocalTransforms. Au moment du switch, on la copie dans
+    // m_prevLocalTransforms (instantané figé de la dernière pose source).
+    // Pendant le fondu, computeBoneTransform() blend chaque transformée locale
+    // (lerp translation + slerp rotation) vers l'animation courante, PUIS
+    // recompose la hiérarchie normalement. Ainsi la translation et la rotation
+    // restent synchrones (pas de colonne 3 contaminée par l'offsetMatrix comme
+    // avec l'ancien blend sur matrices finales → plus d'overshoot des doigts).
+    static constexpr float kCrossfadeDuration = 0.25f; // durée du fondu (idle <-> marche)
+    // Transformées LOCALES de TOUS les nœuds (bones + conteneurs) : mises à jour
+    // chaque frame dans computeBoneTransform(). Clé = nom du nœud.
+    std::unordered_map<std::string, glm::mat4> m_currentLocalTransforms;
+    std::unordered_map<std::string, glm::mat4> m_prevLocalTransforms; // instantané
+    float m_fade = 1.0f;                               // facteur de blend courant (0→1)
+    float m_fadeTimer = 0.0f;                          // progression du fondu (s)
+    bool m_crossfading = false;                        // fondu en cours ?
+
     // Filtre les clés dont le temps ou le quaternion sont manifestement
     // invalides, garde les rotations non normalisées valides en les normalisant,
     // puis compacte le tableau. À appeler dans playAnimation, avant le cache.
@@ -96,8 +122,16 @@ private:
     // centre du rig ou pivotent vers +Y (bras collés / pointant vers le haut).
     glm::mat4 interpolateNodeTransform(const aiNode* node, const aiNodeAnim* channel, float animTime) const;
 
-    // Calcule récursivement les matrices globales des bones
+    // Calcule récursivement les matrices globales des bones (animation
+    // courante, m_channelMap) dans m_finalBoneMatrices
     void computeBoneTransform(const aiNode* node, const glm::mat4& parentTransform, float animTime);
+
+    // Blende deux matrices de transformée LOCALE (T·R, relative au parent) :
+    // translation lerpée + rotation slerpée (chemin court avec garde anti-NaN).
+    // Contrairement à l'ancien mixBoneMatrices qui travaillait sur les matrices
+    // finales (globalTransform * offsetMatrix), ici on travaille sur du T·R pur
+    // → lerp et slerp sont synchrones, pas d'overshoot.
+    static glm::mat4 blendLocalTransforms(const glm::mat4& from, const glm::mat4& to, float t);
 
     // Helper : interpolation de translation (defaultValue = bind pose du nœud,
     // utilisée si le canal n'a pas de clé de position)

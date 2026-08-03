@@ -61,6 +61,10 @@ private:
 
     bool m_isRunning = true;
 
+    // Angle accumulé (degrés) du cube rotatif "cube3" : il tourne autour de
+    // son propre centre au lieu d'orbiter autour de l'origine du monde.
+    float m_cube3AngleDeg = 0.0f;
+
     void initialize();
     void update();
     void draw();

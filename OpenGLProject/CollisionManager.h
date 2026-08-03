@@ -145,7 +145,7 @@ public:
 
 private:
     std::vector<StaticBox>                     m_staticBoxes;
-    std::unordered_map<std::string, AABB>      m_dynamicBoxes;
+    std::unordered_map<std::string, DynamicBox> m_dynamicBoxes;
 
     BVH m_bvh; // Intégration du BVH
     bool m_useBVH = false;
@@ -157,8 +157,20 @@ private:
     static AABB computeWorldAABB(const std::vector<Mesh*>& meshes,
         const glm::mat4& modelMatrix);
 
+    // Construit l'OBB world-space (centre + rotation + demi-étendues) d'un
+    // ensemble de meshes : prend la rotation de la matrice modèle en compte.
+    static OBB computeWorldOBB(const std::vector<Mesh*>& meshes,
+        const glm::mat4& modelMatrix);
+
     // Teste une sphère contre une AABB et retourne le résultat de collision
     static CollisionResult testSphereAABB(glm::vec3 center,
         float     radius,
         const AABB& box);
+
+    // Teste une sphère contre une OBB (objet orienté/rotaté) et retourne le
+    // résultat de collision. La normale est exprimée en world space et suit
+    // l'orientation de la boîte (utile pour se tenir sur une face inclinée).
+    static CollisionResult testSphereOBB(glm::vec3 center,
+        float     radius,
+        const OBB& box);
 };

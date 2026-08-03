@@ -21,7 +21,8 @@ namespace Constants {
     // Reglable ici selon le cadrage souhaite.
     inline constexpr float FP_ARMS_OFFSET_X = -0.02f;
     inline constexpr float FP_ARMS_OFFSET_Y = -0.95f;
-    inline constexpr float FP_ARMS_OFFSET_Z = -0.20f;
+    inline constexpr float FP_ARMS_OFFSET_Z = -0.15f;
+
     inline constexpr float FP_ARMS_SCALE_X = 0.65f;
     inline constexpr float FP_ARMS_SCALE_Y = 0.50f;
     inline constexpr float FP_ARMS_SCALE_Z = 0.50f;
@@ -66,9 +67,9 @@ namespace Constants {
     // haut-extérieur du bras gauche → angles POSITIFS = vers l'avant) et Z
     // (abduction). +60°/bras + +70°/avant-bras : coude à (~0.38,1.48,0.21),
     // main gauche à (~0.22,1.57,0.35) en espace rig. Réglables ici si besoin.
-    inline constexpr float FP_ARMS_BONE_UPPER_ARM_DEG = 60.0f;        // élévation du bras gauche
-    inline constexpr float FP_ARMS_BONE_FOREARM_DEG = 60.0f;          // pli du coude gauche
-    inline constexpr float FP_ARMS_SPREAD_DEG = 18.0f;                // angle d'écartement (L: +Z, R: -Z)
-    inline constexpr float FP_ARMS_SPACING = -0.20f;                   // distance supplémentaire entre les bras (unités du rig)
+    inline constexpr float FP_ARMS_BONE_UPPER_ARM_DEG = 0.0f;       // élévation du bras gauche
+    inline constexpr float FP_ARMS_BONE_FOREARM_DEG = 0.0f;         // pli du coude gauche
+    inline constexpr float FP_ARMS_SPREAD_DEG = 18.0f;              // angle d'écartement (L: +Z, R: -Z)
+    inline constexpr float FP_ARMS_SPACING = -0.15f;                // distance supplémentaire entre les bras (unités du rig)
     }
 }

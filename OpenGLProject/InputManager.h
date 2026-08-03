@@ -39,7 +39,7 @@ public:
 
     void setContext(InputContext context) { m_context = context; };
 
-    // Transmet les bras au Mouse/LeftClick (animation de tir au clic gauche)
+    // Transmet les bras au Mouse/LeftClick (tir), Push (R) et Grab (E)
     void setFirstPersonArms(FirstPersonArms* arms);
 
     // Methode appelee chaque frame pour mettre a jour l'etat de toutes les touches

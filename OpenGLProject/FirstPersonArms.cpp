@@ -8,12 +8,17 @@
 
 #include "constants/firstpersonarms.h"
 #include "constants/window.h"
+#include "constants/file.h"
+#include "File.h"
+#include <nlohmann/json.hpp>
 
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cfloat>   // FLT_MAX pour la AABB de debug
 #include <cmath>    // isnan / isinf
 #include <cstdio>
+
+using json = nlohmann::json;
 
 FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
                                  const std::string& modelPath, TextureManager* textureManager)
@@ -75,12 +80,51 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
             if (name.find("finger_gun_fire") != std::string::npos) {
                 m_fireAnimIndex = i;
             }
+            if (name.find("push") != std::string::npos) {
+                // Push : les deux mains ou main droite (pas de .L/_L)
+                if (name.find(".L") == std::string::npos && name.find("_L") == std::string::npos) {
+                    m_pushAnimIndex = i;
+                }
+            }
+            if (name.find("grab") != std::string::npos) {
+                // Seule la main gauche (grab.L) — plus de chaîne droite→gauche.
+                if (name.find(".L") != std::string::npos || name.find("_L") != std::string::npos) {
+                    m_grabAnimIndex = i;
+                }
+            }
+            // Marche : "relax" en attendant qu'une vraie animation de marche
+            // soit ajoutée au rig (aucune walk/run n'existe dans arms_rig.glb).
+            if (name.find("relax") != std::string::npos) {
+                m_walkAnimIndex = i;
+            }
         }
+        printf("[FPArms] anims detectees: idle=%d fire=%d push=%d grab=%d walk=%d\n",
+               m_idleAnimIndex, m_fireAnimIndex, m_pushAnimIndex, m_grabAnimIndex, m_walkAnimIndex);
         if (m_idleAnimIndex >= 0) {
             m_animator->playAnimation(m_idleAnimIndex, true);
         } else if (scene->mNumAnimations > 0) {
             printf("[FPArms] finger_gun_idle pas trouve, fallback anim 0\n");
             m_animator->playAnimation(0, true);
+        }
+        // Calcule la pose immédiatement : un crossfade ultérieur prendra un
+        // instantané valide (au lieu de matrices identité jamais calculées) et
+        // le premier draw dispose déjà de la pose correcte.
+        m_animator->update(0.0f);
+
+        // Charger la config des bones à cacher par animation (res/armBones.json).
+        // Remplace le hardcoding de upper_arm.R/L : chaque animation peut avoir
+        // sa propre liste de bones invisibles en 1P.
+        loadArmBonesConfig();
+
+        // Trouver le bone racine du squelette (id=0, premier bone extrait
+        // par Assimp → généralement le parent de toute la hiérarchie).
+        // Sert au tilt dynamique de l'animation relax (kRelaxTiltDeg).
+        // Cache aussi les IDs des avant-bras pour le collapse 1P.
+        for (const auto& [name, info] : boneMap) {
+            if (info.id == 0) {
+                m_spineBoneName = name;
+                printf("[FPArms] spine bone pour le tilt relax: \"%s\"\n", name.c_str());
+            }
         }
     } else {
         printf("[FPArms] ERREUR: scene NULL!\n");
@@ -93,6 +137,59 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, white);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+
+void FirstPersonArms::loadArmBonesConfig() {
+    // Construire la map nom → ID depuis la bone map du modèle
+    const auto& boneMap = m_model->getBoneInfoMap();
+    for (const auto& [name, info] : boneMap) {
+        m_boneNameToId[name] = info.id;
+    }
+
+    // Charger le JSON de configuration
+    File configFile(Constants::File::JSON_ARMBONES_PATH);
+    if (!configFile.exists()) {
+        printf("[FPArms] armBones.json introuvable, tous les bones visibles en 1P\n");
+        return;
+    }
+
+    try {
+        json j = json::parse(configFile.readAll());
+
+        // Fonction helper : résout une liste de noms de bones → set d'IDs
+        auto resolve = [&](const json& names) -> std::unordered_set<int> {
+            std::unordered_set<int> ids;
+            for (const auto& name : names) {
+                auto it = m_boneNameToId.find(name.get<std::string>());
+                if (it != m_boneNameToId.end()) {
+                    ids.insert(it->second);
+                } else {
+                    printf("[FPArms] armBones.json: bone \"%s\" introuvable dans le rig\n",
+                           name.get<std::string>().c_str());
+                }
+            }
+            return ids;
+        };
+
+        for (auto& [key, val] : j.items()) {
+            if (key == "_comment" || key == "_bones_disponibles") continue;
+            if (!val.is_array()) {
+                printf("[FPArms] armBones.json: la cle \"%s\" n'est pas un tableau, ignorée\n", key.c_str());
+                continue;
+            }
+            auto ids = resolve(val);
+            if (key == "default") {
+                m_defaultHiddenBones = std::move(ids);
+            } else {
+                m_hideRules.emplace_back(key, std::move(ids));
+            }
+        }
+
+        printf("[FPArms] armBones.json charge: %zu regles + default (%zu bones)\n",
+               m_hideRules.size(), m_defaultHiddenBones.size());
+    } catch (const std::exception& e) {
+        printf("[FPArms] Erreur parsing armBones.json: %s\n", e.what());
+    }
 }
 
 FirstPersonArms::~FirstPersonArms() {
@@ -112,26 +209,100 @@ void FirstPersonArms::update(float deltaTime, const glm::vec3& playerPos, bool i
         m_viewmodelOffsetsActive = true;
     }
 
+    // ── Relax tilt : pencher l'animation de marche vers le bas ──────────
+    // Appliqué/retiré dynamiquement : l'offset de rotation sur le bone
+    // racine (id=0) n'est actif QUE pendant l'animation "relax".
+    // L'offset persiste jusqu'au prochain update(), donc le tilt apparaît
+    // dès la frame suivante (délai imperceptible).
+    const aiAnimation* currentAfter = m_animator->getCurrentAnimation();
+    const bool isRelax = currentAfter &&
+        std::string(currentAfter->mName.C_Str()).find("relax") != std::string::npos;
+    if (isRelax && !m_relaxTiltActive && !m_spineBoneName.empty()) {
+        m_animator->addBoneOffset(m_spineBoneName,
+            glm::rotate(glm::mat4(1.0f), glm::radians(kRelaxTiltDeg), glm::vec3(1.0f, 0.0f, 0.0f)));
+        m_relaxTiltActive = true;
+    } else if (!isRelax && m_relaxTiltActive) {
+        m_animator->addBoneOffset(m_spineBoneName, glm::mat4(1.0f));
+        m_relaxTiltActive = false;
+    }
+
+    // ── Idle vs marche : animations du FICHIER (pas de bobbing custom) ─────
+    // Détection du mouvement par la variation de position du joueur entre 2
+    // frames (m_wantsToMove n'est pas maintenu dans Player).
+    bool isMoving = false;
+    if (m_playerPosInitialized) {
+        const glm::vec3 delta = playerPos - m_lastPlayerPos;
+        const float horizSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z))
+                                 / std::max(deltaTime, 1e-5f);
+        isMoving = horizSpeed > 0.05f; // seuil : immobile vs en mouvement
+    }
+    m_playerPosInitialized = true;
+    m_lastPlayerPos = playerPos;
+
+    // L'animation cible dépend de l'état : "relax" (marche) si le joueur
+    // bouge, finger_gun_idle sinon. Ne relance rien si c'est déjà celle qui
+    // joue (évite le reset de m_currentTime à chaque frame).
+    const aiScene* scene = m_model->getScene();
+    const aiAnimation* current = m_animator->getCurrentAnimation();
+    const bool firing = m_fireAnimIndex >= 0 && scene &&
+        current == scene->mAnimations[m_fireAnimIndex];
+    const bool pushing = m_pushAnimIndex >= 0 && scene &&
+        current == scene->mAnimations[m_pushAnimIndex];
+    const bool grabbing = m_grabAnimIndex >= 0 && scene &&
+        current == scene->mAnimations[m_grabAnimIndex];
+    // Animation "d'action" (non-loop) en cours : on ne switch PAS idle↔marche
+    // pendant qu'elle joue, et on revient au repos quand elle se termine.
+    const bool actionAnim = firing || pushing || grabbing;
+
+    // Debounce idle ↔ marche : évite les oscillations rapides quand le
+    // joueur est poussé légèrement (cube → position oscille de qq mm →
+    // isMoving alterne → crossfade permanent). Le cooldown s'écoule ici et
+    // est réinitialisé à chaque switch effectif.
+    m_animSwitchCooldown -= deltaTime;
+
+    // Garde : si le modèle n'a pas chargé (scene null), aucun index n'est
+    // valide — on laisse l'Animator faire son early-return dans update().
+    const int targetAnim = restAnimIndex(isMoving);
+    if (!actionAnim && scene && targetAnim >= 0 && m_animSwitchCooldown <= 0.0f) {
+        const aiAnimation* target = scene->mAnimations[targetAnim];
+        if (current != target) {
+            m_animator->playAnimation(targetAnim, true);
+            m_animSwitchCooldown = kAnimSwitchCooldown;
+        }
+    }
+
     m_animator->update(deltaTime);
 
-    // Après la fin de l'animation de tir (non-loop), retour à l'idle.
-    // Animator::update() a déjà calculé les matrices de la dernière frame du
-    // tir avant que isFinished() ne soit testé. Sans recalcul ici, cette pose
-    // reste envoyée au GPU pendant une frame supplémentaire, puis l'idle est
-    // calculé seulement à la frame suivante : c'est le petit à-coup visible à
-    // la fin du tir. Les clés finales de fire correspondent à la première pose
-    // de idle ; on recalcule donc immédiatement la pose idle à t=0 sans faire
-    // avancer son temps.
-    if (m_fireAnimIndex >= 0 && m_animator->isFinished() &&
-        m_animator->getCurrentAnimationName().find("finger_gun_fire") != std::string::npos) {
-        m_animator->playAnimation(m_idleAnimIndex >= 0 ? m_idleAnimIndex : 0, true);
+    // After action anim finishes, return to rest.
+    if (actionAnim && m_animator->isFinished() && targetAnim >= 0) {
+        m_animator->playAnimation(targetAnim, true);
         m_animator->update(0.0f);
     }
 }
 
 void FirstPersonArms::triggerFire() {
-    if (m_fireAnimIndex >= 0 && m_animator) {
-        m_animator->playAnimation(m_fireAnimIndex, false);
+    if (!m_animator) return;
+
+    if (m_fireAnimIndex >= 0) {
+        m_animator->playAnimation(m_fireAnimIndex, false, false);
+    }
+}
+
+void FirstPersonArms::triggerPush() {
+    if (m_pushAnimIndex >= 0 && m_animator) {
+        printf("[FPArms] triggerPush() -> push (index %d)\n", m_pushAnimIndex);
+        m_animator->playAnimation(m_pushAnimIndex, false, false);
+    } else {
+        printf("[FPArms] triggerPush() IGNORE: pushAnimIndex=%d (animation push pas trouvee dans le rig ?)\n", m_pushAnimIndex);
+    }
+}
+
+void FirstPersonArms::triggerGrab() {
+    if (m_grabAnimIndex >= 0 && m_animator) {
+        printf("[FPArms] triggerGrab() -> grab main gauche (index %d)\n", m_grabAnimIndex);
+        m_animator->playAnimation(m_grabAnimIndex, false, false);
+    } else {
+        printf("[FPArms] triggerGrab() IGNORE: grabAnimIndex=%d (animation pas trouvee dans le rig ?)\n", m_grabAnimIndex);
     }
 }
 
@@ -227,8 +398,38 @@ void FirstPersonArms::draw(Shader* shader) {
     shader->setMat4("projection", shader->getProjection());
     shader->setVec3("viewPos", viewPos);
 
-    // Envoyer les matrices des bones au shader (noms pré-calculés)
-    const auto& boneMats = m_animator->getFinalBoneMatrices();
+    // Envoyer les matrices des bones au shader (noms pré-calculés).
+    // En 1P : on copie les matrices et on collapse les bones configurés dans
+    // res/armBones.json pour l'animation courante (échelle quasi-nulle →
+    // vertices invisibles).
+    const auto& animBoneMats = m_animator->getFinalBoneMatrices();
+    std::vector<glm::mat4> boneMats1P; // copie modifiable (1P seulement)
+    const std::vector<glm::mat4>* boneMatsPtr = &animBoneMats;
+    if (!thirdPerson) {
+        boneMats1P.assign(animBoneMats.begin(), animBoneMats.end());
+
+        // Trouver la règle qui match l'animation courante (match sous-chaîne)
+        const std::unordered_set<int>* bonesToHide = &m_defaultHiddenBones;
+        const aiAnimation* curAnim = m_animator->getCurrentAnimation();
+        if (curAnim) {
+            const std::string animName(curAnim->mName.C_Str());
+            for (const auto& [pattern, boneIds] : m_hideRules) {
+                if (animName.find(pattern) != std::string::npos) {
+                    bonesToHide = &boneIds;
+                    break;
+                }
+            }
+        }
+
+        // Collapser les bones listés
+        for (int boneId : *bonesToHide) {
+            if (boneId >= 0 && boneId < static_cast<int>(boneMats1P.size())) {
+                boneMats1P[boneId] = glm::scale(boneMats1P[boneId], glm::vec3(1e-4f));
+            }
+        }
+        boneMatsPtr = &boneMats1P;
+    }
+    const auto& boneMats = *boneMatsPtr;
     size_t count = boneMats.size() < m_boneUniformNames.size() ? boneMats.size() : m_boneUniformNames.size();
     for (size_t i = 0; i < count; i++) {
         shader->setMat4(m_boneUniformNames[i].c_str(), boneMats[i]);

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <cmath>
+#include <cfloat>
 #include <string>
 #include <glm/glm.hpp>
 #include <glm/gtx/norm.hpp>
@@ -15,6 +16,49 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers internes
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Calcule l'OBB world-space (centre, rotation, demi-étendues) d'un ensemble de
+// meshes. Extraction : centre local de l'AABB transformé par la matrice, axes =
+// colonnes normalisées de la matrice (rotation pure), demi-étendues = longueurs
+// des colonnes × demi-étendues locales. Valable pour T·R·S classiques ; la
+// rotation est portée par la matrice, l'échelle dans les longueurs de colonnes.
+OBB CollisionManager::computeWorldOBB(const std::vector<Mesh*>& meshes,
+    const glm::mat4& modelMatrix)
+{
+    OBB result;
+
+    // AABB locale regroupée sur tous les sous-meshes
+    glm::vec3 lMin(FLT_MAX);
+    glm::vec3 lMax(-FLT_MAX);
+    for (const auto* mesh : meshes) {
+        lMin = glm::min(lMin, mesh->getLocalAABBMin());
+        lMax = glm::max(lMax, mesh->getLocalAABBMax());
+    }
+    if (lMin.x > lMax.x || lMin.y > lMax.y || lMin.z > lMax.z) {
+        return result; // AABB locale vide → OBB invalide (halfExtents = 0)
+    }
+
+    const glm::vec3 localCenter = (lMin + lMax) * 0.5f;
+    const glm::vec3 localHalf   = (lMax - lMin) * 0.5f;
+
+    // Centre world du box
+    result.center = glm::vec3(modelMatrix * glm::vec4(localCenter, 1.0f));
+
+    // Rotation pure + étendues : colonnes de la matrice (vecteurs d'axe)
+    const glm::vec3 col0(modelMatrix[0]);
+    const glm::vec3 col1(modelMatrix[1]);
+    const glm::vec3 col2(modelMatrix[2]);
+    const float s0 = glm::length(col0);
+    const float s1 = glm::length(col1);
+    const float s2 = glm::length(col2);
+    if (s0 < 1e-6f || s1 < 1e-6f || s2 < 1e-6f) {
+        return result; // matrice dégénérée → OBB invalide
+    }
+
+    result.rotation    = glm::mat3(col0 / s0, col1 / s1, col2 / s2);
+    result.halfExtents = glm::vec3(s0 * localHalf.x, s1 * localHalf.y, s2 * localHalf.z);
+    return result;
+}
 
 // Calcule l'AABB world-space englobant tous les sous-meshes
 AABB CollisionManager::computeWorldAABB(const std::vector<Mesh*>& meshes,
@@ -92,6 +136,64 @@ CollisionResult CollisionManager::testSphereAABB(glm::vec3   center,
     return result;
 }
 
+// Test sphère / OBB (boîte orientée : rotation prise en compte)
+// On passe la sphère dans le repère local du box (Rᵀ·d), on fait un test
+// AABB classique, puis on ramène la normale en world space (R·n). C'est ce
+// qui rend la hitbox des objets rotatés (cube qui tourne) fidèle au visuel.
+CollisionResult CollisionManager::testSphereOBB(glm::vec3   center,
+    float       radius,
+    const OBB&  box)
+{
+    CollisionResult result;
+
+    // Centre de la sphère dans le repère local du box
+    const glm::vec3 localCenter = box.toLocal(center - box.center);
+
+    // Test AABB local (même logique que testSphereAABB mais sur ±halfExtents)
+    const glm::vec3 closest = glm::clamp(localCenter, -box.halfExtents, box.halfExtents);
+    const glm::vec3 diff = localCenter - closest;
+    const float     dist2 = glm::length2(diff);
+    if (dist2 > radius * radius) return result; // pas de collision
+
+    result.hit = true;
+
+    glm::vec3 localNormal;
+    float     penetration = 0.0f;
+
+    const bool insideBox = (closest == localCenter);
+    if (insideBox) {
+        // Centre à l'intérieur : normale = face locale la plus proche
+        const float dx = box.halfExtents.x - std::abs(localCenter.x);
+        const float dy = box.halfExtents.y - std::abs(localCenter.y);
+        const float dz = box.halfExtents.z - std::abs(localCenter.z);
+
+        if (dx <= dy && dx <= dz) {
+            localNormal = glm::vec3(localCenter.x > 0.f ? 1.f : -1.f, 0.f, 0.f);
+            penetration = radius + dx;
+        }
+        else if (dy <= dx && dy <= dz) {
+            localNormal = glm::vec3(0.f, localCenter.y > 0.f ? 1.f : -1.f, 0.f);
+            penetration = radius + dy;
+        }
+        else {
+            localNormal = glm::vec3(0.f, 0.f, localCenter.z > 0.f ? 1.f : -1.f);
+            penetration = radius + dz;
+        }
+    }
+    else {
+        // Centre à l'extérieur : normale = direction vers le point le plus proche
+        const float dist = std::sqrt(dist2);
+        localNormal = diff / dist;
+        penetration = radius - dist;
+    }
+
+    // Normale en world space : suit l'orientation de la boîte (une face
+    // inclinée renvoie une normale inclinée → le joueur peut s'y tenir).
+    result.normal = box.rotation * localNormal;
+    result.penetration = penetration;
+    return result;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CollisionManager : enregistrement
 // ─────────────────────────────────────────────────────────────────────────────
@@ -110,8 +212,9 @@ void CollisionManager::addDynamicMesh(const std::string& key,
     const glm::mat4& modelMatrix)
 {
     AABB box = computeWorldAABB(meshes, modelMatrix);
-    if (!box.isValid()) return;
-    m_dynamicBoxes[key] = box;
+    OBB  obb = computeWorldOBB(meshes, modelMatrix);
+    if (!box.isValid() || !obb.isValid()) return;
+    m_dynamicBoxes[key] = { box, obb };
 }
 
 void CollisionManager::updateDynamic(const std::string& key,
@@ -119,11 +222,12 @@ void CollisionManager::updateDynamic(const std::string& key,
     const glm::mat4& modelMatrix)
 {
     AABB box = computeWorldAABB(meshes, modelMatrix);
-    if (!box.isValid()) {
+    OBB  obb = computeWorldOBB(meshes, modelMatrix);
+    if (!box.isValid() || !obb.isValid()) {
         removeDynamic(key);
         return;
     }
-    m_dynamicBoxes[key] = box;
+    m_dynamicBoxes[key] = { box, obb };
 }
 
 void CollisionManager::removeDynamic(const std::string& key) {
@@ -166,8 +270,10 @@ CollisionResult CollisionManager::testSphereAll(glm::vec3 center, float radius) 
     // reconstruire un BVH par frame annulerait le gain — le coût de
     // m_dynamicBoxes reste borné par le nombre d'objets mobiles réellement
     // actifs (souvent < 10 dans ce projet).
-    for (const auto& [key, box] : m_dynamicBoxes) {
-        CollisionResult r = testSphereAABB(center, radius, box);
+    // Test OBB : les objets dynamiques peuvent être rotatés (cube qui tourne),
+    // une AABB ne peut pas représenter leur hitbox fidèlement.
+    for (const auto& [key, db] : m_dynamicBoxes) {
+        CollisionResult r = testSphereOBB(center, radius, db.obb);
         if (r.hit && r.penetration > best.penetration) best = r;
     }
 
@@ -419,10 +525,10 @@ void CollisionManager::printInfo() const {
             << std::endl;
     }
     std::cout << "  Dynamiques : " << m_dynamicBoxes.size() << " boîte(s)" << std::endl;
-    for (const auto& [key, box] : m_dynamicBoxes) {
+    for (const auto& [key, db] : m_dynamicBoxes) {
         std::cout << "    [" << key << "] "
-            << "min(" << box.min.x << "," << box.min.y << "," << box.min.z << ") "
-            << "max(" << box.max.x << "," << box.max.y << "," << box.max.z << ")"
+            << "min(" << db.aabb.min.x << "," << db.aabb.min.y << "," << db.aabb.min.z << ") "
+            << "max(" << db.aabb.max.x << "," << db.aabb.max.y << "," << db.aabb.max.z << ")"
             << std::endl;
     }
 }
