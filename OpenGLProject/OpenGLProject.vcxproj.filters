@@ -1,612 +1,196 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Fichiers sources">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
-    <Filter Include="Fichiers de ressources">
-      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
-      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders">
-      <UniqueIdentifier>{06246eb9-f98d-41e2-a4b4-bcb04624eb44}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders\cube">
-      <UniqueIdentifier>{03a278c3-1e69-4af9-ac28-2f9b76ae465c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Inputs">
-      <UniqueIdentifier>{b06e89a0-143a-4e30-8003-0d1ce3d7bcf7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers sources\Inputs">
-      <UniqueIdentifier>{b35dc59f-d5a7-43a0-890d-c95ff1a77bd9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders\cube\lightsource">
-      <UniqueIdentifier>{4e02fd8a-f27c-4616-a9d2-b0d49ba1a2df}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders\cube\severallights">
-      <UniqueIdentifier>{5f46799b-20b1-4970-baa8-64c6d3ba6b71}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\textures">
-      <UniqueIdentifier>{c79f5ec9-e8ac-4fe7-91e8-b595c7979a28}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\textures\glass">
-      <UniqueIdentifier>{0221ccd3-6c88-4983-b8bf-157e1e8df580}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\textures\crate">
-      <UniqueIdentifier>{56411d74-e890-4b23-adda-cae4ff46d278}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\textures\glass\blue">
-      <UniqueIdentifier>{20650e79-e3a1-42d1-83c9-9ca40a88db89}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Network">
-      <UniqueIdentifier>{b2b0a559-cde5-435b-ace1-354c20e43e2a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers sources\Network">
-      <UniqueIdentifier>{1104b147-9251-4e11-8946-38d5e403d6d9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders\text">
-      <UniqueIdentifier>{2cfeba1b-9c09-47a9-8936-1f96244ddaf0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders\model">
-      <UniqueIdentifier>{a7cbd5eb-282c-4309-a818-edc4758ad80c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders\outline">
-      <UniqueIdentifier>{be1cf2d3-8e7f-4a28-bf0d-4b2bfbb1b001}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Shape">
-      <UniqueIdentifier>{3d0cec28-26b6-4ccb-917f-bd6b8483e45a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers sources\Shape">
-      <UniqueIdentifier>{e6bdb93d-a2e9-435b-9b9d-28c95e852f43}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers sources\Menu">
-      <UniqueIdentifier>{e9d881cb-92ad-47ac-bfd4-a00ed68e2fc2}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Menu">
-      <UniqueIdentifier>{5cafa939-c760-424e-b51c-c34d5715a0cf}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders\shape">
-      <UniqueIdentifier>{06845dbe-d9a4-4f47-86d2-8e3f34f44b33}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders\image">
-      <UniqueIdentifier>{d71ac3fc-37f0-4719-96fe-04237c8d3575}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Sound">
-      <UniqueIdentifier>{c8379479-9052-4c1c-95a1-1eadd9baa61a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers sources\Sound">
-      <UniqueIdentifier>{9f6d2717-049f-4ac3-8e80-a47f5a574ea3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers sources\Shape\2D">
-      <UniqueIdentifier>{bf74db0a-b576-4686-87c3-7bb41382b515}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers sources\Shape\3D">
-      <UniqueIdentifier>{f76d24dd-ca6b-49a0-95dd-043577e80c57}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Shape\2D">
-      <UniqueIdentifier>{a294675f-6e66-46e2-94e6-558ee84f3a6a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Shape\3D">
-      <UniqueIdentifier>{438b4eaa-2964-49cb-a1e2-68f98e35c1a7}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers sources\Light">
-      <UniqueIdentifier>{934f1c87-20a1-42f5-818a-31a1bb504d50}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Light">
-      <UniqueIdentifier>{b8d2935f-89f8-4671-b22c-13f01f2935df}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Menu\Input">
-      <UniqueIdentifier>{b6a8c891-0e5a-4f2a-89b6-fa120b008a2c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers sources\Menu\Input">
-      <UniqueIdentifier>{b0d90cb5-0845-4f6b-b50f-b7cf8f2a4206}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Shape\2D\Shared">
-      <UniqueIdentifier>{2f885dbd-3b9e-4ed3-9e6c-39e700dec411}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders\image\mask">
-      <UniqueIdentifier>{4de3b241-8a61-42e0-b7b5-0871eb97cdc4}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Collision">
-      <UniqueIdentifier>{ab262397-9325-49b3-afb5-fb55c4d4ddb9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers sources\Collision">
-      <UniqueIdentifier>{e5e80e73-48f9-472b-99b0-86a2fdfd054e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers de ressources\shaders\skinned">
-      <UniqueIdentifier>{6c9b3241-bd8b-40e2-bc15-f6de2bfa6989}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Fichiers d%27en-tête\Constants">
-      <UniqueIdentifier>{6c017516-054f-451c-9fa6-a68414c51533}</UniqueIdentifier>
-    </Filter>
+    <Filter Include="Core"><UniqueIdentifier>{11111111-1111-1111-1111-111111111111}</UniqueIdentifier></Filter>
+    <Filter Include="Core\Entity"><UniqueIdentifier>{22222222-2222-2222-2222-222222222222}</UniqueIdentifier></Filter>
+    <Filter Include="Input"><UniqueIdentifier>{33333333-3333-3333-3333-333333333333}</UniqueIdentifier></Filter>
+    <Filter Include="Graphics"><UniqueIdentifier>{44444444-4444-4444-4444-444444444444}</UniqueIdentifier></Filter>
+    <Filter Include="Graphics\Animation"><UniqueIdentifier>{55555555-5555-5555-5555-555555555555}</UniqueIdentifier></Filter>
+    <Filter Include="Graphics\Shape"><UniqueIdentifier>{66666666-6666-6666-6666-666666666666}</UniqueIdentifier></Filter>
+    <Filter Include="Graphics\Shape\2D"><UniqueIdentifier>{77777777-7777-7777-7777-777777777777}</UniqueIdentifier></Filter>
+    <Filter Include="Graphics\Shape\3D"><UniqueIdentifier>{88888888-8888-8888-8888-888888888888}</UniqueIdentifier></Filter>
+    <Filter Include="Menu"><UniqueIdentifier>{99999999-9999-9999-9999-999999999999}</UniqueIdentifier></Filter>
+    <Filter Include="Menu\Input"><UniqueIdentifier>{aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa}</UniqueIdentifier></Filter>
+    <Filter Include="Lighting"><UniqueIdentifier>{bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb}</UniqueIdentifier></Filter>
+    <Filter Include="Sound"><UniqueIdentifier>{cccccccc-cccc-cccc-cccc-cccccccccccc}</UniqueIdentifier></Filter>
+    <Filter Include="Collision"><UniqueIdentifier>{dddddddd-dddd-dddd-dddd-dddddddddddd}</UniqueIdentifier></Filter>
+    <Filter Include="Network"><UniqueIdentifier>{eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee}</UniqueIdentifier></Filter>
+    <Filter Include="Constants"><UniqueIdentifier>{ffffffff-ffff-ffff-ffff-ffffffffffff}</UniqueIdentifier></Filter>
+    <Filter Include="Utils"><UniqueIdentifier>{00000000-0000-0000-0000-000000000001}</UniqueIdentifier></Filter>
+    <Filter Include="Resources"><UniqueIdentifier>{00000000-0000-0000-0000-000000000002}</UniqueIdentifier></Filter>
+    <Filter Include="Resources\Shaders"><UniqueIdentifier>{00000000-0000-0000-0000-000000000003}</UniqueIdentifier></Filter>
+    <Filter Include="Resources\Shaders\Cube"><UniqueIdentifier>{00000000-0000-0000-0000-000000000004}</UniqueIdentifier></Filter>
+    <Filter Include="Resources\Shaders\Model"><UniqueIdentifier>{00000000-0000-0000-0000-000000000005}</UniqueIdentifier></Filter>
+    <Filter Include="Resources\Shaders\Skinned"><UniqueIdentifier>{00000000-0000-0000-0000-000000000006}</UniqueIdentifier></Filter>
+    <Filter Include="Resources\Shaders\Shape"><UniqueIdentifier>{00000000-0000-0000-0000-000000000007}</UniqueIdentifier></Filter>
+    <Filter Include="Resources\Shaders\Text"><UniqueIdentifier>{00000000-0000-0000-0000-000000000008}</UniqueIdentifier></Filter>
+    <Filter Include="Resources\Shaders\Image"><UniqueIdentifier>{00000000-0000-0000-0000-000000000009}</UniqueIdentifier></Filter>
+    <Filter Include="Resources\Textures"><UniqueIdentifier>{00000000-0000-0000-0000-00000000000a}</UniqueIdentifier></Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="glad.c">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Window.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Renderer.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Game.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Mesh.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Texture.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Transformation.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClCompile>
-    <ClCompile Include="Camera.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Entity.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Player.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Escape.cpp">
-    <ClCompile Include="PlayerKey.cpp">
-      <Filter>Fichiers sourcesInputs</Filter>
-    </ClCompile>
-      <Filter>Fichiers sources\Inputs</Filter>
-    <ClCompile Include="PlayerKey.cpp">
-      <Filter>Fichiers sourcesInputs</Filter>
-    </ClCompile>
-    </ClCompile>
-    <ClCompile Include="PlayerKey.cpp">
-      <Filter>Fichiers sourcesInputs</Filter>
-    </ClCompile>
-    <ClCompile Include="Mouse.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
-    </ClCompile>
-    <ClCompile Include="Direction.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="TextureManager.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="FirstPersonArms.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Model.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Socket.cpp">
-      <Filter>Fichiers sources\Network</Filter>
-    </ClCompile>
-    <ClCompile Include="Shader.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="ReceiveBuffer.cpp">
-      <Filter>Fichiers sources\Network</Filter>
-    </ClCompile>
-    <ClCompile Include="Packet.cpp">
-      <Filter>Fichiers sources\Network</Filter>
-    </ClCompile>
-    <ClCompile Include="InputManager.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
-    </ClCompile>
-    <ClCompile Include="LeftClick.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
-    </ClCompile>
-    <ClCompile Include="ModelEntity.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClCompile>
-    <ClCompile Include="ModelEntity.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Menu.cpp">
-      <Filter>Fichiers sources\Menu</Filter>
-    </ClCompile>
-    <ClCompile Include="MenuManager.cpp">
-      <Filter>Fichiers sources\Menu</Filter>
-    </ClCompile>
-    <ClCompile Include="TextRenderer.cpp">
-      <Filter>Fichiers sources\Menu</Filter>
-    </ClCompile>
-    <ClCompile Include="PauseMenu.cpp">
-      <Filter>Fichiers sources\Menu</Filter>
-    </ClCompile>
-    <ClCompile Include="OptionsMenu.cpp">
-      <Filter>Fichiers sources\Menu</Filter>
-    </ClCompile>
-    <ClCompile Include="MainMenu.cpp">
-      <Filter>Fichiers sources\Menu</Filter>
-    </ClCompile>
-    <ClCompile Include="SoundManager.cpp">
-      <Filter>Fichiers sources\Sound</Filter>
-    </ClCompile>
-    <ClCompile Include="Sound.cpp">
-      <Filter>Fichiers sources\Sound</Filter>
-    </ClCompile>
-    <ClCompile Include="Triangle.cpp">
-      <Filter>Fichiers sources\Shape\2D</Filter>
-    </ClCompile>
-    <ClCompile Include="DVDShape.cpp">
-      <Filter>Fichiers sources\Shape\2D</Filter>
-    </ClCompile>
-    <ClCompile Include="Image.cpp">
-      <Filter>Fichiers sources\Shape\2D</Filter>
-    </ClCompile>
-    <ClCompile Include="MaskImage.cpp">
-      <Filter>Fichiers sources\Shape\2D</Filter>
-    </ClCompile>
-    <ClCompile Include="Rectangle.cpp">
-      <Filter>Fichiers sources\Shape\2D</Filter>
-    </ClCompile>
-    <ClCompile Include="Shape.cpp">
-      <Filter>Fichiers sources\Shape\2D</Filter>
-    </ClCompile>
-    <ClCompile Include="Cube.cpp">
-      <Filter>Fichiers sources\Shape\3D</Filter>
-    </ClCompile>
-    <ClCompile Include="LightSource.cpp">
-      <Filter>Fichiers sources\Light</Filter>
-    </ClCompile>
-    <ClCompile Include="LightManager.cpp">
-      <Filter>Fichiers sources\Light</Filter>
-    </ClCompile>
-    <ClCompile Include="Spotlight.cpp">
-      <Filter>Fichiers sources\Light</Filter>
-    </ClCompile>
-    <ClCompile Include="SelectInput.cpp">
-      <Filter>Fichiers sources\Menu\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="RangeInput.cpp">
-      <Filter>Fichiers sources\Menu\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="CheckboxInput.cpp">
-      <Filter>Fichiers sources\Menu\Input</Filter>
-    </ClCompile>
-    <ClCompile Include="CursorManager.cpp">
-      <Filter>Fichiers sources\Menu</Filter>
-    </ClCompile>
-    <ClCompile Include="ImageLoader.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="AABB.h">
-      <Filter>Fichiers d%27en-tête\Collision</Filter>
-    </ClCompile>
-    <ClCompile Include="CollisionManager.cpp">
-      <Filter>Fichiers sources\Collision</Filter>
-    </ClCompile>
-    <ClCompile Include="Outlineable.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClCompile>
-    <ClCompile Include="Animator.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="constants\texture.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClCompile>
-    <ClCompile Include="Push.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Grab.cpp">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
+    <ClCompile Include="main.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="glad.c"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="Window.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="Renderer.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="Game.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="Camera.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="Entity.cpp"><Filter>Core\Entity</Filter></ClCompile>
+    <ClCompile Include="Player.cpp"><Filter>Core\Entity</Filter></ClCompile>
+    <ClCompile Include="Direction.cpp"><Filter>Core\Entity</Filter></ClCompile>
+    <ClCompile Include="Transformation.h"><Filter>Core\Entity</Filter></ClCompile>
+    <ClCompile Include="InputManager.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="PlayerKey.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="Mouse.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="LeftClick.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="Escape.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="Push.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="Grab.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="Shader.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="Mesh.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="Model.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="ModelEntity.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="ModelEntity.h"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="Texture.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="TextureManager.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="ImageLoader.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="Animator.cpp"><Filter>Graphics\Animation</Filter></ClCompile>
+    <ClCompile Include="FirstPersonArms.cpp"><Filter>Graphics\Animation</Filter></ClCompile>
+    <ClCompile Include="Shape.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
+    <ClCompile Include="Rectangle.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
+    <ClCompile Include="Triangle.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
+    <ClCompile Include="DVDShape.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
+    <ClCompile Include="Image.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
+    <ClCompile Include="MaskImage.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
+    <ClCompile Include="Cube.cpp"><Filter>Graphics\Shape\3D</Filter></ClCompile>
+    <ClCompile Include="Menu.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="MenuManager.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="MainMenu.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="PauseMenu.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="OptionsMenu.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="TextRenderer.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="CursorManager.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="CheckboxInput.cpp"><Filter>Menu\Input</Filter></ClCompile>
+    <ClCompile Include="RangeInput.cpp"><Filter>Menu\Input</Filter></ClCompile>
+    <ClCompile Include="SelectInput.cpp"><Filter>Menu\Input</Filter></ClCompile>
+    <ClCompile Include="LightSource.cpp"><Filter>Lighting</Filter></ClCompile>
+    <ClCompile Include="LightManager.cpp"><Filter>Lighting</Filter></ClCompile>
+    <ClCompile Include="Spotlight.cpp"><Filter>Lighting</Filter></ClCompile>
+    <ClCompile Include="Sound.cpp"><Filter>Sound</Filter></ClCompile>
+    <ClCompile Include="SoundManager.cpp"><Filter>Sound</Filter></ClCompile>
+    <ClCompile Include="CollisionManager.cpp"><Filter>Collision</Filter></ClCompile>
+    <ClCompile Include="AABB.h"><Filter>Collision</Filter></ClCompile>
+    <ClCompile Include="Outlineable.h"><Filter>Collision</Filter></ClCompile>
+    <ClCompile Include="Socket.cpp"><Filter>Network</Filter></ClCompile>
+    <ClCompile Include="Packet.cpp"><Filter>Network</Filter></ClCompile>
+    <ClCompile Include="ReceiveBuffer.cpp"><Filter>Network</Filter></ClCompile>
+    <ClCompile Include="constants\texture.h"><Filter>Constants</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="config.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Window.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Renderer.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Game.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Vertex.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="win_compat.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Mesh.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Shader.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Texture.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Camera.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Entity.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="ShaderManager.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="ShaderType.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="TextureManager.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Key.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="configKeys.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Player.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Mouse.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Escape.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Direction.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="FirstPersonArms.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="PlayerKey.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Model.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Socket.h">
-      <Filter>Fichiers d%27en-tête\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="ReceiveBuffer.h">
-      <Filter>Fichiers d%27en-tête\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="Packet.h">
-      <Filter>Fichiers d%27en-tête\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="PacketBuilder.h">
-      <Filter>Fichiers d%27en-tête\Network</Filter>
-    </ClInclude>
-    <ClInclude Include="InputManager.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="gamestate.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="LeftClick.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Menu.h">
-      <Filter>Fichiers d%27en-tête\Menu</Filter>
-    </ClInclude>
-    <ClInclude Include="MenuManager.h">
-      <Filter>Fichiers d%27en-tête\Menu</Filter>
-    </ClInclude>
-    <ClInclude Include="TextRenderer.h">
-      <Filter>Fichiers d%27en-tête\Menu</Filter>
-    </ClInclude>
-    <ClInclude Include="PauseMenu.h">
-      <Filter>Fichiers d%27en-tête\Menu</Filter>
-    </ClInclude>
-    <ClInclude Include="OptionsMenu.h">
-      <Filter>Fichiers d%27en-tête\Menu</Filter>
-    </ClInclude>
-    <ClInclude Include="MainMenu.h">
-      <Filter>Fichiers d%27en-tête\Menu</Filter>
-    </ClInclude>
-    <ClInclude Include="Sound.h">
-      <Filter>Fichiers d%27en-tête\Sound</Filter>
-    </ClInclude>
-    <ClInclude Include="SoundManager.h">
-      <Filter>Fichiers d%27en-tête\Sound</Filter>
-    </ClInclude>
-    <ClInclude Include="DVDShape.h">
-      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
-    </ClInclude>
-    <ClInclude Include="Image.h">
-      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
-    </ClInclude>
-    <ClInclude Include="Rectangle.h">
-      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
-    </ClInclude>
-    <ClInclude Include="Shape.h">
-      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
-    </ClInclude>
-    <ClInclude Include="Triangle.h">
-      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
-    </ClInclude>
-    <ClInclude Include="Cube.h">
-      <Filter>Fichiers d%27en-tête\Shape\3D</Filter>
-    </ClInclude>
-    <ClInclude Include="LightSource.h">
-      <Filter>Fichiers d%27en-tête\Light</Filter>
-    </ClInclude>
-    <ClInclude Include="LightManager.h">
-      <Filter>Fichiers d%27en-tête\Light</Filter>
-    </ClInclude>
-    <ClInclude Include="Spotlight.h">
-      <Filter>Fichiers d%27en-tête\Light</Filter>
-    </ClInclude>
-    <ClInclude Include="SelectInput.h">
-      <Filter>Fichiers d%27en-tête\Menu\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="RangeInput.h">
-      <Filter>Fichiers d%27en-tête\Menu\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="CheckboxInput.h">
-      <Filter>Fichiers d%27en-tête\Menu\Input</Filter>
-    </ClInclude>
-    <ClInclude Include="CursorManager.h">
-      <Filter>Fichiers d%27en-tête\Menu</Filter>
-    </ClInclude>
-    <ClInclude Include="SharedQuad.h">
-      <Filter>Fichiers d%27en-tête\Shape\2D\Shared</Filter>
-    </ClInclude>
-    <ClInclude Include="MaskImage.h">
-      <Filter>Fichiers d%27en-tête\Shape\2D</Filter>
-    </ClInclude>
-    <ClInclude Include="File.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="ImageLoader.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="CollisionManager.h">
-      <Filter>Fichiers d%27en-tête\Collision</Filter>
-    </ClInclude>
-    <ClInclude Include="BVHNode.h">
-      <Filter>Fichiers d%27en-tête\Collision</Filter>
-    </ClInclude>
-    <ClInclude Include="Animator.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="SkinningData.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\color.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\material.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\window.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\firstPersonArms.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\renderer.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\player.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\menu.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\network.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\camera.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\physics.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\shader.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="constants\file.h">
-      <Filter>Fichiers d%27en-tête\Constants</Filter>
-    </ClInclude>
-    <ClInclude Include="Push.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="Grab.h">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
+    <ClInclude Include="config.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="Window.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="Renderer.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="Game.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="Camera.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="gamestate.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="win_compat.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="Entity.h"><Filter>Core\Entity</Filter></ClInclude>
+    <ClInclude Include="Player.h"><Filter>Core\Entity</Filter></ClInclude>
+    <ClInclude Include="Direction.h"><Filter>Core\Entity</Filter></ClInclude>
+    <ClInclude Include="InputManager.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="Key.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="configKeys.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="PlayerKey.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="Mouse.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="LeftClick.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="Escape.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="Push.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="Grab.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="Shader.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="ShaderManager.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="ShaderType.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="Vertex.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="Mesh.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="Model.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="Texture.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="TextureManager.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="ImageLoader.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="Animator.h"><Filter>Graphics\Animation</Filter></ClInclude>
+    <ClInclude Include="FirstPersonArms.h"><Filter>Graphics\Animation</Filter></ClInclude>
+    <ClInclude Include="SkinningData.h"><Filter>Graphics\Animation</Filter></ClInclude>
+    <ClInclude Include="Shape.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
+    <ClInclude Include="Rectangle.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
+    <ClInclude Include="Triangle.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
+    <ClInclude Include="DVDShape.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
+    <ClInclude Include="Image.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
+    <ClInclude Include="MaskImage.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
+    <ClInclude Include="SharedQuad.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
+    <ClInclude Include="Cube.h"><Filter>Graphics\Shape\3D</Filter></ClInclude>
+    <ClInclude Include="Menu.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="MenuManager.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="MainMenu.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="PauseMenu.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="OptionsMenu.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="TextRenderer.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="CursorManager.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="CheckboxInput.h"><Filter>Menu\Input</Filter></ClInclude>
+    <ClInclude Include="RangeInput.h"><Filter>Menu\Input</Filter></ClInclude>
+    <ClInclude Include="SelectInput.h"><Filter>Menu\Input</Filter></ClInclude>
+    <ClInclude Include="LightSource.h"><Filter>Lighting</Filter></ClInclude>
+    <ClInclude Include="LightManager.h"><Filter>Lighting</Filter></ClInclude>
+    <ClInclude Include="Spotlight.h"><Filter>Lighting</Filter></ClInclude>
+    <ClInclude Include="Sound.h"><Filter>Sound</Filter></ClInclude>
+    <ClInclude Include="SoundManager.h"><Filter>Sound</Filter></ClInclude>
+    <ClInclude Include="CollisionManager.h"><Filter>Collision</Filter></ClInclude>
+    <ClInclude Include="BVHNode.h"><Filter>Collision</Filter></ClInclude>
+    <ClInclude Include="Socket.h"><Filter>Network</Filter></ClInclude>
+    <ClInclude Include="Packet.h"><Filter>Network</Filter></ClInclude>
+    <ClInclude Include="PacketBuilder.h"><Filter>Network</Filter></ClInclude>
+    <ClInclude Include="ReceiveBuffer.h"><Filter>Network</Filter></ClInclude>
+    <ClInclude Include="constants\camera.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\color.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\file.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\firstPersonArms.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\material.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\menu.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\network.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\physics.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\player.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\renderer.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\shader.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\window.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="File.h"><Filter>Utils</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\shaders\cube\cube.frag">
-      <Filter>Fichiers de ressources\shaders\cube</Filter>
-    </None>
-    <None Include="res\shaders\cube\cube.vert">
-      <Filter>Fichiers de ressources\shaders\cube</Filter>
-    </None>
-    <None Include="res\shaders\cube\lightsource\lightsource.frag">
-      <Filter>Fichiers de ressources\shaders\cube\lightsource</Filter>
-    </None>
-    <None Include="res\shaders\cube\lightsource\lightsource.vert">
-      <Filter>Fichiers de ressources\shaders\cube\lightsource</Filter>
-    </None>
-    <None Include="res\shaders\cube\severallights\severallights.frag">
-      <Filter>Fichiers de ressources\shaders\cube\severallights</Filter>
-    </None>
-    <None Include="res\shaders\cube\severallights\severallights.vert">
-      <Filter>Fichiers de ressources\shaders\cube\severallights</Filter>
-    </None>
-    <None Include="res\textures\crate\details.json">
-      <Filter>Fichiers de ressources\textures\crate</Filter>
-    </None>
-    <None Include="res\shaders\text\text.frag">
-      <Filter>Fichiers de ressources\shaders\text</Filter>
-    </None>
-    <None Include="res\shaders\text\text.vert">
-      <Filter>Fichiers de ressources\shaders\text</Filter>
-    </None>
-    <None Include="res\shaders\model\model.frag">
-      <Filter>Fichiers de ressources\shaders\model</Filter>
-    </None>
-    <None Include="res\shaders\model\model.vert">
-      <Filter>Fichiers de ressources\shaders\model</Filter>
-    </None>
-    <None Include="res\shaders\outline\outline.frag">
-      <Filter>Fichiers de ressources\shaders\outline</Filter>
-    </None>
-    <None Include="res\shaders\outline\outline.vert">
-      <Filter>Fichiers de ressources\shaders\outline</Filter>
-    </None>
-    <None Include="res\shaders\shape\shape.frag">
-      <Filter>Fichiers de ressources\shaders\shape</Filter>
-    </None>
-    <None Include="res\shaders\shape\shape.vert">
-      <Filter>Fichiers de ressources\shaders\shape</Filter>
-    </None>
-    <None Include="res\shaders\image\image.frag">
-      <Filter>Fichiers de ressources\shaders\image</Filter>
-    </None>
-    <None Include="res\shaders\image\image.vert">
-      <Filter>Fichiers de ressources\shaders\image</Filter>
-    </None>
-    <None Include="res\shaders\image\masque\mask.frag">
-      <Filter>Fichiers de ressources\shaders\image\mask</Filter>
-    </None>
-    <None Include="res\shaders\image\masque\mask.vert">
-      <Filter>Fichiers de ressources\shaders\image\mask</Filter>
-    </None>
-    <None Include="res\shaders\skinned\skinned.frag">
-      <Filter>Fichiers de ressources\shaders\skinned</Filter>
-    </None>
-    <None Include="res\shaders\skinned\skinned.vert">
-      <Filter>Fichiers de ressources\shaders\skinned</Filter>
-    </None>
-    <None Include="res\armBones.json">
-      <Filter>Fichiers de ressources</Filter>
-    </None>
-    <None Include="res\options.json">
-      <Filter>Fichiers de ressources</Filter>
-    </None>
+    <None Include="res\shaders\cube\cube.frag"><Filter>Resources\Shaders\Cube</Filter></None>
+    <None Include="res\shaders\cube\cube.vert"><Filter>Resources\Shaders\Cube</Filter></None>
+    <None Include="res\shaders\cube\lightsource\lightsource.frag"><Filter>Resources\Shaders\Cube</Filter></None>
+    <None Include="res\shaders\cube\lightsource\lightsource.vert"><Filter>Resources\Shaders\Cube</Filter></None>
+    <None Include="res\shaders\cube\severallights\severallights.frag"><Filter>Resources\Shaders\Cube</Filter></None>
+    <None Include="res\shaders\cube\severallights\severallights.vert"><Filter>Resources\Shaders\Cube</Filter></None>
+    <None Include="res\shaders\model\model.frag"><Filter>Resources\Shaders\Model</Filter></None>
+    <None Include="res\shaders\model\model.vert"><Filter>Resources\Shaders\Model</Filter></None>
+    <None Include="res\shaders\outline\outline.frag"><Filter>Resources\Shaders\Model</Filter></None>
+    <None Include="res\shaders\outline\outline.vert"><Filter>Resources\Shaders\Model</Filter></None>
+    <None Include="res\shaders\skinned\skinned.frag"><Filter>Resources\Shaders\Skinned</Filter></None>
+    <None Include="res\shaders\skinned\skinned.vert"><Filter>Resources\Shaders\Skinned</Filter></None>
+    <None Include="res\shaders\shape\shape.frag"><Filter>Resources\Shaders\Shape</Filter></None>
+    <None Include="res\shaders\shape\shape.vert"><Filter>Resources\Shaders\Shape</Filter></None>
+    <None Include="res\shaders\text\text.frag"><Filter>Resources\Shaders\Text</Filter></None>
+    <None Include="res\shaders\text\text.vert"><Filter>Resources\Shaders\Text</Filter></None>
+    <None Include="res\shaders\image\image.frag"><Filter>Resources\Shaders\Image</Filter></None>
+    <None Include="res\shaders\image\image.vert"><Filter>Resources\Shaders\Image</Filter></None>
+    <None Include="res\shaders\image\masque\mask.frag"><Filter>Resources\Shaders\Image</Filter></None>
+    <None Include="res\shaders\image\masque\mask.vert"><Filter>Resources\Shaders\Image</Filter></None>
+    <None Include="res\armBones.json"><Filter>Resources</Filter></None>
+    <None Include="res\options.json"><Filter>Resources</Filter></None>
+    <None Include="res\textures\crate\details.json"><Filter>Resources\Textures</Filter></None>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="res\textures\crate\container.png">
-      <Filter>Fichiers de ressources\textures\crate</Filter>
-    </Image>
-    <Image Include="res\textures\crate\container_specular.png">
-      <Filter>Fichiers de ressources\textures\crate</Filter>
-    </Image>
-    <Image Include="res\textures\glass\blue\blue.png">
-      <Filter>Fichiers de ressources\textures\glass\blue</Filter>
-    </Image>
+    <Image Include="res\textures\crate\container.png"><Filter>Resources\Textures</Filter></Image>
+    <Image Include="res\textures\crate\container_specular.png"><Filter>Resources\Textures</Filter></Image>
+    <Image Include="res\textures\glass\blue\blue.png"><Filter>Resources\Textures</Filter></Image>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="res\credits.txt">
-      <Filter>Fichiers de ressources</Filter>
-    </Text>
+    <Text Include="res\credits.txt"><Filter>Resources</Filter></Text>
   </ItemGroup>
 </Project>
