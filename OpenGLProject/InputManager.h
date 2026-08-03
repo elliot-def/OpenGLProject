@@ -5,6 +5,7 @@
 #include <string>
 #include <iostream>
 #include <filesystem>
+#include <memory>
 #include <unordered_map>
 
 #include "Key.h"
@@ -25,11 +26,8 @@ public:
     // window : pointeur vers la fenetre
     // player : pointeur vers le joueur
     // Appelle loadKeys() pour initialiser toutes les touches
-    InputManager(Game* game, MenuManager* menuManager, Window* window, Player* player) : m_game(game), m_menuManager(menuManager), m_window(window), m_player(player) {
-        loadKeys();
-    }
+    InputManager(Game* game, MenuManager* menuManager, Window* window, Player* player);
 
-    // Destructeur
     ~InputManager();
 
     // Retourne un pointeur vers une touche a partir de son nom
@@ -46,15 +44,16 @@ public:
     void update();
 
 private:
-    std::unordered_map<std::string, Key*> m_keys; // Contient toutes les touches accessibles par leur nom
+    std::unordered_map<std::string, std::unique_ptr<Key>> m_keys; // Contient toutes les touches accessibles par leur nom
 	InputContext m_context = InputContext::MENU;  // Contexte actuel (jeu, menu, inventaire...)
-    Mouse* m_mouse;                               // Pointeur vers la souris (pour gerer les actions liees a la souris)
+
 
     Player* m_player;               // Pointeur vers le joueur
     Game* m_game;                   // Pointeur vers le jeu
 	MenuManager* m_menuManager;     // Pointeur vers le menu manager
     Window* m_window;               // Pointeur vers la fenetre
 
+    std::unique_ptr<Mouse> m_mouse;
     std::chrono::system_clock::time_point m_lastUpdateTime;
     void resetLastUpdateTime() { m_lastUpdateTime = std::chrono::system_clock::now(); };
 

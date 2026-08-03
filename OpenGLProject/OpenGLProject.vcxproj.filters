@@ -160,30 +160,18 @@
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="Escape.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
+    <ClCompile Include="PlayerKey.cpp">
+      <Filter>Fichiers sourcesInputs</Filter>
     </ClCompile>
-    <ClCompile Include="Sprint.cpp">
       <Filter>Fichiers sources\Inputs</Filter>
+    <ClCompile Include="PlayerKey.cpp">
+      <Filter>Fichiers sourcesInputs</Filter>
     </ClCompile>
-    <ClCompile Include="Right.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
     </ClCompile>
-    <ClCompile Include="Left.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
+    <ClCompile Include="PlayerKey.cpp">
+      <Filter>Fichiers sourcesInputs</Filter>
     </ClCompile>
     <ClCompile Include="Mouse.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
-    </ClCompile>
-    <ClCompile Include="Jump.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
-    </ClCompile>
-    <ClCompile Include="Forward.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
-    </ClCompile>
-    <ClCompile Include="Crouch.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
-    </ClCompile>
-    <ClCompile Include="Backward.cpp">
       <Filter>Fichiers sources\Inputs</Filter>
     </ClCompile>
     <ClCompile Include="Direction.cpp">
@@ -194,12 +182,6 @@
     </ClCompile>
     <ClCompile Include="FirstPersonArms.cpp">
       <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Flashlight.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
-    </ClCompile>
-    <ClCompile Include="ThirdPerson.cpp">
-      <Filter>Fichiers sources\Inputs</Filter>
     </ClCompile>
     <ClCompile Include="Model.cpp">
       <Filter>Fichiers sources</Filter>
@@ -365,28 +347,7 @@
     <ClInclude Include="Key.h">
       <Filter>Fichiers d%27en-tête\Inputs</Filter>
     </ClInclude>
-    <ClInclude Include="Forward.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
     <ClInclude Include="configKeys.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Backward.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Left.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Right.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Crouch.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Sprint.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="Jump.h">
       <Filter>Fichiers d%27en-tête\Inputs</Filter>
     </ClInclude>
     <ClInclude Include="Player.h">
@@ -404,10 +365,7 @@
     <ClInclude Include="FirstPersonArms.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="Flashlight.h">
-      <Filter>Fichiers d%27en-tête\Inputs</Filter>
-    </ClInclude>
-    <ClInclude Include="ThirdPerson.h">
+    <ClInclude Include="PlayerKey.h">
       <Filter>Fichiers d%27en-tête\Inputs</Filter>
     </ClInclude>
     <ClInclude Include="Model.h">

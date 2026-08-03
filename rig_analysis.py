@@ -245,8 +245,8 @@ for t in (0.0, anim_dur(rest)):
 
 # ---- 2. poses des animations utiles
 print("\n== Poses (joints monde) par animation")
-for aname in ["rest", "relax", "finger_gun_idle", "finger_gun_fire", "finger_gun_broken",
-              "finger_gun_fix", "guard_idle", "knife_idle"]:
+for aname in ["rest", "relax", "finger_gun_idle", "finger_gun_fire",
+              "push", "grab", "guard_idle", "knife_idle"]:
     anim = anim_by_name(aname)
     if anim is None:
         continue

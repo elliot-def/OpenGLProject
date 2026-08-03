@@ -146,27 +146,20 @@
     <ClCompile Include="constants\texture.h" />
     <ClCompile Include="Outlineable.h" />
     <ClCompile Include="Animator.cpp" />
-    <ClCompile Include="Backward.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="CheckboxInput.cpp" />
     <ClCompile Include="CollisionManager.cpp" />
-    <ClCompile Include="Crouch.cpp" />
     <ClCompile Include="Cube.cpp" />
     <ClCompile Include="CursorManager.cpp" />
     <ClCompile Include="Direction.cpp" />
     <ClCompile Include="DVDShape.cpp" />
     <ClCompile Include="Escape.cpp" />
     <ClCompile Include="FirstPersonArms.cpp" />
-    <ClCompile Include="Flashlight.cpp" />
-    <ClCompile Include="ThirdPerson.cpp" />
-    <ClCompile Include="Forward.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImageLoader.cpp" />
     <ClCompile Include="InputManager.cpp" />
-    <ClCompile Include="Jump.cpp" />
-    <ClCompile Include="Left.cpp" />
     <ClCompile Include="LeftClick.cpp" />
     <ClCompile Include="LightManager.cpp" />
     <ClCompile Include="LightSource.cpp" />
@@ -185,6 +178,7 @@
     <ClCompile Include="Packet.cpp" />
     <ClCompile Include="PauseMenu.cpp" />
     <ClCompile Include="RangeInput.cpp" />
+    <ClCompile Include="PlayerKey.cpp" />
     <ClCompile Include="Push.cpp" />
     <ClCompile Include="Grab.cpp" />
     <ClCompile Include="ReceiveBuffer.cpp" />
@@ -194,12 +188,10 @@
     <ClCompile Include="Socket.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Renderer.cpp" />
-    <ClCompile Include="Right.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Sound.cpp" />
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="Spotlight.cpp" />
-    <ClCompile Include="Sprint.cpp" />
     <ClCompile Include="TextRenderer.cpp" />
     <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="Transformation.h" />
@@ -209,7 +201,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Animator.h" />
-    <ClInclude Include="Backward.h" />
     <ClInclude Include="BVHNode.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="CheckboxInput.h" />
@@ -228,7 +219,6 @@
     <ClInclude Include="constants\renderer.h" />
     <ClInclude Include="constants\shader.h" />
     <ClInclude Include="constants\window.h" />
-    <ClInclude Include="Crouch.h" />
     <ClInclude Include="Cube.h" />
     <ClInclude Include="CursorManager.h" />
     <ClInclude Include="Direction.h" />
@@ -236,17 +226,12 @@
     <ClInclude Include="Escape.h" />
     <ClInclude Include="File.h" />
     <ClInclude Include="FirstPersonArms.h" />
-    <ClInclude Include="Flashlight.h" />
-    <ClInclude Include="ThirdPerson.h" />
-    <ClInclude Include="Forward.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="gamestate.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="ImageLoader.h" />
     <ClInclude Include="InputManager.h" />
-    <ClInclude Include="Jump.h" />
     <ClInclude Include="Key.h" />
-    <ClInclude Include="Left.h" />
     <ClInclude Include="LeftClick.h" />
     <ClInclude Include="LightManager.h" />
     <ClInclude Include="LightSource.h" />
@@ -263,6 +248,7 @@
     <ClInclude Include="PacketBuilder.h" />
     <ClInclude Include="PauseMenu.h" />
     <ClInclude Include="RangeInput.h" />
+    <ClInclude Include="PlayerKey.h" />
     <ClInclude Include="Push.h" />
     <ClInclude Include="Grab.h" />
     <ClInclude Include="ReceiveBuffer.h" />
@@ -274,14 +260,12 @@
     <ClInclude Include="Socket.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Renderer.h" />
-    <ClInclude Include="Right.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderManager.h" />
     <ClInclude Include="ShaderType.h" />
     <ClInclude Include="Sound.h" />
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="Spotlight.h" />
-    <ClInclude Include="Sprint.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />

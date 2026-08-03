@@ -1,34 +1,24 @@
-#pragma once
 #include "InputManager.h"
-#include "Key.h"
-#include "Forward.h"
-#include "Backward.h"
-#include "Left.h"
-#include "Right.h"
-#include "Crouch.h"
-#include "Jump.h"
-#include "Sprint.h"
+#include "Entity.h"
+#include "PlayerKey.h"
 #include "Escape.h"
 #include "Mouse.h"
-#include "Flashlight.h"
-#include "ThirdPerson.h"
-#include "LeftClick.h"
 #include "Push.h"
 #include "Grab.h"
 #include "Window.h"
 #include "FirstPersonArms.h"
 
-InputManager::~InputManager() {
-	for (auto& pair : m_keys) {
-		delete pair.second;
-	}
-	delete m_mouse;
+InputManager::InputManager(Game* game, MenuManager* menuManager, Window* window, Player* player)
+    : m_game(game), m_menuManager(menuManager), m_window(window), m_player(player) {
+    loadKeys();
 }
+
+InputManager::~InputManager() = default;
 
 Key* InputManager::getKey(const std::string& name) {
 	auto it = m_keys.find(name);
 	if (it != m_keys.end()) {
-		return it->second;
+		return it->second.get();
 	}
 	throw std::out_of_range("Key not found: " + name);
 }
@@ -37,42 +27,43 @@ void InputManager::setFirstPersonArms(FirstPersonArms* arms) {
 	if (m_mouse) {
 		m_mouse->setFirstPersonArms(arms);
 	}
-	// Branche aussi les touches R (push) et E (grab)
 	auto pushIt = m_keys.find("Push");
 	if (pushIt != m_keys.end()) {
-		static_cast<Push*>(pushIt->second)->setFirstPersonArms(arms);
+		static_cast<Push*>(pushIt->second.get())->setFirstPersonArms(arms);
 	}
 	auto grabIt = m_keys.find("Grab");
 	if (grabIt != m_keys.end()) {
-		static_cast<Grab*>(grabIt->second)->setFirstPersonArms(arms);
+		static_cast<Grab*>(grabIt->second.get())->setFirstPersonArms(arms);
 	}
 }
 
 void InputManager::loadKeys() {
-	m_keys["Forward"] = new Forward(m_player);
-	m_keys["Backward"] = new Backward(m_player);
-	m_keys["Left"] = new Left(m_player);
-	m_keys["Right"] = new Right(m_player);
-	m_keys["Crouch"] = new Crouch(m_player);
-	m_keys["Jump"] = new Jump(m_player);
-	m_keys["Sprint"] = new Sprint(m_player);    m_keys["Flashlight"] = new Flashlight(m_player);
-    m_keys["ThirdPerson"] = new ThirdPerson(m_player);
-    m_keys["Escape"] = new Escape(m_game);
-    m_keys["Push"] = new Push();
-    m_keys["Grab"] = new Grab();
+	m_keys["Forward"]   = std::make_unique<PlayerKey>(m_player, "Forward",   ConfigKeys::KEY_FORWARD,  nullptr, nullptr, [this]() { m_player->processDirectionKey(EntityRelativeDirection::FORWARD); });
+	m_keys["Backward"]  = std::make_unique<PlayerKey>(m_player, "Backward",  ConfigKeys::KEY_BACKWARD, nullptr, nullptr, [this]() { m_player->processDirectionKey(EntityRelativeDirection::BACKWARD); });
+	m_keys["Left"]      = std::make_unique<PlayerKey>(m_player, "Left",      ConfigKeys::KEY_LEFT,     nullptr, nullptr, [this]() { m_player->processDirectionKey(EntityRelativeDirection::LEFT); });
+	m_keys["Right"]     = std::make_unique<PlayerKey>(m_player, "Right",     ConfigKeys::KEY_RIGHT,    nullptr, nullptr, [this]() { m_player->processDirectionKey(EntityRelativeDirection::RIGHT); });
+	m_keys["Crouch"]    = std::make_unique<PlayerKey>(m_player, "Crouch",    ConfigKeys::KEY_CROUCH,   nullptr, nullptr, [this]() { m_player->processDirectionKey(EntityRelativeDirection::DOWN); });
+
+	m_keys["Jump"]      = std::make_unique<PlayerKey>(m_player, "Jump",      ConfigKeys::KEY_JUMP,     [this]() { m_player->processJump(); });
+	m_keys["Sprint"]    = std::make_unique<PlayerKey>(m_player, "Sprint",    ConfigKeys::KEY_SPRINT,   [this]() { m_player->setIsSprinting(true); },
+	                                                                                               [this]() { m_player->setIsSprinting(false); });
+	m_keys["Flashlight"]  = std::make_unique<PlayerKey>(m_player, "Flashlight",  ConfigKeys::KEY_FLASHLIGHT,  nullptr, [this]() { m_player->processFlashLightKey(); });
+	m_keys["ThirdPerson"] = std::make_unique<PlayerKey>(m_player, "ThirdPerson", ConfigKeys::KEY_THIRD_PERSON, nullptr, [this]() { m_player->processThirdPersonKey(); });
+
+	m_keys["Escape"] = std::make_unique<Escape>(m_game);
+	m_keys["Push"]   = std::make_unique<Push>();
+	m_keys["Grab"]   = std::make_unique<Grab>();
 	
-	m_mouse = new Mouse(m_player, m_menuManager);
+	m_mouse = std::make_unique<Mouse>(m_player, m_menuManager);
 }
 
 void InputManager::update() {
 	bool actionPerformed = false;
-	// Mouse movement & keys
 	double xpos, ypos;
 	glfwGetCursorPos(m_window->getGLFWwindow(), &xpos, &ypos);
 	actionPerformed |= m_mouse->update(m_context, xpos, ypos);
-	// Key states
 	for (const auto& pair : m_keys) {
-		Key* key = pair.second;
+		Key* key = pair.second.get();
 		int state = glfwGetKey(glfwGetCurrentContext(), key->getKey());
 		bool wasPressed = key->getStatus();
 		if (state == GLFW_PRESS) {

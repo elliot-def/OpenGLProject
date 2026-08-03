@@ -62,7 +62,8 @@ public:
 
 protected:
     Renderer* m_renderer;     // Renderer pour dessiner et gerer le rendu
-    Direction* m_direction;   // Orientation de l'entit� (yaw/pitch)
+    Direction* m_direction = nullptr;   // Orientation de l'entit� (yaw/pitch)
+    bool m_ownsDirection = false;        // true si Entity a alloué m_direction
     CollisionManager* m_collisionManager;
 
     glm::vec3 m_position;     // Position dans l'espace 3D    

@@ -12,6 +12,7 @@
 Entity::Entity(Renderer* renderer, CollisionManager* collisionManager)
 	: m_position(glm::vec3(0.0f, 0.0f, 3.0f)),
 	  m_direction(new Direction(-90.0, 0.0)),
+	  m_ownsDirection(true),
 	  m_renderer(renderer),
 	  m_collisionManager(collisionManager)
 {
@@ -20,12 +21,13 @@ Entity::Entity(Renderer* renderer, CollisionManager* collisionManager)
 }
 
 Entity::~Entity() {
-
+	if (m_ownsDirection)
+		delete m_direction;
 }
 
 void Entity::update()
 {
-	// Logique de mise � jour du joueur (mouvement, interactions, etc.)
+	// Logique de mise a jour du joueur (mouvement, interactions, etc.)
 
 }
 

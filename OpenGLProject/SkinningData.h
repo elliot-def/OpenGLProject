@@ -5,7 +5,7 @@
 #include <assimp/scene.h>
 
 inline constexpr int MAX_BONE_INFLUENCE = 4;
-inline constexpr int MAX_BONES = 52; // arms_rig.fbx
+inline constexpr int MAX_BONES = 128; // marge confortable, le vrai compte vient du fichier GLB au runtime
 
 struct BoneInfo {
     int      id = -1;

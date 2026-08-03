@@ -21,11 +21,13 @@ Spotlight::Spotlight(Renderer* renderer,
 
 void Spotlight::update(glm::vec3 position, Direction* direction) {
 	m_position = position;
+	if (m_ownsDirection) { delete m_direction; m_ownsDirection = false; }
 	m_direction = direction;
 }
 
 void Spotlight::update(Player* player) {
 	m_position = player->getPosition() + Constants::Player::PLAYER_EYE_HEIGHT;
+	if (m_ownsDirection) { delete m_direction; m_ownsDirection = false; }
 	m_direction = player->getDirection();
 }
 
@@ -38,17 +40,17 @@ void Spotlight::applyToShader(Shader* shader, bool isEnabled) {
     shader->setFloat("spotLight.outerCutOff", m_outerCutOff);
 
     if (isEnabled) {
-        // Mise à jour du timer et génération d'une nouvelle cible si nécessaire
-        m_flickerTimer += m_renderer->getDeltaTime(); // Assurez-vous d'avoir accès au deltaTime
+        // Mise ï¿½ jour du timer et gï¿½nï¿½ration d'une nouvelle cible si nï¿½cessaire
+        m_flickerTimer += m_renderer->getDeltaTime(); // Assurez-vous d'avoir accï¿½s au deltaTime
         if (m_flickerTimer >= m_flickerChangeInterval) {
             m_targetFlicker = 0.85f + (rand() % 30) / 100.0f; // Entre 0.85 et 1.15
             m_flickerTimer = 0.0f;
         }
 
-        // Interpolation linéaire vers la valeur cible
+        // Interpolation linï¿½aire vers la valeur cible
         m_currentFlicker += (m_targetFlicker - m_currentFlicker) * m_smoothingSpeed * m_renderer->getDeltaTime();
 
-        // Application de l'aléatoire lissé sur l'intensité
+        // Application de l'alï¿½atoire lissï¿½ sur l'intensitï¿½
         shader->setVec3("spotLight.ambient", m_ambient * m_currentFlicker);
         shader->setVec3("spotLight.diffuse", m_diffuse * m_currentFlicker);
         shader->setVec3("spotLight.specular", m_specular * m_currentFlicker);

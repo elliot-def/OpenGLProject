@@ -38,6 +38,15 @@ public:
     const std::vector<Mesh*>& getMeshes();
 
 private:
+    // Diagnostique au premier draw : AABB CPU, matrices NaN/Inf, positions
+    // des joints, test de frustum. N'affecte pas le rendu.
+    void debugPrintFirstDraw(const glm::mat4& armModel,
+                             const std::vector<Mesh*>& meshes);
+
+    // Détecte les index des animations connues dans le rig (idle, fire,
+    // push, grab, walk). Appelé une fois dans le constructeur.
+    void detectAnimations();
+
     // Applique les offsets de pose aux DEUX bras du viewmodel : élévation du
     // bras GAUCHE (le droit est déjà levé par l'animation finger_gun_idle) +
     // abduction symétrique des épaules (L +Z / R −Z) pour écarter les mains.
