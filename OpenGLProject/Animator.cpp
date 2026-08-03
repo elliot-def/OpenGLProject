@@ -91,7 +91,6 @@ void Animator::printAnimationDebug() const {
                 channel->mRotationKeys[channel->mNumRotationKeys - 1].mTime);
         }
         if (channel->mNumPositionKeys > 0) {
-            positionChannels++;
             positionKeys += channel->mNumPositionKeys;
         }
         if (channel->mNodeName == aiString("upper_arm.R")) {
@@ -99,16 +98,6 @@ void Animator::printAnimationDebug() const {
         }
     }
 
-    printf("[AnimatorDebug] anim=\"%s\" loop=%d ticks=%.3f duration=%.3f seconds=%.3f "
-           "channels=%u rotChannels=%u rotKeys=%u posChannels=%u posKeys=%u "
-           "rotRange=[%.6f, %.6f] upper_arm.R_keys=%u\n",
-           m_currentAnimName.c_str(), m_loop ? 1 : 0, m_ticksPerSecond,
-           static_cast<float>(m_currentAnimation->mDuration),
-           static_cast<float>(m_currentAnimation->mDuration) / m_ticksPerSecond,
-           m_currentAnimation->mNumChannels, rotationChannels, rotationKeys,
-           positionChannels, positionKeys,
-           static_cast<float>(minRotationTime), static_cast<float>(maxRotationTime),
-           upperArm ? upperArm->mNumRotationKeys : 0u);
 
     if (upperArm && upperArm->mNumRotationKeys > 0) {
         const aiQuatKey& first = upperArm->mRotationKeys[0];
@@ -117,10 +106,6 @@ void Animator::printAnimationDebug() const {
                                                        first.mValue.y, first.mValue.z));
         const float lastLen = glm::length(glm::quat(last.mValue.w, last.mValue.x,
                                                       last.mValue.y, last.mValue.z));
-        printf("[AnimatorDebug] upper_arm.R firstTime=%.6f lastTime=%.6f "
-               "firstQuatLen=%.6f lastQuatLen=%.6f\n",
-               static_cast<float>(first.mTime), static_cast<float>(last.mTime),
-               firstLen, lastLen);
     }
 }
 
@@ -189,9 +174,6 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
             repairedChannels++;
             repairedKeys += n - kept;
             if (rejectedTime > 0 || rejectedQuaternion > 0) {
-                printf("[AnimatorDebug] repair node=\\\"%s\\\" total=%u kept=%u "
-                       "rejectedTime=%u rejectedQuaternion=%u\\n",
-                       ch->mNodeName.C_Str(), n, kept, rejectedTime, rejectedQuaternion);
             }
         }
         if (kept == 0) {
@@ -204,8 +186,6 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
     }
 
     if (repairedChannels > 0) {
-        printf("[Animator] repairRotationKeys: %u canaux nettoyes (%u cles pourries)"
-               " — bug Assimp 5.4.3 contourne\n", repairedChannels, repairedKeys);
     }
 }
 
@@ -242,17 +222,9 @@ void Animator::update(float deltaTime) {
             const float deltaRotation = m_debugHasLastRotation
                 ? glm::length(rotation - m_debugLastRotation) : 0.0f;
             const bool looped = m_currentTime < m_debugLastTime;
-            printf("[AnimatorDebug] sample anim=\"%s\" time=%.6f delta=%.6f "
-                   "looped=%d upper_arm.R=(%.5f,%.5f,%.5f,%.5f) quatDelta=%.6f\n",
-                   m_currentAnimName.c_str(), m_currentTime, deltaTime,
-                   looped ? 1 : 0, rotation.w, rotation.x, rotation.y, rotation.z,
-                   deltaRotation);
             m_debugLastRotation = rotation;
             m_debugHasLastRotation = true;
         } else {
-            printf("[AnimatorDebug] sample anim=\"%s\" time=%.6f "
-                   "upper_arm.R channel ABSENT\n",
-                   m_currentAnimName.c_str(), m_currentTime);
         }
         m_debugLastTime = m_currentTime;
     }

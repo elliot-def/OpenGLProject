@@ -57,6 +57,7 @@ private:
     std::unique_ptr<std::vector<std::unique_ptr<TextRenderer>>> m_textRenderers;
 
     ModelEntity* m_modelEntity;
+    ModelEntity* m_fropyEntity;
     std::unique_ptr<FirstPersonArms> m_firstPersonArms;
 
     bool m_isRunning = true;

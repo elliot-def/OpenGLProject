@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <memory>
 #include <glm/glm.hpp>
 #include <map>
 
@@ -10,6 +11,7 @@
 #include "constants/menu.h"
 
 #include "Shape.h"
+#include "Rectangle.h"
 #include "RangeInput.h"
 #include "CheckboxInput.h"
 #include "SelectInput.h"
@@ -97,6 +99,7 @@ protected:
     std::string m_title;
     float m_titleX, m_titleY, m_titleWidth, m_titleHeight;
     bool m_drawBackground;
+    std::unique_ptr<Rectangle> m_background; // Rectangle du fond, créé une fois
 
     void drawTextCentered(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);
     void drawTextRightAligned(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);
@@ -107,9 +110,7 @@ public:
         : m_game(game), m_soundManager(soundManager), m_textRenderers(textRenderers), m_shaderManager(shaderManager), m_cursorManager(cursorManager), m_title(t), m_titleX(Constants::Menu::MENU_TITLE_X), m_titleY(Constants::Menu::MENU_TITLE_Y), m_titleWidth(Constants::Menu::MENU_TITLE_W), m_titleHeight(Constants::Menu::MENU_TITLE_H), m_drawBackground(bg) {
     }
 
-    ~Menu() {
-        clear();
-    }
+    ~Menu();
 
     void addItem(const std::string& text, float x = Constants::Window::WINDOW_WIDTH / 2, float y = Constants::Window::WINDOW_HEIGHT / 2, float width = 100, float height = 30, std::function<void()> callback = {}) {
         m_items.emplace_back(text, x, y, width, height, callback);
@@ -198,4 +199,7 @@ public:
     virtual void update() {};
 
     void draw();
+
+    // Lazy-init du Rectangle de fond (évite recréation par frame)
+    void ensureBackground();
 };

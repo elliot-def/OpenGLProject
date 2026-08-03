@@ -20,6 +20,7 @@ namespace ConfigKeys {
     inline const int KEY_THIRD_PERSON = GLFW_KEY_C;
     inline const int KEY_PUSH = GLFW_KEY_R;
     inline const int KEY_GRAB = GLFW_KEY_E;
+    inline const int KEY_NOCLIP = GLFW_KEY_N;
 
     inline const int MOUSE_LEFT_CLICK = GLFW_MOUSE_BUTTON_LEFT;         // Aller a droite
     inline const int MOUSE_RIGHT_CLICK = GLFW_MOUSE_BUTTON_RIGHT;       // Aller a droite

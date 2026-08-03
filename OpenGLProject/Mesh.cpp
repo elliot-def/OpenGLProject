@@ -77,8 +77,10 @@ void Mesh::setupMesh(unsigned int attributesMask = 0b0101) {
             (void*)(9 * sizeof(float)));
     }
 
-    // Bone IDs + Weights (toujours configurés : zéro pour les mesh non-riggés)
-    {
+    // Bone IDs + Weights — activés UNIQUEMENT pour les meshes riggés (SKINNING).
+    // Les meshes non-skinnés (cubes, rectangles, UI) économisent 8 attributs
+    // int + 8 floats de bande passante GPU par vertex.
+    if (attributesMask & (unsigned int)VertexAttribute::SKINNING) {
         struct SkinLayoutProbe {
             char  pre[11 * sizeof(float)];
             int   boneIDs[MAX_BONE_INFLUENCE];

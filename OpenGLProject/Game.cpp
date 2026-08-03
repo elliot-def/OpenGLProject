@@ -95,6 +95,10 @@ void Game::initialize() {
     
     m_modelEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(), "./res/models/backpack/backpack.obj", m_textureManager.get());
 
+    // Fropy — modèle décoratif
+    m_fropyEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(), "./res/models/fropy/fropy.obj", m_textureManager.get());
+    m_fropyEntity->setPosition(glm::vec3(3.0f, 5.0f, 0.0f));
+
     // Bras en premiere personne
     // .glb: texture embarquee, autosuffisant (pas de chemins absolus casses
     // comme le .fbx qui pointait vers G:\Models\ps2\...). 52 joints = MAX_BONES.
@@ -185,6 +189,7 @@ void Game::update() {
     m_soundManager->update();
 
     m_collisionManager->updateDynamic("backpack", m_modelEntity->getModel()->getMeshes(), m_modelEntity->getModelMatrix());
+    m_collisionManager->updateDynamic("fropy", m_fropyEntity->getModel()->getMeshes(), m_fropyEntity->getModelMatrix());
 
     // Mise à jour du bobbing des bras en première personne
     if (m_firstPersonArms) {
@@ -203,6 +208,7 @@ void Game::draw() {
     m_lightManager->draw();
 
     m_modelEntity->draw(m_shaderManager->getShader("model"));
+    m_fropyEntity->draw(m_shaderManager->getShader("model"));
 
     // 2. Transparences
     glEnable(GL_BLEND);
@@ -234,19 +240,26 @@ void Game::draw() {
 
 void Game::changeState(GameState newState) {
     m_menuManager->changeState(newState);
+    Sound* sound;
     switch (newState) {
     case STATE_MENU:
     case STATE_OPTIONS:
         m_inputManager->setContext(InputContext::MENU);
 		m_window->setCursorCaptured(false);
+		m_soundManager->applyReverbToAll(ReverbPreset::UNDERWATER);
         break;
     case STATE_PLAYING:
         m_inputManager->setContext(InputContext::GAME);
         m_window->setCursorCaptured(true);
+        m_soundManager->applyReverbToAll(ReverbPreset::NONE);
+
+        sound = m_soundManager->load("on&on", "res/sounds/on&on.wav", true, 0.5f, 1.0f);
+        sound->play();
         break;
     case STATE_PAUSED:
         m_inputManager->setContext(InputContext::PAUSED);
         m_window->setCursorCaptured(false);
+        m_soundManager->applyReverbToAll(ReverbPreset::UNDERWATER);
         break;
     }
 }

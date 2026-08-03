@@ -551,6 +551,10 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
     unsigned int mask = (unsigned int)VertexAttribute::POSITION |
         (unsigned int)VertexAttribute::NORMAL |
         (unsigned int)VertexAttribute::TEXCOORD;
+    // Ajouter SKINNING si le mesh a des bones (évite d'activer les attributs
+    // boneIDs/weights pour les meshes statiques → économise bande passante GPU)
+    if (mesh->mNumBones > 0)
+        mask |= (unsigned int)VertexAttribute::SKINNING;
 
     return new Mesh(vertices, indices, mask, textureIDs);
 }

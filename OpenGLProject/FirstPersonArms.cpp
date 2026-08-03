@@ -42,36 +42,10 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
     if (scene) {
         const auto& meshes  = m_model->getMeshes();
         const auto& boneMap = m_model->getBoneInfoMap();
-        printf("[FPArms] scene OK, animations=%u, meshes=%zu, bones=%zu\n",
-               scene->mNumAnimations, meshes.size(), boneMap.size());
-        if (meshes.empty()) {
-            printf("[FPArms] ERREUR: 0 mesh extrait! (FBX charge mais aucun mesh a dessiner)\n");
-        } else {
-            printf("[FPArms] mesh 0: %zu vertices, %zu indices\n",
-                   meshes[0]->getVertices().size(), meshes[0]->getIndices().size());
-        }
-        if (boneMap.empty()) {
-            printf("[FPArms] ATTENTION: 0 bone extrait — le rig est-il present dans le FBX?\n");
-        } else {
-            const auto& firstBone = *boneMap.begin();
-            printf("[FPArms] premier bone: \"%s\" (id=%d), MAX_BONES=%d\n",
-                   firstBone.first.c_str(), firstBone.second.id, MAX_BONES);
-            // Lister TOUS les noms de bones — ce sont les noms exacts à
-            // passer à m_animator->addBoneOffset("<nom>", offset).
-            for (const auto& [name, info] : boneMap) {
-                printf("[FPArms]   bone: \"%s\" (id=%d)\n", name.c_str(), info.id);
-            }
-            if (boneMap.size() > static_cast<size_t>(MAX_BONES)) {
-                printf("[FPArms] ATTENTION: %zu bones > MAX_BONES (%d) — "
-                       "les bones au-dela seront ignores (vertus degenerees possibles)!\n",
-                       boneMap.size(), MAX_BONES);
-            }
-        }
         detectAnimations();
         if (m_idleAnimIndex >= 0) {
             m_animator->playAnimation(m_idleAnimIndex, true);
         } else if (scene->mNumAnimations > 0) {
-            printf("[FPArms] finger_gun_idle pas trouve, fallback anim 0\n");
             m_animator->playAnimation(0, true);
         }
         // Calcule la pose immédiatement : un crossfade ultérieur prendra un
@@ -91,11 +65,9 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
         for (const auto& [name, info] : boneMap) {
             if (info.id == 0) {
                 m_spineBoneName = name;
-                printf("[FPArms] spine bone pour le tilt relax: \"%s\"\n", name.c_str());
             }
         }
     } else {
-        printf("[FPArms] ERREUR: scene NULL!\n");
     }
 
     // Texture blanche de fallback (1x1) si le modele n'a pas de textures
@@ -117,7 +89,6 @@ void FirstPersonArms::loadArmBonesConfig() {
     // Charger le JSON de configuration
     File configFile(Constants::File::JSON_ARMBONES_PATH);
     if (!configFile.exists()) {
-        printf("[FPArms] armBones.json introuvable, tous les bones visibles en 1P\n");
         return;
     }
 
@@ -132,8 +103,6 @@ void FirstPersonArms::loadArmBonesConfig() {
                 if (it != m_boneNameToId.end()) {
                     ids.insert(it->second);
                 } else {
-                    printf("[FPArms] armBones.json: bone \"%s\" introuvable dans le rig\n",
-                           name.get<std::string>().c_str());
                 }
             }
             return ids;
@@ -142,7 +111,6 @@ void FirstPersonArms::loadArmBonesConfig() {
         for (auto& [key, val] : j.items()) {
             if (key == "_comment" || key == "_bones_disponibles") continue;
             if (!val.is_array()) {
-                printf("[FPArms] armBones.json: la cle \"%s\" n'est pas un tableau, ignorée\n", key.c_str());
                 continue;
             }
             auto ids = resolve(val);
@@ -153,10 +121,7 @@ void FirstPersonArms::loadArmBonesConfig() {
             }
         }
 
-        printf("[FPArms] armBones.json charge: %zu regles + default (%zu bones)\n",
-               m_hideRules.size(), m_defaultHiddenBones.size());
     } catch (const std::exception& e) {
-        printf("[FPArms] Erreur parsing armBones.json: %s\n", e.what());
     }
 }
 
@@ -258,19 +223,15 @@ void FirstPersonArms::triggerFire() {
 
 void FirstPersonArms::triggerPush() {
     if (m_pushAnimIndex >= 0 && m_animator) {
-        printf("[FPArms] triggerPush() -> push (index %d)\n", m_pushAnimIndex);
         m_animator->playAnimation(m_pushAnimIndex, false, false);
     } else {
-        printf("[FPArms] triggerPush() IGNORE: pushAnimIndex=%d (animation push pas trouvee dans le rig ?)\n", m_pushAnimIndex);
     }
 }
 
 void FirstPersonArms::triggerGrab() {
     if (m_grabAnimIndex >= 0 && m_animator) {
-        printf("[FPArms] triggerGrab() -> grab main gauche (index %d)\n", m_grabAnimIndex);
         m_animator->playAnimation(m_grabAnimIndex, false, false);
     } else {
-        printf("[FPArms] triggerGrab() IGNORE: grabAnimIndex=%d (animation pas trouvee dans le rig ?)\n", m_grabAnimIndex);
     }
 }
 
@@ -459,7 +420,6 @@ void FirstPersonArms::detectAnimations() {
 
 	for (unsigned int i = 0; i < scene->mNumAnimations; i++) {
 		std::string name(scene->mAnimations[i]->mName.C_Str());
-		printf("[FPArms] anim %u: \"%s\"\n", i, name.c_str());
 
 		if (name.find("finger_gun_idle") != std::string::npos)
 			m_idleAnimIndex = i;
@@ -476,8 +436,6 @@ void FirstPersonArms::detectAnimations() {
 		if (name.find("relax") != std::string::npos)
 			m_walkAnimIndex = i;
 	}
-	printf("[FPArms] anims detectees: idle=%d fire=%d push=%d grab=%d walk=%d\n",
-	       m_idleAnimIndex, m_fireAnimIndex, m_pushAnimIndex, m_grabAnimIndex, m_walkAnimIndex);
 }
 
 void FirstPersonArms::debugPrintFirstDraw(const glm::mat4& armModel,
@@ -485,75 +443,4 @@ void FirstPersonArms::debugPrintFirstDraw(const glm::mat4& armModel,
 	static bool s_printed = false;
 	if (s_printed) return;
 	s_printed = true;
-
-	printf("[FPArms] draw() appele, meshes=%zu\n", meshes.size());
-	if (meshes.empty()) return;
-
-	const auto& dbgTex = meshes[0]->getTextureIDs();
-	printf("[FPArms] mesh 0 textures=%zu (slot0=%u, slot1=%u)\n",
-	       dbgTex.size(), dbgTex.size() > 0 ? dbgTex[0] : 0u, dbgTex.size() > 1 ? dbgTex[1] : 0u);
-
-	const auto& boneMatsDbg = m_animator->getFinalBoneMatrices();
-	bool hasNaN = false;
-	for (size_t i = 0; i < boneMatsDbg.size(); i++) {
-		for (int c = 0; c < 4; c++) {
-			for (int r = 0; r < 4; r++) {
-				const float v = boneMatsDbg[i][c][r];
-				if (std::isnan(v) || std::isinf(v)) { hasNaN = true; break; }
-			}
-		}
-	}
-	printf("[FPArms] bones=%zu, NaN/Inf: %s\n", boneMatsDbg.size(), hasNaN ? "OUI !!!" : "non");
-	if (!boneMatsDbg.empty()) {
-		printf("[FPArms] bone[0] col0: (%.4f, %.4f, %.4f, %.4f)\n",
-		       boneMatsDbg[0][0][0], boneMatsDbg[0][1][0],
-		       boneMatsDbg[0][2][0], boneMatsDbg[0][3][0]);
-	}
-
-	glm::vec3 mn(FLT_MAX), mx(-FLT_MAX);
-	for (const Vertex& v : meshes[0]->getVertices()) {
-		glm::mat4 bt(0.0f);
-		float wsum = 0.0f;
-		for (int i = 0; i < 4; i++) {
-			const int id = v.m_boneIDs[i];
-			const float w = v.m_weights[i];
-			wsum += w;
-			if (id >= 0 && id < static_cast<int>(boneMatsDbg.size()) && w > 0.0001f)
-				bt += boneMatsDbg[id] * w;
-		}
-		if (wsum < 0.001f) bt = glm::mat4(1.0f);
-		const glm::vec4 p = armModel * (bt * glm::vec4(v.getPositions(), 1.0f));
-		mn = glm::min(mn, glm::vec3(p));
-		mx = glm::max(mx, glm::vec3(p));
-	}
-	printf("[FPArms] AABB cam: min=(%.3f,%.3f,%.3f) max=(%.3f,%.3f,%.3f)\n",
-	       mn.x, mn.y, mn.z, mx.x, mx.y, mx.z);
-
-	static const char* kDbgBones[] = {
-		"shoulder.R", "upper_arm.R", "forearm.R", "hand.R",
-		"shoulder.L", "upper_arm.L", "forearm.L", "hand.L",
-	};
-	const auto& dbgMap = m_model->getBoneInfoMap();
-	for (const char* nm : kDbgBones) {
-		auto bit = dbgMap.find(nm);
-		if (bit == dbgMap.end() || bit->second.id < 0 ||
-		    bit->second.id >= static_cast<int>(boneMatsDbg.size()))
-			continue;
-		const glm::mat4 vis = boneMatsDbg[bit->second.id] * glm::inverse(bit->second.offsetMatrix);
-		printf("[FPArms]   joint %-12s rig=(%.3f, %.3f, %.3f)\n",
-		       nm, vis[3][0], vis[3][1], vis[3][2]);
-	}
-
-	const float aspect = (float)Constants::Window::WINDOW_WIDTH / (float)Constants::Window::WINDOW_HEIGHT;
-	const float halfH = tanf(glm::radians(30.0f)) * std::max(std::abs(mx.z), std::abs(mn.z));
-	const float halfW = halfH * aspect;
-	printf("[FPArms] frustum: z=[%.3f,%.3f] |x|<%.2f ok=%d |y|<%.2f ok=%d\n",
-	       mn.z, mx.z, halfW, (std::max(std::abs(mx.x), std::abs(mn.x)) < halfW),
-	       halfH, (std::max(std::abs(mx.y), std::abs(mn.y)) < halfH));
-
-	GLenum err = glGetError();
-	while (err != GL_NO_ERROR) {
-		printf("[FPArms] glGetError: 0x%04X\n", err);
-		err = glGetError();
-	}
 }

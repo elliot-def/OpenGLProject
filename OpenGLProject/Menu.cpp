@@ -65,9 +65,9 @@ void Menu::addSelect(const std::string& label, float x, float y, float width, fl
 }
 
 void Menu::draw() {
-	// Draw background
-    Rectangle background = Rectangle(m_shaderManager->getShader("shape"), Constants::Window::WINDOW_WIDTH / 2, Constants::Window::WINDOW_HEIGHT / 2, Constants::Window::WINDOW_WIDTH, Constants::Window::WINDOW_HEIGHT, Constants::Color::SHADOW_GREY);
-    background.draw();
+	// Draw background — Rectangle créé une seule fois, réutilisé chaque frame
+    ensureBackground();
+    m_background->draw();
     // Dessiner le titre si présent
     if (!m_title.empty()) {
         drawTextCentered(m_title, m_titleX, m_titleY, 1, Constants::Color::LINEN);
@@ -216,4 +216,21 @@ bool Menu::handleClick(double mouseX, double mouseY) {
     }
 
     return false;
+}
+
+Menu::~Menu() {
+    clear();
+}
+
+void Menu::ensureBackground() {
+    if (!m_background) {
+        m_background = std::make_unique<Rectangle>(
+            m_shaderManager->getShader("shape"),
+            static_cast<float>(Constants::Window::WINDOW_WIDTH) / 2.0f,
+            static_cast<float>(Constants::Window::WINDOW_HEIGHT) / 2.0f,
+            static_cast<float>(Constants::Window::WINDOW_WIDTH),
+            static_cast<float>(Constants::Window::WINDOW_HEIGHT),
+            Constants::Color::SHADOW_GREY
+        );
+    }
 }

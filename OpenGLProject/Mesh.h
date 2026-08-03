@@ -8,9 +8,10 @@
 
 enum class VertexAttribute {
     POSITION = 1 << 0,  // 0001
-    NORMAL = 1 << 1,  // 0010
-    COLOR = 1 << 2,  // 0100
-    TEXCOORD = 1 << 3   // 1000
+    NORMAL   = 1 << 1,  // 0010
+    COLOR    = 1 << 2,  // 0100
+    TEXCOORD = 1 << 3,  // 1000
+    SKINNING = 1 << 4   // 10000 — boneIDs + weights (attribs 4 et 5)
 };
 
 /**

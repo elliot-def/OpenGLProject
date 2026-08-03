@@ -44,7 +44,10 @@ void InputManager::loadKeys() {
 	m_keys["Right"]     = std::make_unique<PlayerKey>(m_player, "Right",     ConfigKeys::KEY_RIGHT,    nullptr, nullptr, [this]() { m_player->processDirectionKey(EntityRelativeDirection::RIGHT); });
 	m_keys["Crouch"]    = std::make_unique<PlayerKey>(m_player, "Crouch",    ConfigKeys::KEY_CROUCH,   nullptr, nullptr, [this]() { m_player->processDirectionKey(EntityRelativeDirection::DOWN); });
 
-	m_keys["Jump"]      = std::make_unique<PlayerKey>(m_player, "Jump",      ConfigKeys::KEY_JUMP,     [this]() { m_player->processJump(); });
+	m_keys["Jump"]      = std::make_unique<PlayerKey>(m_player, "Jump",      ConfigKeys::KEY_JUMP,
+	    [this]() { m_player->processJump(); },                                         // onPress : saut normal
+	    nullptr,
+	    [this]() { m_player->processDirectionKey(EntityRelativeDirection::UP); });     // ifPressed : vol noclip
 	m_keys["Sprint"]    = std::make_unique<PlayerKey>(m_player, "Sprint",    ConfigKeys::KEY_SPRINT,   [this]() { m_player->setIsSprinting(true); },
 	                                                                                               [this]() { m_player->setIsSprinting(false); });
 	m_keys["Flashlight"]  = std::make_unique<PlayerKey>(m_player, "Flashlight",  ConfigKeys::KEY_FLASHLIGHT,  nullptr, [this]() { m_player->processFlashLightKey(); });
@@ -53,6 +56,9 @@ void InputManager::loadKeys() {
 	m_keys["Escape"] = std::make_unique<Escape>(m_game);
 	m_keys["Push"]   = std::make_unique<Push>();
 	m_keys["Grab"]   = std::make_unique<Grab>();
+
+	m_keys["Noclip"] = std::make_unique<PlayerKey>(m_player, "Noclip", ConfigKeys::KEY_NOCLIP,
+	    [this]() { m_player->setUseGravity(!m_player->isGravityEnabled()); });
 	
 	m_mouse = std::make_unique<Mouse>(m_player, m_menuManager);
 }

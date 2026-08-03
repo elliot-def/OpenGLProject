@@ -199,7 +199,6 @@ void Cube::draw() {
         glDepthMask(GL_TRUE);
     }
 
-    m_shader->clearUniformLocations();                          // Nettoie les anciens r�glages du shader
     m_shader->setModel(m_transformation->getMatrix());          // Envoie la matrice "mod�le" (position/rotation/scale)
     m_shader->use();                                            // Active le shader
     m_shader->setupMatrices();                                  // Envoie la transformation compl�te
