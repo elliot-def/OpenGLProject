@@ -23,6 +23,7 @@ void ModelEntity::draw(Shader* shader) {
     glm::vec3 dir = m_direction->getDirectionVector();
     float yaw = atan2(dir.x, dir.z);
     model = glm::rotate(model, yaw, glm::vec3(0, 1, 0));
+    model = model * getSpinRotation();
 
     // ── OUTLINE PASS ─────────────────────────────────────────────────────────────
     if (m_outlineEnabled && m_outlineShader) {
@@ -57,6 +58,7 @@ void ModelEntity::drawDebug(Shader* shader) {
     glm::vec3 dir = m_direction->getDirectionVector();
     float yaw = atan2(dir.x, dir.z);
     model = glm::rotate(model, yaw, glm::vec3(0, 1, 0));
+    model = model * getSpinRotation();
 
     shader->setMat4("model", model);
 
@@ -88,6 +90,9 @@ glm::mat4 ModelEntity::getModelMatrix() const {
     glm::vec3 dir = m_direction->getDirectionVector();
     float yaw = atan2(dir.x, dir.z);
     model = glm::rotate(model, yaw, glm::vec3(0, 1, 0));
+
+    // Spin sur soi-même (hérité d'Entity)
+    model = model * getSpinRotation();
 
     return model;
 }

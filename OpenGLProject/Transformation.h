@@ -52,6 +52,20 @@ public:
     }
 
     /**
+     * @brief Rotation autour d'un point pivot (spin sur place).
+     * @param center Pivot (ex: centre du cube) en world-space.
+     * @param axis Axe de rotation.
+     * @param angleDeg Angle courant en degrés.
+     * @return Référence à l'objet pour chaînage de méthodes.
+     */
+    Transformation& spinAroundSelf(const glm::vec3& center, const glm::vec3& axis, float angleDeg) {
+        m_trans = glm::translate(glm::mat4(1.0f), center) *
+                  glm::rotate(glm::mat4(1.0f), glm::radians(angleDeg), axis) *
+                  glm::translate(glm::mat4(1.0f), -center);
+        return *this;
+    }
+
+    /**
      * @brief Remplace la matrice de transformation actuelle.
      * @param matrix Nouvelle matrice 4x4 glm::mat4.
      * @return R�f�rence � l'objet pour cha�nage de m�thodes.

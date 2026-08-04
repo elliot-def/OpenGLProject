@@ -66,6 +66,19 @@ protected:
 
     float m_edge;                      // Taille d'une ar�te du cube
 
+    // Spin sur place (rotation autour de son propre centre)
+    float    m_spinSpeedDeg = 0.0f;            // °/s, 0 = pas de rotation
+    glm::vec3 m_spinAxis    = glm::vec3(0.0f); // axe de rotation
+    float    m_spinAngle    = 0.0f;            // angle accumulé (degrés)
+
+public:
+    // Active une rotation continue autour du centre du cube
+    void setSpin(float speedDegPerSec, const glm::vec3& axis) {
+        m_spinSpeedDeg = speedDegPerSec;
+        m_spinAxis = axis;
+    }
+
+
 private:
     void drawLightSourceShader();
     void drawSeveralLightShader();

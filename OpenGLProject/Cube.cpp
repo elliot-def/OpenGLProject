@@ -1,5 +1,6 @@
 #include "Cube.h"
 
+#include <cmath>
 #include "Vertex.h"   // Structure d'un sommet (position, couleur, texture�)
 #include "Mesh.h"     // Classe pour gerer les buffers OpenGL et dessiner
 #include "Shader.h"   // Classe pour les shaders OpenGL
@@ -177,7 +178,10 @@ inline std::vector<Texture*> Cube::getTextures() const {
 
 // Pr�pare le cube pour �tre affich� (envoie les donn�es au GPU)
 void Cube::update() {
-   
+    if (m_spinSpeedDeg != 0.0f && m_renderer) {
+        m_spinAngle = std::fmod(m_spinAngle + m_spinSpeedDeg * m_renderer->getDeltaTime(), 360.0f);
+        m_transformation->spinAroundSelf(m_center, m_spinAxis, m_spinAngle);
+    }
 }
 
 // Dessine le cube � l��cran

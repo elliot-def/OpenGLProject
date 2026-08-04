@@ -5,6 +5,7 @@
 #include "Renderer.h"
 #include "Direction.h"
 #include "Shader.h"
+#include <cmath>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -27,8 +28,10 @@ Entity::~Entity() {
 
 void Entity::update()
 {
-	// Logique de mise a jour du joueur (mouvement, interactions, etc.)
-
+	// Spin sur place (rotation continue)
+	if (m_spinSpeedDeg != 0.0f && m_renderer) {
+		m_spinAngle = std::fmod(m_spinAngle + m_spinSpeedDeg * m_renderer->getDeltaTime(), 360.0f);
+	}
 }
 
 void Entity::draw(Shader* shader) {}
@@ -51,3 +54,9 @@ void Entity::updatePositionFromEnvironment(float deltaTime) {
 }
 
 glm::vec3 Entity::getDirectionVector() const { return m_direction->getDirectionVector(); } // Direction regardee
+
+glm::mat4 Entity::getSpinRotation() const {
+    if (m_spinSpeedDeg == 0.0f)
+        return glm::mat4(1.0f);
+    return glm::rotate(glm::mat4(1.0f), glm::radians(m_spinAngle), m_spinAxis);
+}

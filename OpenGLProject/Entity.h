@@ -56,6 +56,13 @@ public:
         m_position = position;
     }
 
+    // Rotation continue sur soi-même (spin)
+    void setSpin(float speedDegPerSec, const glm::vec3& axis) {
+        m_spinSpeedDeg = speedDegPerSec;
+        m_spinAxis = axis;
+    }
+    glm::mat4 getSpinRotation() const;
+
     // Outline (silhouette haute couleur) — voir Outlineable.h
     void setOutlineShader(Shader* s) { m_outlineShader = s; }
     Shader* getOutlineShader() const { return m_outlineShader; }
@@ -71,4 +78,9 @@ protected:
     glm::vec3 m_frameMovement{ 0.f }; // Accumulateur de mouvement
 
     Shader* m_outlineShader = nullptr;  // Optionnel
+
+    // Spin sur place (rotation continue autour de soi-même)
+    float    m_spinSpeedDeg = 0.0f;
+    glm::vec3 m_spinAxis    = glm::vec3(0.0f);
+    float    m_spinAngle    = 0.0f;
 };
