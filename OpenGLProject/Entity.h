@@ -5,6 +5,7 @@
 #include <glm/fwd.hpp>
 
 #include "Outlineable.h"
+#include "Direction.h"
 
 class CollisionManager;
 class Renderer;
@@ -23,7 +24,6 @@ namespace EntityRelativeDirection {
         DOWN       // Descendre
     };
 }
-
 
 // Classe Entity : classe de base pour tous les objets de la scene
 // Exemple : joueur, cube, camera, etc.
@@ -54,6 +54,9 @@ public:
     void setUseGravity(bool enable) { m_useGravity = enable; }
     void setPosition(const glm::vec3& position) {
         m_position = position;
+    }
+    void setDirection(const Direction& dir) {
+        if (m_direction) m_direction->setYawPitch(dir.getYaw(), dir.getPitch());
     }
 
     // Rotation continue sur soi-même (spin)

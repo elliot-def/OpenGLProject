@@ -2,6 +2,7 @@
 
 #include "Game.h"
 #include "config.h"
+#include "SteamManager.h"
 
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -9,7 +10,14 @@
 #include <vector>
 
 
-Game::Game() {
+Game::Game() : m_argc(0), m_argv(nullptr) {
+    if (!glfwInit()) {
+        throw std::runtime_error("Impossible d'initialiser GLFW");
+    }
+    initialize();
+}
+
+Game::Game(int argc, char* argv[]) : m_argc(argc), m_argv(argv) {
     if (!glfwInit()) {
         throw std::runtime_error("Impossible d'initialiser GLFW");
     }
@@ -18,7 +26,13 @@ Game::Game() {
 
 Game::~Game() {
 	SharedQuad::destroy();
+    delete m_humanEntity;
+    delete m_fropyEntity;
+    delete m_modelEntity;
     m_socket->stop();
+    if (m_steamManager) {
+        m_steamManager->shutdown();
+    }
     glfwTerminate(); // pas besoin de delete, les unique_ptr nettoient tout seuls
 }
 
@@ -109,6 +123,10 @@ void Game::initialize() {
     // Branche le clic gauche sur l'animation de tir des bras
     m_inputManager->setFirstPersonArms(m_firstPersonArms.get());
 
+    // Modèle humain (3ème personne) — chargé en bind pose, sans animation pour le moment
+    m_humanEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(),
+                                    "./res/rigging/human/human_1.glb", m_textureManager.get());
+
     // Decor statique, une seule fois
     m_collisionManager->addStaticMesh(m_cubes[0]->getMesh(), m_cubes[0]->getTransformation()->getMatrix(), "cube1");
     m_collisionManager->addStaticMesh(m_cubes[1]->getMesh(), m_cubes[1]->getTransformation()->getMatrix(), "cube2");
@@ -116,6 +134,41 @@ void Game::initialize() {
     m_collisionManager->addStaticMesh(m_cubes[3]->getMesh(), m_cubes[3]->getTransformation()->getMatrix(), "cube4");
 
     m_collisionManager->buildBVH();
+
+    // ---- Steam - Initialisation ----
+    m_steamManager = std::make_unique<SteamManager>();
+    if (m_steamManager->init()) {
+        // Configurer les callbacks AVANT parseCommandLine
+        m_steamManager->setOnInviteReceived([this](CSteamID lobbyID) {
+            printf("[Game] Invitation reçue, tentative de rejoindre le lobby %llu...\n",
+                   lobbyID.ConvertToUint64());
+            m_steamManager->joinLobby(lobbyID);
+        });
+
+        m_steamManager->setOnLobbyCreated([this](CSteamID lobbyID) {
+            printf("[Game] Lobby créé avec succès, ouverture de l'invitation...\n");
+            m_steamManager->openInviteDialog();
+        });
+
+        m_steamManager->setOnLobbyEntered([this](CSteamID lobbyID) {
+            printf("[Game] Connecté au lobby %llu !\n", lobbyID.ConvertToUint64());
+            if (m_socket) {
+                // TODO: utiliser le lobby pour établir la connexion réseau
+                // (par exemple via SetLobbyGameServer)
+            }
+        });
+
+        m_steamManager->setOnLobbyLeft([this]() {
+            printf("[Game] Quitté le lobby.\n");
+        });
+
+        // Vérifier les invitations passées en ligne de commande
+        if (m_argc > 0 && m_argv != nullptr) {
+            m_steamManager->parseCommandLine(m_argc, m_argv);
+        }
+    } else {
+        printf("[Game] Steam non disponible, fonctionnement hors-ligne.\n");
+    }
 
     glGetString(GL_VERSION) ? std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl
         : throw std::runtime_error("Impossible de r�cup�rer la version OpenGL");
@@ -126,6 +179,12 @@ void Game::initialize() {
 void Game::run() {
     while (!m_window->getShouldClose()) {
         m_renderer->handleFrameTiming();
+
+        // Traiter les callbacks Steam à chaque frame
+        if (m_steamManager && m_steamManager->isInitialized()) {
+            m_steamManager->runCallbacks();
+        }
+
         switch (m_menuManager->getCurrentState()) {
         case STATE_MENU:
         case STATE_OPTIONS:
@@ -184,6 +243,14 @@ void Game::update() {
     m_collisionManager->updateDynamic("fropy", m_fropyEntity->getModel()->getMeshes(), m_fropyEntity->getModelMatrix());
     m_fropyEntity->update();
 
+    // Humain 3ème personne : suit la position et la direction du joueur.
+    // PAS de collision dynamique : le modèle est l'avatar du joueur, il ne doit
+    // pas se collisionner lui-même (éjection infinie du joueur hors de la map).
+    if (m_humanEntity) {
+        m_humanEntity->setPosition(m_player->getPosition());
+        m_humanEntity->setDirection(*m_player->getDirection());
+    }
+
     // Mise à jour du bobbing des bras en première personne
     if (m_firstPersonArms) {
         m_firstPersonArms->update(m_renderer->getDeltaTime(), m_player->getPosition(), m_player->getIsSprinting());
@@ -202,6 +269,11 @@ void Game::draw() {
 
     m_modelEntity->draw(m_shaderManager->getShader("model"));
     m_fropyEntity->draw(m_shaderManager->getShader("model"));
+
+    // Humain 3ème personne (visible uniquement en vue 3P)
+    if (m_humanEntity && m_player->isThirdPerson()) {
+        m_humanEntity->draw(m_shaderManager->getShader("model"));
+    }
 
     // 2. Transparences
     glEnable(GL_BLEND);
@@ -224,9 +296,9 @@ void Game::draw() {
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
 
-    // Bras — viewmodel 1P (overlay, depth buffer vide dans draw) / world-space
-    // 3P (attaches au corps du joueur, occlus par le decor normalement)
-    if (m_firstPersonArms) {
+    // Bras : uniquement en 1ère personne (overlay viewmodel).
+    // En 3P, le modèle humain les remplace.
+    if (m_firstPersonArms && !m_player->isThirdPerson()) {
         m_firstPersonArms->draw(m_shaderManager->getShader("skinned"));
     }
 }

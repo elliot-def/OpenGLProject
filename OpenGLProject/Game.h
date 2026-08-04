@@ -27,10 +27,12 @@ class MenuManager;
 class TextRenderer;
 class ModelEntity;
 class FirstPersonArms;
+class SteamManager;
 
 class Game {
 public:
     Game();
+    Game(int argc, char* argv[]);
     ~Game();
 
     void run();
@@ -58,9 +60,14 @@ private:
 
     ModelEntity* m_modelEntity;
     ModelEntity* m_fropyEntity;
+    ModelEntity* m_humanEntity = nullptr;
     std::unique_ptr<FirstPersonArms> m_firstPersonArms;
+    std::unique_ptr<SteamManager> m_steamManager;
 
     bool m_isRunning = true;
+    
+    int m_argc;
+    char** m_argv;
 
     void initialize();
     void update();

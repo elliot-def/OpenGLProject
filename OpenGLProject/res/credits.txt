@@ -10,6 +10,8 @@ Drillimpact for first person arms asset : https://drillimpact.itch.io/psx-first-
 
 OpenGameArt for 3rd person rigged player model : https://opengameart.org/content/base-human-models-low-poly-for-blender-25x
 
+Steam API : https://partner.steamgames.com/doc/sdk/api
+
 I used IA for some design (such as game's icon) because i'm poor, but i swear i'll replace them with the game's fonds
 
 France should have win against Spain in world cup semi-final 2026

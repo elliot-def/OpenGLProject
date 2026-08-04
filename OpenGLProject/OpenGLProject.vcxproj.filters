@@ -81,6 +81,7 @@
     <ClCompile Include="AABB.h"><Filter>Collision</Filter></ClCompile>
     <ClCompile Include="Outlineable.h"><Filter>Collision</Filter></ClCompile>
     <ClCompile Include="Socket.cpp"><Filter>Network</Filter></ClCompile>
+    <ClCompile Include="SteamManager.cpp"><Filter>Network</Filter></ClCompile>
     <ClCompile Include="Packet.cpp"><Filter>Network</Filter></ClCompile>
     <ClCompile Include="ReceiveBuffer.cpp"><Filter>Network</Filter></ClCompile>
     <ClCompile Include="constants\texture.h"><Filter>Constants</Filter></ClCompile>
@@ -143,6 +144,7 @@
     <ClInclude Include="CollisionManager.h"><Filter>Collision</Filter></ClInclude>
     <ClInclude Include="BVHNode.h"><Filter>Collision</Filter></ClInclude>
     <ClInclude Include="Socket.h"><Filter>Network</Filter></ClInclude>
+    <ClInclude Include="SteamManager.h"><Filter>Network</Filter></ClInclude>
     <ClInclude Include="Packet.h"><Filter>Network</Filter></ClInclude>
     <ClInclude Include="PacketBuilder.h"><Filter>Network</Filter></ClInclude>
     <ClInclude Include="ReceiveBuffer.h"><Filter>Network</Filter></ClInclude>

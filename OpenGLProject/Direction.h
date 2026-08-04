@@ -30,6 +30,10 @@ public:
         return glm::normalize(glm::vec3(v.x, 0, v.z));
     }
 
+    double getYaw() const { return m_yaw; }
+    double getPitch() const { return m_pitch; }
+    void setYawPitch(double yaw, double pitch) { m_yaw = yaw; m_pitch = pitch; }
+
 private:
     double m_yaw;   // Rotation horizontale (gauche-droite)
     double m_pitch; // Rotation verticale (haut-bas)

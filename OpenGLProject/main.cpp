@@ -7,8 +7,8 @@
 *   3D Models roughness
 */
 
-int main() {
-    Game* game = new Game();
+int main(int argc, char* argv[]) {
+    Game* game = new Game(argc, argv);
 
     game->run();
 
