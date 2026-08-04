@@ -3,6 +3,8 @@
 #define NOMINMAX
 #define GLM_ENABLE_EXPERIMENTAL
 
+#include <atomic>
+#include <thread>
 #include <vector>
 #include <memory>
 
@@ -28,6 +30,7 @@ class TextRenderer;
 class ModelEntity;
 class FirstPersonArms;
 class SteamManager;
+class LoadingScreen;
 
 class Game {
 public:
@@ -69,7 +72,24 @@ private:
     int m_argc;
     char** m_argv;
 
-    void initialize();
+    // Steam en async d'abord, puis chargement différé (modèles en thread)
+    enum class InitPhase { STEAM_WAIT, LOADING, READY };
+    InitPhase m_initPhase = InitPhase::STEAM_WAIT;
+
+    // Thread de chargement des modèles 3D (contexte GL partagé)
+    std::atomic<bool> m_loadingDone{false};
+    std::thread       m_loadingThread;
+    GLFWwindow*       m_loaderWindow = nullptr;
+    void loadModelsAsync();  // exécuté sur le thread de chargement
+
+    static constexpr float LOADING_EXTRA_DELAY   = 0.5f;   // délai après 100%
+    static constexpr float LOADING_FADE_DURATION = 0.5f;   // durée du fondu
+    float m_loadingFadeTimer = 0.0f;
+
+    std::unique_ptr<LoadingScreen> m_loadingScreen;
+
+    void initialize();     // Window + Renderer + Steam async start (+ ressources si Steam prêt)
+    void loadResources();  // Chargement des ressources lourdes (textures, modèles, sons...)
     void update();
     void draw();
 };

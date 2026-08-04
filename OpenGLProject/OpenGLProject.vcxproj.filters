@@ -74,6 +74,7 @@
     <ClCompile Include="SelectInput.cpp"><Filter>Menu\Input</Filter></ClCompile>
     <ClCompile Include="LightSource.cpp"><Filter>Lighting</Filter></ClCompile>
     <ClCompile Include="LightManager.cpp"><Filter>Lighting</Filter></ClCompile>
+    <ClCompile Include="LoadingScreen.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="Spotlight.cpp"><Filter>Lighting</Filter></ClCompile>
     <ClCompile Include="Sound.cpp"><Filter>Sound</Filter></ClCompile>
     <ClCompile Include="SoundManager.cpp"><Filter>Sound</Filter></ClCompile>
@@ -138,6 +139,7 @@
     <ClInclude Include="SelectInput.h"><Filter>Menu\Input</Filter></ClInclude>
     <ClInclude Include="LightSource.h"><Filter>Lighting</Filter></ClInclude>
     <ClInclude Include="LightManager.h"><Filter>Lighting</Filter></ClInclude>
+    <ClInclude Include="LoadingScreen.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="Spotlight.h"><Filter>Lighting</Filter></ClInclude>
     <ClInclude Include="Sound.h"><Filter>Sound</Filter></ClInclude>
     <ClInclude Include="SoundManager.h"><Filter>Sound</Filter></ClInclude>

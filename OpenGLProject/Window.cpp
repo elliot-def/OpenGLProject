@@ -73,7 +73,7 @@ bool Window::init() {
             return false;
         }
 
-        // Fixer la résolution, le taux de rafraîchissement et les bits couleur
+        // Fixer la rï¿½solution, le taux de rafraï¿½chissement et les bits couleur
         glfwWindowHint(GLFW_RED_BITS, mode->redBits);
         glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
         glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
@@ -83,10 +83,10 @@ bool Window::init() {
         m_height = mode->height;
     }
 
-    // Création de la fenêtre
+    // Crï¿½ation de la fenï¿½tre
     m_window = glfwCreateWindow(
         m_width, m_height, m_title,
-        monitor, // nullptr pour fenêtre normale, sinon fullscreen
+        monitor, // nullptr pour fenï¿½tre normale, sinon fullscreen
         nullptr
     );
 
@@ -103,7 +103,7 @@ bool Window::init() {
         return false;
     }
 
-    // Définition de la zone de rendu
+    // Dï¿½finition de la zone de rendu
     glViewport(0, 0, m_width, m_height);
 
     //efface le bouton de la souris et permet de capturer la souris
@@ -114,7 +114,7 @@ bool Window::init() {
     return true;
 }
 
-// Fonction pour charger et définir l'icône de la fenêtre
+// Fonction pour charger et dï¿½finir l'icï¿½ne de la fenï¿½tre
 void Window::setWindowIcon(const char* iconPath) {
     // Charger l'image avec stb_image
     int width, height, channels;
@@ -125,26 +125,44 @@ void Window::setWindowIcon(const char* iconPath) {
         return;
     }
 
-    // Créer la structure GLFWimage
+    // Crï¿½er la structure GLFWimage
     GLFWimage icon;
     icon.width = width;
     icon.height = height;
     icon.pixels = pixels;
 
-    // Définir l'icône de la fenêtre
+    // Dï¿½finir l'icï¿½ne de la fenï¿½tre
     glfwSetWindowIcon(m_window, 1, &icon);
 
-    // Libérer la mémoire de l'image
+    // Libï¿½rer la mï¿½moire de l'image
     stbi_image_free(pixels);
 
-    printf("Icône définie avec succès (%dx%d)\n", width, height);
+    printf("Icï¿½ne dï¿½finie avec succï¿½s (%dx%d)\n", width, height);
+}
+
+// ---------------------------------------------------------------------------
+// Contexte GL partagÃ© (thread de chargement)
+// ---------------------------------------------------------------------------
+
+GLFWwindow* Window::createSharedContext() const {
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    GLFWwindow* w = glfwCreateWindow(1, 1, "loader", nullptr, m_window);
+    glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);  // restore default
+    if (!w) {
+        printf("[Window] ERREUR: impossible de crÃ©er le contexte partagÃ©.\n");
+    }
+    return w;
+}
+
+void Window::destroySharedContext(GLFWwindow* w) const {
+    if (w) glfwDestroyWindow(w);
 }
 
 void Window::setCustomCursor(const char* cursorPath) {
     int cursor_width, cursor_height, cursor_channels;
     unsigned char* cursor_pixels = stbi_load(cursorPath, &cursor_width, &cursor_height, &cursor_channels, 4);
     if (cursor_pixels) {
-        // Construire une GLFWimage à partir des données chargées par stb_image
+        // Construire une GLFWimage ï¿½ partir des donnï¿½es chargï¿½es par stb_image
         GLFWimage cursor_image{};
         cursor_image.width = cursor_width;
         cursor_image.height = cursor_height;
@@ -153,13 +171,13 @@ void Window::setCustomCursor(const char* cursorPath) {
         GLFWcursor* cursor = glfwCreateCursor(&cursor_image, 0, 0);
         if (cursor) {
             glfwSetCursor(m_window, cursor);
-            // Note: vous pouvez conserver le pointeur `cursor` si vous voulez le détruire plus tard avec glfwDestroyCursor
+            // Note: vous pouvez conserver le pointeur `cursor` si vous voulez le dï¿½truire plus tard avec glfwDestroyCursor
         }
         else {
-            printf("Erreur: Impossible de créer le curseur GLFW\n");
+            printf("Erreur: Impossible de crï¿½er le curseur GLFW\n");
         }
 
-        // glfwCreateCursor copie les données, on peut donc libérer l'image chargée
+        // glfwCreateCursor copie les donnï¿½es, on peut donc libï¿½rer l'image chargï¿½e
         stbi_image_free(cursor_pixels);
     }
     else {

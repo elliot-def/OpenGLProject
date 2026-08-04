@@ -9,8 +9,7 @@
 
 
 Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<unsigned int>& indices, unsigned int attributesMask, const std::vector<unsigned int>& textureIDs) 
-    : m_vertices(vertices), m_indices(indices), m_textureIDs(textureIDs) {
-    // Rien � faire ici : les IDs seront initialis�s dans load()
+    : m_vertices(vertices), m_indices(indices), m_textureIDs(textureIDs), m_attributeMask(attributesMask) {
     setupMesh(attributesMask);
 
     for (const auto& v : m_vertices) {
@@ -25,61 +24,59 @@ Mesh::~Mesh() {
     if (m_vbo) glDeleteBuffers(1, &m_vbo);
     if (m_vao) glDeleteVertexArrays(1, &m_vao);
 
-    m_vao = m_vbo = m_ebo = 0; // R�initialisation des IDs
+    m_vao = m_vbo = m_ebo = 0;
     m_indexCount = 0;
 }
 
+// ---------------------------------------------------------------------------
+// Recrée les VAO/VBO/EBO dans le contexte GL courant.
+// Appelé après un chargement sur un contexte partagé (thread), car les VAO
+// ne sont pas partagés entre contextes OpenGL (contrairement aux VBO/EBO/textures).
+// Les anciens handles du contexte partagé seront nettoyés à sa destruction.
+// ---------------------------------------------------------------------------
+
+void Mesh::reloadGPUResources() {
+    setupMesh(m_attributeMask);
+}
+
 void Mesh::setupMesh(unsigned int attributesMask = 0b0101) {
-    m_indexCount = static_cast<GLsizei>(m_indices.size()); // Nombre d'indices
+    m_indexCount = static_cast<GLsizei>(m_indices.size());
 
-    // Cr�ation des objets OpenGL
-    glGenVertexArrays(1, &m_vao); // VAO
-    glGenBuffers(1, &m_vbo);      // VBO
-    glGenBuffers(1, &m_ebo);      // EBO
+    glGenVertexArrays(1, &m_vao);
+    glGenBuffers(1, &m_vbo);
+    glGenBuffers(1, &m_ebo);
 
-    glBindVertexArray(m_vao); // Bind du VAO
+    glBindVertexArray(m_vao);
 
-    // Chargement des sommets dans le VBO
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(Vertex), m_vertices.data(), GL_STATIC_DRAW);
 
-    // Chargement des indices dans le EBO
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(unsigned int), m_indices.data(), GL_STATIC_DRAW);
 
-    // D�finition du layout m�moire pour chaque attribut
-    // Position (x, y, z)
-    // Position (layout = 0) : offset = 0
-    // Position (toujours actif)
     if (attributesMask & (unsigned int)VertexAttribute::POSITION) {
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
     }
 
-    // Normal (optionnel)
     if (attributesMask & (unsigned int)VertexAttribute::NORMAL) {
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
             (void*)(3 * sizeof(float)));
     }
 
-    // Color (optionnel)
     if (attributesMask & (unsigned int)VertexAttribute::COLOR) {
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
             (void*)(6 * sizeof(float)));
     }
 
-    // TexCoord (optionnel)
     if (attributesMask & (unsigned int)VertexAttribute::TEXCOORD) {
         glEnableVertexAttribArray(3);
         glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
             (void*)(9 * sizeof(float)));
     }
 
-    // Bone IDs + Weights — activés UNIQUEMENT pour les meshes riggés (SKINNING).
-    // Les meshes non-skinnés (cubes, rectangles, UI) économisent 8 attributs
-    // int + 8 floats de bande passante GPU par vertex.
     if (attributesMask & (unsigned int)VertexAttribute::SKINNING) {
         struct SkinLayoutProbe {
             char  pre[11 * sizeof(float)];
@@ -99,20 +96,18 @@ void Mesh::setupMesh(unsigned int attributesMask = 0b0101) {
                               (void*)offsetof(SkinLayoutProbe, weights));
     }
 
-    glBindVertexArray(0); // D�bind pour �viter les erreurs plus tard
+    glBindVertexArray(0);
 }
 
 void Mesh::draw() const {
-    // On s'assure d'avoir au moins la diffuse
     if (m_textureIDs.size() >= 2) {
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, m_textureIDs[0]); // Diffuse toujours au slot 0
+        glBindTexture(GL_TEXTURE_2D, m_textureIDs[0]);
 
         glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, m_textureIDs[1]); // Sp�culaire (vraie ou fallback noire) au slot 1
+        glBindTexture(GL_TEXTURE_2D, m_textureIDs[1]);
     }
     else if (!m_textureIDs.empty()) {
-        // S�curit� si un vieux mesh n'a qu'une seule texture
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, m_textureIDs[0]);
     }

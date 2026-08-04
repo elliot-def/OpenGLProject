@@ -189,8 +189,12 @@ void Sound::pause() {
 }
 
 void Sound::stop() {
-    alSourceStop(m_source);
-    alCheckError("alSourceStop");
+    ALint state;
+    alGetSourcei(m_source, AL_SOURCE_STATE, &state);
+    if (state == AL_PLAYING || state == AL_PAUSED) {
+        alSourceStop(m_source);
+        alCheckError("alSourceStop");
+    }
 }
 
 void Sound::resume() {

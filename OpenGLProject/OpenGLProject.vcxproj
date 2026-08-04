@@ -162,6 +162,7 @@
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="LeftClick.cpp" />
     <ClCompile Include="LightManager.cpp" />
+    <ClCompile Include="LoadingScreen.cpp" />
     <ClCompile Include="LightSource.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MainMenu.cpp" />
@@ -235,6 +236,7 @@
     <ClInclude Include="Key.h" />
     <ClInclude Include="LeftClick.h" />
     <ClInclude Include="LightManager.h" />
+    <ClInclude Include="LoadingScreen.h" />
     <ClInclude Include="LightSource.h" />
     <ClInclude Include="MainMenu.h" />
     <ClInclude Include="MaskImage.h" />

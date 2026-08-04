@@ -3,6 +3,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <shellapi.h>
 #endif
 
 // ---------------------------------------------------------------------------
@@ -28,11 +29,31 @@ bool SteamManager::init() {
     ESteamAPIInitResult result = SteamAPI_InitEx(&errMsg);
 
     if (result != k_ESteamAPIInitResult_OK) {
+        if (result == k_ESteamAPIInitResult_NoSteamClient) {
+            printf("[SteamManager] Steam n'est pas lancé, tentative de lancement...\n");
+#ifdef _WIN32
+            // Lancer Steam via le protocole steam://
+            ShellExecuteA(NULL, "open", "steam://open/main", NULL, NULL, SW_HIDE);
+            printf("[SteamManager]   -> Steam lancé, attente de l'initialisation...\n");
+
+            // Réessayer pendant max 10 secondes
+            for (int attempt = 0; attempt < 10; ++attempt) {
+                Sleep(1000);
+                SteamAPI_Shutdown();  // nettoyer l'état entre les tentatives
+                result = SteamAPI_InitEx(&errMsg);
+                if (result == k_ESteamAPIInitResult_OK) goto steam_ready;
+                if (result != k_ESteamAPIInitResult_NoSteamClient) break;
+                printf("[SteamManager]   -> Tentative %d/10...\n", attempt + 1);
+            }
+            printf("[SteamManager] ERREUR: Steam n'a pas pu être initialisé après lancement (%d - %s).\n", result, errMsg);
+#else
+            printf("[SteamManager]   -> Steam n'est pas lancé (lancement automatique non supporté sur cette plateforme).\n");
+#endif
+            return false;
+        }
+
         printf("[SteamManager] ERREUR SteamAPI_InitEx: %d - %s\n", result, errMsg);
         switch (result) {
-            case k_ESteamAPIInitResult_NoSteamClient:
-                printf("[SteamManager]   -> Steam n'est pas lancé.\n");
-                break;
             case k_ESteamAPIInitResult_VersionMismatch:
                 printf("[SteamManager]   -> Version du client Steam obsolète.\n");
                 break;
@@ -43,10 +64,103 @@ bool SteamManager::init() {
         return false;
     }
 
+steam_ready:
+    completeInit();
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// Initialisation asynchrone (non-bloquante)
+// ---------------------------------------------------------------------------
+
+SteamInitStatus SteamManager::initAsyncStart() {
+    if (m_initialized) return SteamInitStatus::READY;
+    if (m_initStatus == SteamInitStatus::WAITING) return SteamInitStatus::WAITING;
+
+    SteamErrMsg errMsg;
+    ESteamAPIInitResult result = SteamAPI_InitEx(&errMsg);
+
+    if (result == k_ESteamAPIInitResult_OK) {
+        // Steam déjà prêt !
+        goto async_steam_ready;
+    }
+
+    if (result == k_ESteamAPIInitResult_NoSteamClient) {
+        printf("[SteamManager] Steam n'est pas lancé, lancement asynchrone...\n");
+#ifdef _WIN32
+        ShellExecuteA(NULL, "open", "steam://open/main", NULL, NULL, SW_HIDE);
+        m_initStatus    = SteamInitStatus::WAITING;
+        m_launchTimer   = 0.0f;
+        m_launchAttempt = 0;
+        printf("[SteamManager]   -> Steam lancé, attente non-bloquante...\n");
+        return SteamInitStatus::WAITING;
+#else
+        printf("[SteamManager]   -> Steam n'est pas lancé (lancement auto non supporté).\n");
+        m_initStatus = SteamInitStatus::FAILED;
+        return SteamInitStatus::FAILED;
+#endif
+    }
+
+    // Autre erreur
+    printf("[SteamManager] ERREUR SteamAPI_InitEx: %d - %s\n", result, errMsg);
+    m_initStatus = SteamInitStatus::FAILED;
+    return SteamInitStatus::FAILED;
+
+async_steam_ready:
+    completeInit();
+    m_initStatus = SteamInitStatus::READY;
+    return SteamInitStatus::READY;
+}
+
+SteamInitStatus SteamManager::initAsyncPoll(float dt) {
+    if (m_initStatus != SteamInitStatus::WAITING)
+        return m_initStatus;
+
+    m_launchTimer += dt;
+    if (m_launchTimer < LAUNCH_RETRY_INTERVAL)
+        return SteamInitStatus::WAITING;
+
+    m_launchTimer = 0.0f;
+    ++m_launchAttempt;
+
+    SteamErrMsg errMsg;
+    SteamAPI_Shutdown();
+    ESteamAPIInitResult result = SteamAPI_InitEx(&errMsg);
+
+    if (result == k_ESteamAPIInitResult_OK) {
+        printf("[SteamManager] Steam connecté après %d tentative(s) !\n", m_launchAttempt);
+        goto async_steam_ready;
+    }
+
+    if (result != k_ESteamAPIInitResult_NoSteamClient) {
+        printf("[SteamManager] ERREUR pendant l'attente: %d - %s\n", result, errMsg);
+        m_initStatus = SteamInitStatus::FAILED;
+        return SteamInitStatus::FAILED;
+    }
+
+    if (m_launchAttempt >= MAX_LAUNCH_ATTEMPTS) {
+        printf("[SteamManager] Timeout: Steam n'a pas répondu après %d tentatives.\n", MAX_LAUNCH_ATTEMPTS);
+        m_initStatus = SteamInitStatus::FAILED;
+        return SteamInitStatus::FAILED;
+    }
+
+    printf("[SteamManager]   -> Tentative %d/%d...\n", m_launchAttempt, MAX_LAUNCH_ATTEMPTS);
+    return SteamInitStatus::WAITING;
+
+async_steam_ready:
+    completeInit();
+    m_initStatus = SteamInitStatus::READY;
+    return SteamInitStatus::READY;
+}
+
+// ---------------------------------------------------------------------------
+// Finalisation commune de l'init Steam
+// ---------------------------------------------------------------------------
+
+void SteamManager::completeInit() {
     m_localSteamID = SteamUser()->GetSteamID();
     m_initialized  = true;
 
-    // Enregistrer les callbacks (seulement après SteamAPI_Init réussi)
     m_cbOverlay.Register(this, &SteamManager::onGameOverlayActivated);
     m_cbLobbyJoin.Register(this, &SteamManager::onGameLobbyJoinRequested);
     m_cbEnter.Register(this, &SteamManager::onLobbyEnter);
@@ -58,8 +172,6 @@ bool SteamManager::init() {
     printf("[SteamManager]   PersonaName : %s\n", SteamFriends()->GetPersonaName());
 
     m_appID = SteamUtils()->GetAppID();
-
-    return true;
 }
 
 // ---------------------------------------------------------------------------

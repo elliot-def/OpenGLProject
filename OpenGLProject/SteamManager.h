@@ -18,10 +18,20 @@
 //   2. Fermé   → Argument +connect_lobby dans la ligne de commande
 //
 // Cycle de vie :
-//   init()        → SteamAPI_Init
-//   chaque frame  → runCallbacks()
-//   fin           → shutdown() → SteamAPI_Shutdown
+//   init()          → SteamAPI_Init (bloquant)
+//   initAsyncStart()→ Lance l'init, lance Steam si nécessaire, non-bloquant
+//   initAsyncPoll() → À appeler chaque frame jusqu'à READY ou FAILED
+//   chaque frame    → runCallbacks()
+//   fin             → shutdown() → SteamAPI_Shutdown
 // ---------------------------------------------------------------------------
+
+// État de l'initialisation asynchrone
+enum class SteamInitStatus {
+    NOT_STARTED,
+    WAITING,   // Steam lancé, en attente de connexion
+    READY,     // Steam initialisé avec succès
+    FAILED     // Échec (timeout ou autre erreur)
+};
 
 class SteamManager {
 public:
@@ -33,6 +43,17 @@ public:
     // Initialise le client Steam. Retourne true si succès.
     // Doit être appelé une seule fois au démarrage.
     bool init();
+
+    // Init non-bloquante : essaie une première fois, lance Steam si absent,
+    // puis retourne immédiatement. Appeler initAsyncPoll() chaque frame ensuite.
+    SteamInitStatus initAsyncStart();
+
+    // À appeler chaque frame après initAsyncStart().
+    // Retourne WAITING tant que Steam n'est pas prêt, READY quand OK, FAILED si échec.
+    SteamInitStatus initAsyncPoll(float dt);
+
+    // Vrai si on est en train d'attendre Steam après l'avoir lancé
+    bool isWaitingForSteam() const { return m_initStatus == SteamInitStatus::WAITING; }
 
     // Traite les événements Steam en attente (invitations, overlay, etc.)
     // À appeler chaque frame dans la boucle de rendu.
@@ -91,6 +112,13 @@ private:
     CSteamID           m_currentLobby;
     CSteamID           m_localSteamID;
 
+    // ---- Init asynchrone ----
+    SteamInitStatus    m_initStatus   = SteamInitStatus::NOT_STARTED;
+    float              m_launchTimer  = 0.0f;
+    int                m_launchAttempt = 0;
+    static constexpr int    MAX_LAUNCH_ATTEMPTS = 10;
+    static constexpr float  LAUNCH_RETRY_INTERVAL = 1.0f;  // secondes
+
     // ---- Callbacks Steam (manuels : enregistrés après init) ----
     STEAM_CALLBACK_MANUAL(SteamManager, onGameOverlayActivated,   GameOverlayActivated_t,   m_cbOverlay);
     STEAM_CALLBACK_MANUAL(SteamManager, onGameLobbyJoinRequested, GameLobbyJoinRequested_t, m_cbLobbyJoin);
@@ -108,5 +136,6 @@ private:
     LobbyCallback       m_onInviteReceived;
 
     // ---- Détail interne ----
+    void completeInit();   // finalise l'init après SteamAPI_InitEx OK
     void setLobbyMetadata(CSteamID lobbyID);
 };

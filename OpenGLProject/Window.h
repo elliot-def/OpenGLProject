@@ -1,20 +1,20 @@
 #pragma once
 
-struct GLFWwindow; // Déclaration anticipée pour éviter d'inclure GLFW ici
+struct GLFWwindow; // Dï¿½claration anticipï¿½e pour ï¿½viter d'inclure GLFW ici
 
-class SoundManager; // Déclaration anticipée pour éviter d'inclure SoundManager ici
+class SoundManager; // Dï¿½claration anticipï¿½e pour ï¿½viter d'inclure SoundManager ici
 /**
  * @class Window
- * @brief Gère la création et l'utilisation d'une fenêtre OpenGL via GLFW
+ * @brief Gï¿½re la crï¿½ation et l'utilisation d'une fenï¿½tre OpenGL via GLFW
  *
  * La classe encapsule :
- * - la largeur et la hauteur de la fenêtre
- * - le titre de la fenêtre
+ * - la largeur et la hauteur de la fenï¿½tre
+ * - le titre de la fenï¿½tre
  * - le pointeur vers GLFWwindow
  *
  * Elle fournit des fonctions pour :
- * - Mettre à jour la fenêtre (swap buffers et gestion des événements)
- * - Récupérer les informations de la fenêtre
+ * - Mettre ï¿½ jour la fenï¿½tre (swap buffers et gestion des ï¿½vï¿½nements)
+ * - Rï¿½cupï¿½rer les informations de la fenï¿½tre
  * - Initialiser et fermer correctement GLFW
  */
 class Window {
@@ -23,41 +23,46 @@ public:
      * @brief Constructeur
      * @param soundManager Pointeur vers le gestionnaire de son
      *
-     * Crée la fenêtre et initialise GLFW
+     * Crï¿½e la fenï¿½tre et initialise GLFW
      */
     Window();
 
     /**
      * @brief Destructeur
      *
-     * Détruit la fenêtre et libère les ressources GLFW
+     * Dï¿½truit la fenï¿½tre et libï¿½re les ressources GLFW
      */
     ~Window();
 
     /**
-     * @brief Met à jour la fenêtre
+     * @brief Met ï¿½ jour la fenï¿½tre
      *
-     * Swap les buffers pour afficher le rendu et récupère les événements
+     * Swap les buffers pour afficher le rendu et rï¿½cupï¿½re les ï¿½vï¿½nements
      */
     void update() const;
     void setCursorCaptured(bool shouldCapture);
     void setWindowIcon(const char* iconPath);
     void setCustomCursor(const char* cursorPath);
+
+    // Contexte GL partagÃ© pour le chargement en arriÃ¨re-plan.
+    // CrÃ©e une fenÃªtre invisible 1Ã—1 partageant les ressources du contexte principal.
+    GLFWwindow* createSharedContext() const;
+    void        destroySharedContext(GLFWwindow* w) const;
     
     // Getters
     GLFWwindow* getGLFWwindow() const; // Retourne le pointeur GLFW
-    bool getShouldClose() const;       // Indique si la fenêtre doit se fermer
-    int getWidth() const;              // Largeur de la fenêtre
-    int getHeight() const;             // Hauteur de la fenêtre
+    bool getShouldClose() const;       // Indique si la fenï¿½tre doit se fermer
+    int getWidth() const;              // Largeur de la fenï¿½tre
+    int getHeight() const;             // Hauteur de la fenï¿½tre
 
 private:
     int m_width;            // Largeur
     int m_height;           // Hauteur
     const char* m_title;    // Titre
-    GLFWwindow* m_window;   // Pointeur vers la fenêtre GLFW
+    GLFWwindow* m_window;   // Pointeur vers la fenï¿½tre GLFW
 
-    void pollEvents() const;  // Récupère les événements (clavier, souris)
-    void swapBuffers() const; // Échange les buffers pour le rendu
-    bool init();              // Initialise GLFW et crée la fenêtre
+    void pollEvents() const;  // Rï¿½cupï¿½re les ï¿½vï¿½nements (clavier, souris)
+    void swapBuffers() const; // ï¿½change les buffers pour le rendu
+    bool init();              // Initialise GLFW et crï¿½e la fenï¿½tre
 };
 

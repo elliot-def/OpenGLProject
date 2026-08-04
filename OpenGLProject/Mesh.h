@@ -59,6 +59,11 @@ public:
      */
     void draw() const;
 
+    // Recrée les objets GPU (VAO, VBO, EBO) dans le contexte GL courant.
+    // Nécessaire après un chargement sur un contexte partagé (thread) :
+    // les VAO ne sont pas partagés entre contextes OpenGL.
+    void reloadGPUResources();
+
 	std::vector<Vertex> getVertices() const { return m_vertices; }
     std::vector<Vertex>& getWritableVertices() { return m_vertices; }
     std::vector<unsigned int> getIndices() const { return m_indices; }
@@ -68,6 +73,7 @@ public:
     glm::vec3 getLocalAABBMax() const { return m_aabbMax; }
 
 private:
+    unsigned int m_attributeMask = 0;  // sauvegardé pour reloadGPUResources()
     unsigned int m_vao = 0;      // Vertex Array Object
     unsigned int m_vbo = 0;      // Vertex Buffer Object
     unsigned int m_ebo = 0;      // Element Buffer Object
