@@ -17,10 +17,6 @@ ModelEntity::ModelEntity(Camera* camera, LightManager* lightManager, Renderer* r
 	m_animator = std::make_unique<Animator>();
 	m_animator->setup(m_model.get());
 
-	for (unsigned int i = 0; i < MAX_BONES; i++) {
-		m_boneUniformNames.push_back("uBoneMatrices[" + std::to_string(i) + "]");
-	}
-
 	detectAnimations();
 	if (m_hasAnimations) {
 		if (m_idleAnimIndex >= 0) {
@@ -154,11 +150,12 @@ void ModelEntity::draw(Shader* shader) {
     // Bone matrices pour le skinning (shader "skinned" uniquement)
     if (m_hasAnimations && m_animator && shader->getType() == ShaderType::SkinnedModel) {
         const auto& boneMats = m_animator->getFinalBoneMatrices();
-        size_t count = boneMats.size() < m_boneUniformNames.size()
-                       ? boneMats.size() : m_boneUniformNames.size();
-        for (size_t i = 0; i < count; i++) {
-            shader->setMat4(m_boneUniformNames[i].c_str(), boneMats[i]);
-        }
+        // Envoi groupé : un seul glUniformMatrix4fv pour tout le tableau (au
+        // lieu de ~128 appels + 128 hachages de string). count est borné par
+        // SHADER_MAX_BONES, la taille du tableau uniform côté shader.
+        size_t count = boneMats.size() < SHADER_MAX_BONES
+                       ? boneMats.size() : SHADER_MAX_BONES;
+        shader->setMat4Array("uBoneMatrices[0]", boneMats.data(), static_cast<int>(count));
     }
 
     shader->setVec3("viewPos", m_camera->getPosition());

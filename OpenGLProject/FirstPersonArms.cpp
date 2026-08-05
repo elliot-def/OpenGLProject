@@ -32,11 +32,6 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
     // deux bras. Le placement, l'échelle et la caméra restent différents
     // selon le mode, mais les angles de pose sont identiques.
 
-    // Pré-calculer les noms d'uniforms des bones
-    for (int i = 0; i < MAX_BONES; i++) {
-        m_boneUniformNames.push_back("uBoneMatrices[" + std::to_string(i) + "]");
-    }
-
     // Jouer l'idle par défaut (chercher "finger_gun_idle" par nom)
     const aiScene* scene = m_model->getScene();
     if (scene) {
@@ -328,7 +323,7 @@ void FirstPersonArms::draw(Shader* shader) {
     shader->setMat4("projection", shader->getProjection());
     shader->setVec3("viewPos", viewPos);
 
-    // Envoyer les matrices des bones au shader (noms pré-calculés).
+    // Envoyer les matrices des bones au shader.
     // En 1P : on copie les matrices et on collapse les bones configurés dans
     // res/armBones.json pour l'animation courante (échelle quasi-nulle →
     // vertices invisibles).
@@ -359,11 +354,13 @@ void FirstPersonArms::draw(Shader* shader) {
         }
         boneMatsPtr = &boneMats1P;
     }
+    // Envoi groupé des matrices de bones : un seul glUniformMatrix4fv pour
+    // tout le tableau (au lieu de ~128 appels + 128 hachages de string).
+    // count est borné par SHADER_MAX_BONES, la taille du tableau uniform côté
+    // shader (skinned.vert) — envoyer plus écrirait hors du tableau.
     const auto& boneMats = *boneMatsPtr;
-    size_t count = boneMats.size() < m_boneUniformNames.size() ? boneMats.size() : m_boneUniformNames.size();
-    for (size_t i = 0; i < count; i++) {
-        shader->setMat4(m_boneUniformNames[i].c_str(), boneMats[i]);
-    }
+    size_t count = boneMats.size() < SHADER_MAX_BONES ? boneMats.size() : SHADER_MAX_BONES;
+    shader->setMat4Array("uBoneMatrices[0]", boneMats.data(), static_cast<int>(count));
 
     if (thirdPerson) {
         // 3P : on utilise les lumières du monde (point lights + flashlight)

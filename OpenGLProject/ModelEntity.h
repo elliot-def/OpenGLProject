@@ -74,7 +74,6 @@ private:
 
     // ── Animation ──
     std::unique_ptr<Animator> m_animator;
-    std::vector<std::string> m_boneUniformNames; // pré-calculés "uBoneMatrices[0]".."[N]"
     bool m_hasAnimations = false;
     int m_idleAnimIndex = -1;
     int m_walkAnimIndex = -1;

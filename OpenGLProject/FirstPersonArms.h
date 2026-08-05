@@ -74,7 +74,6 @@ private:
     int m_pushAnimIndex = -1;   // index de push (main droite ou les deux)
     int m_grabAnimIndex = -1;   // index de grab (main gauche, grab.L)
     glm::vec3 m_playerPos{ 0.0f }; // position du joueur (attachement world-space 3P)
-    std::vector<std::string> m_boneUniformNames; // pré-calculés "uBoneMatrices[0]".."[51]"
 
     bool m_viewmodelOffsetsActive = false; // offsets de pose communs 1P/3P appliqués ?
 
