@@ -34,7 +34,7 @@ Cube::Cube(glm::vec3 center, float edge, Shader* shader, LightSource* lightSourc
     float halfEdge = m_edge / 2.0f;
 
     // Cr�ation des composants n�cessaires
-    m_transformation = new Transformation(); // Permet de d�placer/faire tourner/agrandir l�objet
+    m_transformation = std::make_unique<Transformation>(); // Permet de d�placer/faire tourner/agrandir l�objet
 
     // D�finition des sommets du cube
     // Chaque face a 4 sommets, et comme un cube a 6 faces -> 24 sommets en tout
@@ -88,7 +88,7 @@ Cube::Cube(glm::vec3 center, float edge, Shader* shader, LightSource* lightSourc
         20, 21, 22, 22, 23, 20  // Face du haut (Y+)
     };
 
-    m_mesh = new Mesh(vertices, indices, (unsigned int)VertexAttribute::POSITION | (unsigned int)VertexAttribute::COLOR);
+    m_mesh = std::make_unique<Mesh>(vertices, indices, (unsigned int)VertexAttribute::POSITION | (unsigned int)VertexAttribute::COLOR);
 }
 
 // Constructeur du cube
@@ -108,7 +108,7 @@ Cube::Cube(glm::vec3 center, float edge, Shader* shader, std::vector<Texture*> t
     float halfEdge = m_edge / 2.0f;
 
     // Cr�ation des composants n�cessaires
-    m_transformation = new Transformation(); // Permet de d�placer/faire tourner/agrandir l�objet
+    m_transformation = std::make_unique<Transformation>(); // Permet de d�placer/faire tourner/agrandir l�objet
 
     // D�finition des sommets du cube
     // Chaque face a 4 sommets, et comme un cube a 6 faces -> 24 sommets en tout
@@ -162,21 +162,16 @@ Cube::Cube(glm::vec3 center, float edge, Shader* shader, std::vector<Texture*> t
         20, 21, 22, 22, 23, 20  // Face du haut (Y+)
     };
 
-    m_mesh = new Mesh(vertices, indices, (unsigned int)VertexAttribute::POSITION | (unsigned int)VertexAttribute::NORMAL | (unsigned int)VertexAttribute::TEXCOORD);
+    m_mesh = std::make_unique<Mesh>(vertices, indices, (unsigned int)VertexAttribute::POSITION | (unsigned int)VertexAttribute::NORMAL | (unsigned int)VertexAttribute::TEXCOORD);
 }
 
-// Destructeur -> appel� quand on d�truit l�objet Cube
-// Lib�re la m�moire utilis�e
-Cube::~Cube() {
-    delete m_mesh;            // D�truit le mesh
-    delete m_transformation;  // D�truit la transformation
-}
+// ~Cube() est =default dans le header : unique_ptr gere la liberation automatique
 
 inline std::vector<Texture*> Cube::getTextures() const {
     return m_textures;
 }
 
-// Pr�pare le cube pour �tre affich� (envoie les donn�es au GPU)
+// Prepare le cube pour etre affiche (envoie les donnees au GPU)
 void Cube::update() {
     if (m_spinSpeedDeg != 0.0f && m_renderer) {
         m_spinAngle = std::fmod(m_spinAngle + m_spinSpeedDeg * m_renderer->getDeltaTime(), 360.0f);
@@ -184,7 +179,7 @@ void Cube::update() {
     }
 }
 
-// Dessine le cube � l��cran
+// Dessine le cube a l'ecran
 void Cube::draw() {
     // OUTLINE PASS
     if (m_outlineEnabled && m_outlineShader) {
@@ -203,34 +198,26 @@ void Cube::draw() {
         glDepthMask(GL_TRUE);
     }
 
-    m_shader->setModel(m_transformation->getMatrix());          // Envoie la matrice "mod�le" (position/rotation/scale)
-    m_shader->use();                                            // Active le shader
-    m_shader->setupMatrices();                                  // Envoie la transformation compl�te
-
+    m_shader->setModel(m_transformation->getMatrix());
+    m_shader->use();
+    m_shader->setupMatrices();
 
     if (m_shader->getType() == ShaderType::LightSource) {
         drawLightSourceShader();
-	}
-    else if (m_shader->getType() == ShaderType::SeveralLights) {
+    } else if (m_shader->getType() == ShaderType::SeveralLights) {
         drawSeveralLightShader();
-    }
-    else {
-        // Type de shader inconnu : log UNE SEULE fois (pas de cout a chaque
-        // frame dans le chemin de rendu).
+    } else {
         static bool s_warned = false;
         if (!s_warned) {
             s_warned = true;
             std::cout << "Shader name not found in Cube draw : " << m_shader->getName() << std::endl;
         }
     }
-    
     m_mesh->draw();
 }
 
 void Cube::drawLightSourceShader() {
     if (!m_lightSource) {
-        // Pas de light source : rien a envoyer. Log UNE SEULE fois au lieu
-        // d'une exception dans le chemin de rendu (60+ fps).
         static bool s_warned = false;
         if (!s_warned) {
             s_warned = true;
@@ -238,13 +225,11 @@ void Cube::drawLightSourceShader() {
         }
         return;
     }
-
-    m_shader->setVec3("lightColor", m_lightSource->getLightColor());  // Associe la couleur au shader
+    m_shader->setVec3("lightColor", m_lightSource->getLightColor());
 }
 
 void Cube::drawSeveralLightShader() {
     if (!m_player) {
-        // Log UNE SEULE fois, pas d'exception dans le chemin de rendu.
         static bool s_warned = false;
         if (!s_warned) {
             s_warned = true;
@@ -255,12 +240,8 @@ void Cube::drawSeveralLightShader() {
 
     m_shader->setVec3("viewPos", m_shader->getCamera()->getPosition());
 
-	//printf("Number of textures in Cube drawSeveralLightShader: %zu\n", m_textures.size());
-
-	for (Texture * texture : m_textures){
+    for (Texture* texture : m_textures) {
         if (!texture->hasSpecular()) {
-            // Texture sans specular : ignoree (log unique) au lieu de thrower
-            // en plein draw() et de tout interrompre.
             static bool s_warnedSpec = false;
             if (!s_warnedSpec) {
                 s_warnedSpec = true;

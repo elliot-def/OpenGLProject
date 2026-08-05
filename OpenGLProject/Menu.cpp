@@ -48,20 +48,20 @@ void Menu::addRange(const std::string& label, float x, float y, float width, flo
     float minValue, float maxValue, float defaultValue,
     std::function<void(float)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
-    m_ranges.push_back(new MenuRange(label, new RangeInput(shader, x, y, width, height, minValue, maxValue, defaultValue, onValueChanged)));
+    m_ranges.push_back(std::make_unique<MenuRange>(label, new RangeInput(shader, x, y, width, height, minValue, maxValue, defaultValue, onValueChanged)));
 }
 
 void Menu::addCheckbox(const std::string& label, float x, float y, float size,
     bool defaultValue, std::function<void(bool)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
-    m_checkboxes.push_back(new MenuCheckbox(label, new CheckboxInput(shader, x, y, size, defaultValue, onValueChanged)));
+    m_checkboxes.push_back(std::make_unique<MenuCheckbox>(label, new CheckboxInput(shader, x, y, size, defaultValue, onValueChanged)));
 }
 
 void Menu::addSelect(const std::string& label, float x, float y, float width, float height,
     std::vector<std::string> options, int defaultIndex,
     std::function<void(int)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
-    m_selects.push_back(new MenuSelect(label, new SelectInput(shader, x, y, width, height, std::move(options), defaultIndex, onValueChanged)));
+    m_selects.push_back(std::make_unique<MenuSelect>(label, new SelectInput(shader, x, y, width, height, std::move(options), defaultIndex, onValueChanged)));
 }
 
 void Menu::draw() {
@@ -93,7 +93,7 @@ void Menu::draw() {
     }
 
     // Dessiner les sliders (label a gauche + widget)
-    for (const auto* range : m_ranges) {
+    for (const auto& range : m_ranges) {
         if (!range || !range->input) continue;
         glm::vec2 pos = range->input->getPosition();
         glm::vec2 size = range->input->getSize();
@@ -114,7 +114,7 @@ void Menu::draw() {
     }
 
     // Dessiner les checkbox (label a gauche + widget)
-    for (const auto* checkbox : m_checkboxes) {
+    for (const auto& checkbox : m_checkboxes) {
         if (!checkbox || !checkbox->input) continue;
         glm::vec2 pos = checkbox->input->getPosition();
         float size = checkbox->input->getSize();
@@ -127,7 +127,7 @@ void Menu::draw() {
     }
 
     // Dessiner les select (label a gauche, valeur selectionnee, options si ouvert)
-    for (const auto* select : m_selects) {
+    for (const auto& select : m_selects) {
         if (!select || !select->input) continue;
         glm::vec2 pos = select->input->getPosition();
         if (!select->label.empty()) {
@@ -180,7 +180,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
     }
 
     // Checkbox : un clic dedans bascule son etat (le callback est appele dans toggle())
-    for (auto* checkbox : m_checkboxes) {
+    for (auto& checkbox : m_checkboxes) {
         if (!checkbox || !checkbox->input) continue;
         if (checkbox->input->isPointInside(mouseX, mouseY)) {
             checkbox->input->toggle();
@@ -193,7 +193,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
     }
 
     // Select : ouvre/ferme la liste ou selectionne une option (handleClick gere tout, y compris le clic en dehors qui referme)
-    for (auto* select : m_selects) {
+    for (auto& select : m_selects) {
         if (!select || !select->input) continue;
         bool wasOpen = select->input->isOpen();
         select->input->handleClick(mouseX, mouseY);
@@ -207,7 +207,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
     }
 
     // Range : un simple clic (sans drag) positionne aussi la valeur - le drag continu passe par updateDrag()
-    for (auto* range : m_ranges) {
+    for (auto& range : m_ranges) {
         if (!range || !range->input) continue;
         if (range->input->isPointInside(mouseX, mouseY)) {
             range->input->update(mouseX, mouseY, true);

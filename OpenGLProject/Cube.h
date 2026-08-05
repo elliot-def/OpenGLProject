@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <memory>
 
 #include "Vertex.h"
 #include "Outlineable.h"
@@ -29,7 +30,7 @@ public:
     Cube(glm::vec3 center, float edge, Shader* shader, std::vector<Texture*> textures, Renderer* renderer, LightManager* lightManager, Player* player);
 
     // Destructeur : libere la memoire (mesh, transformation�)
-    ~Cube();
+    ~Cube() = default;
 
     // Mise � jour du cube (transformations, animations, effets�)
     void update();
@@ -37,14 +38,14 @@ public:
     // Dessine le cube a l'ecran (appelle Mesh + Shader)
     virtual void draw();
 
-	inline Transformation* getTransformation() const { return m_transformation; }
+	inline Transformation* getTransformation() const { return m_transformation.get(); }
 
     // Retourne la texture du cube
     inline std::vector<Texture*> getTextures() const;
 
 	inline glm::vec3 getCenter() const { return m_center; }
 
-	inline Mesh* getMesh() const { return m_mesh; }
+	inline Mesh* getMesh() const { return m_mesh.get(); }
 
     // Outline (silhouette) — voir Outlineable.h
     void setOutlineShader(Shader* s) { m_outlineShader = s; }
@@ -53,12 +54,12 @@ public:
 protected:
     Cube(glm::vec3 center, float edge, Shader* shader, Player* player);
 
-    Mesh* m_mesh = nullptr;           // Maillage du cube (buffers OpenGL)
+    std::unique_ptr<Mesh> m_mesh;     // Maillage du cube (buffers OpenGL)
     glm::vec3 m_center;               // Centre du cube dans l'espace
     std::vector<Texture*> m_textures; // Texture appliquee
     Shader* m_shader;                 // Shader pour le rendu
     Shader* m_outlineShader = nullptr;  // Outline (silhouette)
-    Transformation* m_transformation = nullptr; // Transformations : position, rotation, scale
+    std::unique_ptr<Transformation> m_transformation; // Transformations : position, rotation, scale
 	LightManager* m_lightManager;     // Pointeur vers le LightBlock associ� (si applicable)
 	LightSource* m_lightSource;       // Pointeur vers le LightSource associ� (si applicable)
     Player* m_player;

@@ -92,10 +92,10 @@ protected:
 	CursorManager* m_cursorManager;
     Game* m_game;
     std::vector<MenuText> m_items;
-    std::map<int, MenuShape*> m_shapes;
-    std::vector<MenuRange*> m_ranges;
-    std::vector<MenuCheckbox*> m_checkboxes;
-    std::vector<MenuSelect*> m_selects;
+    std::map<int, std::unique_ptr<MenuShape>> m_shapes;
+    std::vector<std::unique_ptr<MenuRange>> m_ranges;
+    std::vector<std::unique_ptr<MenuCheckbox>> m_checkboxes;
+    std::vector<std::unique_ptr<MenuSelect>> m_selects;
     std::string m_title;
     float m_titleX, m_titleY, m_titleWidth, m_titleHeight;
     bool m_drawBackground;
@@ -122,7 +122,7 @@ public:
     }
 
     void addShape(int id, Shape* shape, std::function<void()> callback = {}) {
-        m_shapes.emplace(id, new MenuShape(shape, callback));
+        m_shapes.emplace(id, std::make_unique<MenuShape>(shape, callback));
     }
 
     // label         : texte affiche a gauche du slider (rendu par Menu::draw)
@@ -148,24 +148,9 @@ public:
 
     void clear() {
         m_items.clear();
-        for (auto& pair : m_shapes) {
-            delete pair.second;
-        }
         m_shapes.clear();
-
-        for (auto* range : m_ranges) {
-            delete range;
-        }
         m_ranges.clear();
-
-        for (auto* checkbox : m_checkboxes) {
-            delete checkbox;
-        }
         m_checkboxes.clear();
-
-        for (auto* select : m_selects) {
-            delete select;
-        }
         m_selects.clear();
     }
 
@@ -194,7 +179,7 @@ public:
     // A appeler chaque frame (independamment du clic) avec la position souris et l'etat du bouton gauche.
     // Necessaire pour que les sliders (RangeInput) puissent etre glisses (drag).
     void updateDrag(double mouseX, double mouseY, bool mousePressed) {
-        for (auto* range : m_ranges) {
+        for (auto& range : m_ranges) {
             if (range && range->input) range->input->update(mouseX, mouseY, mousePressed);
         }
     }
