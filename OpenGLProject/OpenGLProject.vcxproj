@@ -156,6 +156,7 @@
     <ClCompile Include="Escape.cpp" />
     <ClCompile Include="FirstPersonArms.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="GlbAnimationRepair.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImageLoader.cpp" />
