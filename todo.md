@@ -8,6 +8,8 @@ Implémentation futures :
 
 Comment enlever le cmd ?
 
+Rendre les hitbox plus fidèles au modèles 3D (en troisième personne pour les joueurs)
+
 Ajouter des bulles de dialogues ?
 
 PlantUML depuis freebuff
