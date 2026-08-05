@@ -8,6 +8,8 @@ Implémentation futures :
 
 Comment enlever le cmd ?
 
+Ajouter des bulles de dialogues ?
+
 PlantUML depuis freebuff
 
 DA : 
