@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <string>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -104,6 +105,11 @@ public:
     bool raycast(const glm::vec3& origin, const glm::vec3& direction,
         const glm::mat4& modelMatrix, float& distance) const;
 
+    // Animations externes (FBX/GLB separes du modele, ex: Mixamo)
+    void loadExternalAnimations(const std::vector<std::string>& paths);
+    const aiAnimation* getAnimation(size_t index) const;
+    size_t getNumAnimations() const;
+
 private:
     std::string m_sourcePath;
     std::string m_directory;
@@ -135,6 +141,13 @@ private:
     // depuis plusieurs nœuds (fr�quent avec Mixamo/Blender). Sans ce set,
     // deux Mesh* identiques sont pouss�s dans m_meshes → z-fighting � l'�cran.
     std::unordered_set<unsigned int> m_processedMeshIndices;
+
+    // ── Animations externes ───────────────────────────────────────────
+    // Importers pour les fichiers d'animation externes (doivent survivre
+    // aux aiAnimation* qu'ils contiennent — detruits avec ce Model).
+    // unique_ptr car Assimp::Importer n'est pas copiable/movable.
+    std::vector<std::unique_ptr<Assimp::Importer>> m_externalImporters;
+    std::vector<const aiAnimation*> m_externalAnimations;
 
     // Noeuds joints du squelette conserve (voir getJointNodes()). Construit
     // apres processNode() : parcours depth-first de l'arbre, on reclame le

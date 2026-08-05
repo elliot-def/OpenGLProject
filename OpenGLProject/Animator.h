@@ -20,10 +20,15 @@ public:
     void setup(Model* model);
 
     // Joue une animation par son index dans scene->mAnimations[]
+    // (delegue a la version par pointeur via Model::getAnimation).
     // crossfade=true : fond la pose de l'animation en cours vers la nouvelle
-    // sur kCrossfadeDuration (évite le "pop" entre idle et marche). Passer
+    // sur kCrossfadeDuration (evite le "pop" entre idle et marche). Passer
     // false pour une coupure franche (ex: le recul du tir).
     void playAnimation(unsigned int animIndex, bool loop = true, bool crossfade = true);
+
+    // Joue une animation par son pointeur aiAnimation (supporte les animations
+    // externes chargees via Model::loadExternalAnimations).
+    void playAnimation(const aiAnimation* anim, bool loop = true, bool crossfade = true);
 
     // Met à jour l'animation (à appeler chaque frame)
     void update(float deltaTime);

@@ -45,10 +45,42 @@ public:
     int getRunAnimIndex() const { return m_runAnimIndex; }
     int getPunchAnimIndex() const { return m_punchAnimIndex; }
     int getRestAnimIndex() const { return m_restAnimIndex; }
+    int getStrafeLeftIdx()  const { return m_strafeLeftIdx; }
+    int getStrafeRightIdx() const { return m_strafeRightIdx; }
+    int getStrafeWalkLeftIdx()  const { return m_strafeWalkLeftIdx; }
+    int getStrafeWalkRightIdx() const { return m_strafeWalkRightIdx; }
+    int getTurnLeftIdx()  const { return m_turnLeftIdx; }
+    int getTurnRightIdx() const { return m_turnRightIdx; }
+    int getJumpIdx()     const { return m_jumpIdx; }
+    int getRunJumpIdx()  const { return m_runJumpIdx; }
+    int getWalkBackIdx() const { return m_walkBackIdx; }
+
+    // Setters manuels (quand les noms d'anim sont tous "mixamo.com")
+    void setIdleAnimIndex(int i) { m_idleAnimIndex = i; m_hasAnimations = true; }
+    void setWalkAnimIndex(int i) { m_walkAnimIndex = i; m_hasAnimations = true; }
+    void setRunAnimIndex(int i)  { m_runAnimIndex  = i; m_hasAnimations = true; }
+    void setPunchAnimIndex(int i){ m_punchAnimIndex = i; }
+    void setRestAnimIndex(int i) { m_restAnimIndex  = i; }
+    void setStrafeLeftIdx(int i)     { m_strafeLeftIdx = i;     m_hasAnimations = true; }
+    void setStrafeRightIdx(int i)    { m_strafeRightIdx = i;    m_hasAnimations = true; }
+    void setStrafeWalkLeftIdx(int i) { m_strafeWalkLeftIdx = i; m_hasAnimations = true; }
+    void setStrafeWalkRightIdx(int i){ m_strafeWalkRightIdx = i; m_hasAnimations = true; }
+    void setTurnLeftIdx(int i)       { m_turnLeftIdx = i;       m_hasAnimations = true; }
+    void setTurnRightIdx(int i)      { m_turnRightIdx = i;      m_hasAnimations = true; }
+    void setJumpIdx(int i)           { m_jumpIdx = i;           m_hasAnimations = true; }
+    void setRunJumpIdx(int i)        { m_runJumpIdx = i;        m_hasAnimations = true; }
+    void setWalkBackIdx(int i)       { m_walkBackIdx = i;       m_hasAnimations = true; }
+
+    // Echelle uniforme du modele (appliquee dans getModelMatrix)
+    void setScale(float scale) { m_scale = scale; m_modelMatrixValid = false; }
+    float getScale() const { return m_scale; }
 
     // Retourne l'Animator pour un contrôle avancé
     Animator* getAnimator() { return m_animator.get(); }
     const Animator* getAnimator() const { return m_animator.get(); }
+
+    // Re-detecte les animations (a appeler apres loadExternalAnimations)
+    void redetectAnimations() { detectAnimations(); }
 
     // Indique si le modèle a des animations
     bool hasAnimations() const { return m_hasAnimations; }
@@ -82,6 +114,7 @@ private:
     mutable unsigned int m_cachedDirVersion = 0;
     mutable glm::vec3 m_cachedSpinAxis{ 0.0f };
     mutable float m_cachedSpinAngle = 0.0f;
+    mutable float m_cachedScale = 0.0f;
     mutable bool m_modelMatrixValid = false;
     Camera* m_camera;
 	LightManager* m_lightManager;
@@ -95,6 +128,12 @@ private:
     int m_runAnimIndex = -1;    // course (sprint) — "Run-M"
     int m_punchAnimIndex = -1;  // jab one-shot (touche R) — "Left-Punch-M"
     int m_restAnimIndex = -1;   // pose d'attente avant l'idle — "Rest"
+    int m_strafeLeftIdx = -1;     int m_strafeRightIdx = -1;
+    int m_strafeWalkLeftIdx = -1; int m_strafeWalkRightIdx = -1;
+    int m_turnLeftIdx = -1;       int m_turnRightIdx = -1;
+    int m_jumpIdx = -1;           int m_runJumpIdx = -1;
+    int m_walkBackIdx = -1;
+    float m_scale = 1.0f;       // echelle uniforme du modele
 
     void detectAnimations();
 };

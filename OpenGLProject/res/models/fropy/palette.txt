@@ -1,3 +1,5 @@
 Peau : #FFB065
-Cheveux : #241c11
-Lèvres : #4f1a00
+Cheveux / Pupil : #241c11
+Oeil / blouse : #F7EDE9
+Lèvres : #b83f3f
+Chemise : #0E0E55

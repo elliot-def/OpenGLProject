@@ -365,10 +365,19 @@ void Game::update() {
         m_humanEntity->setDirection(*m_player->getDirection());
 
         // Animation du personnage 3P : deleguee au CharacterAnimationController
+        // Sauf en no-clip (gravite desactivee) → on force l'idle.
         if (m_characterAnim) {
-            m_characterAnim->update(m_player->getPosition(),
-                                    m_renderer->getDeltaTime(),
-                                    m_player->getIsSprinting());
+            if (m_player->isGravityEnabled()) {
+                m_characterAnim->update(m_player->getPosition(),
+                                        m_renderer->getDeltaTime(),
+                                        m_player->getIsSprinting(),
+                                        m_collisionManager->getIsPlayerGrounded());
+            } else {
+                // No-clip : rester en idle
+                int idle = m_humanEntity->getIdleAnimIndex();
+                if (idle >= 0) m_humanEntity->playAnimation(idle, true);
+                m_humanEntity->updateAnimation(m_renderer->getDeltaTime());
+            }
         }
     }
 
@@ -431,9 +440,10 @@ void Game::draw() {
     }
 
     // ── HUD debug (personnage 3P) : liste des animations du modele ────────
-    if (m_humanEntity && m_player->isThirdPerson() && m_textRenderers) {
-        CharacterAnimationController::drawDebugHUD(m_humanEntity, *m_textRenderers);
-    }
+    // Desactive par defaut (couteux en FPS). Decommenter pour debugger.
+    // if (m_humanEntity && m_player->isThirdPerson() && m_textRenderers) {
+    //     CharacterAnimationController::drawDebugHUD(m_humanEntity, *m_textRenderers);
+    // }
 
     // Tout le texte de la frame (HUD, menus...) est dessiné en UN SEUL draw
     // call batche, au-dessus du reste de la scène.
@@ -499,9 +509,64 @@ void Game::loadModelsAsync() {
                                              "./res/rigging/arm/arms_rig.glb", m_textureManager.get());
     m_inputManager->setFirstPersonArms(m_firstPersonArms.get());
 
-    printf("[Game]   → Chargement de l'humain (rigge)...\n");
+    printf("[Game]   → Chargement de Remy (rigge)...\n");
     m_humanEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(),
-                                    "./res/rigging/human/human_1.glb", m_textureManager.get());
+                                    "./res/rigging/remy/Remy.fbx", m_textureManager.get());
+
+    // Auto-scale : hauteur cible ~1.8 unites (~1.80m) divisee par la hauteur
+    // reelle de la bounding box du modele (qui inclut le x100 FBX).
+    {
+        const float modelHeight = m_humanEntity->getModel()->getBoundingBox().getSize().y;
+        constexpr float targetHeight = 1.8f;
+        if (modelHeight > 0.001f) {
+            m_humanEntity->setScale(targetHeight / modelHeight);
+            printf("[Game]   Remy auto-scale: %.4f (model=%.1f -> target=%.1f)\n",
+                   targetHeight / modelHeight, modelHeight, targetHeight);
+        }
+    }
+
+    // Charger les animations externes (FBX separes Mixamo)
+    {
+        const std::string animDir = "./res/rigging/remy/";
+        std::vector<std::string> animPaths = {
+            animDir + "idle.fbx",
+            animDir + "walking.fbx",
+            animDir + "standard run.fbx",
+            animDir + "jump.fbx",
+            animDir + "left strafe.fbx",
+            animDir + "right strafe.fbx",
+            animDir + "left strafe walking.fbx",
+            animDir + "right strafe walking.fbx",
+            animDir + "left turn 90.fbx",
+            animDir + "right turn 90.fbx",
+            animDir + "Running Jump.fbx",
+            animDir + "Walking Backwards.fbx",
+        };
+        m_humanEntity->getModel()->loadExternalAnimations(animPaths);
+
+        // Toutes les animations Mixamo s'appellent "mixamo.com" ->
+        // impossible de les distinguer par nom. On les identifie par leur
+        // ordre de chargement (connu, voir animPaths ci-dessus).
+        // Index 0 = Remy.fbx (T-pose 0s), on le saute.
+        m_humanEntity->setIdleAnimIndex(1);         // idle.fbx
+        m_humanEntity->setWalkAnimIndex(2);         // walking.fbx
+        m_humanEntity->setRunAnimIndex(3);          // standard run.fbx
+        m_humanEntity->setJumpIdx(4);               // jump.fbx
+        m_humanEntity->setStrafeLeftIdx(5);         // left strafe.fbx
+        m_humanEntity->setStrafeRightIdx(6);        // right strafe.fbx
+        m_humanEntity->setStrafeWalkLeftIdx(7);     // left strafe walking.fbx
+        m_humanEntity->setStrafeWalkRightIdx(8);    // right strafe walking.fbx
+        m_humanEntity->setTurnLeftIdx(9);           // left turn 90.fbx
+        m_humanEntity->setTurnRightIdx(10);         // right turn 90.fbx
+        m_humanEntity->setRunJumpIdx(11);           // Running Jump.fbx
+        m_humanEntity->setWalkBackIdx(12);          // Walking Backwards.fbx
+        // punch = -1 (pas d'anim de punch)
+        // rest  = -1 (pas d'anim de rest)
+
+        // Jouer l'idle
+        m_humanEntity->getAnimator()->playAnimation(1u, true);
+        m_humanEntity->getAnimator()->update(0.0f);
+    }
 
     // Controleur d'animation du personnage 3P (extrait de Game::update)
     m_characterAnim = std::make_unique<CharacterAnimationController>(m_humanEntity, m_inputManager.get());

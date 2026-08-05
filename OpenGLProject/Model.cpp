@@ -213,6 +213,47 @@ void Model::loadModel(const std::string& path) {
 }
 
 // ---------------------------------------------------------------------------
+// Animations externes (FBX/GLB separes du modele, ex: Mixamo)
+// ---------------------------------------------------------------------------
+
+void Model::loadExternalAnimations(const std::vector<std::string>& paths) {
+    for (const auto& path : paths) {
+        auto importer = std::make_unique<Assimp::Importer>();
+        // On ne veut QUE les animations, pas la geometrie. Sans flags,
+        // Assimp ne traite pas les meshes/textures → gain memoire/perf.
+        const aiScene* extScene = importer->ReadFile(path, 0);
+        if (!extScene) {
+            std::cerr << "[Model] Echec chargement animation externe: " << path
+                      << " - " << importer->GetErrorString() << std::endl;
+            continue;
+        }
+        for (unsigned int i = 0; i < extScene->mNumAnimations; i++) {
+            m_externalAnimations.push_back(extScene->mAnimations[i]);
+        }
+        m_externalImporters.push_back(std::move(importer));
+    }
+    if (!m_externalAnimations.empty()) {
+        std::cout << "[Model] " << m_externalAnimations.size()
+                  << " animations externes chargees" << std::endl;
+    }
+}
+
+const aiAnimation* Model::getAnimation(size_t index) const {
+    if (!m_scene) return nullptr;
+    if (index < m_scene->mNumAnimations)
+        return m_scene->mAnimations[index];
+    index -= m_scene->mNumAnimations;
+    if (index < m_externalAnimations.size())
+        return m_externalAnimations[index];
+    return nullptr;
+}
+
+size_t Model::getNumAnimations() const {
+    size_t n = m_scene ? m_scene->mNumAnimations : 0;
+    return n + m_externalAnimations.size();
+}
+
+// ---------------------------------------------------------------------------
 // Squelette conserve : noeuds joints par nom (premier de l'ordre du fichier)
 // ---------------------------------------------------------------------------
 
@@ -371,6 +412,10 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         if (diffuse.empty()) {
             diffuse = loadMaterialTextures(material, aiTextureType_BASE_COLOR, scene);
         }
+        // FBX : certaines textures embarquees sont exposees sous UNKNOWN
+        if (diffuse.empty()) {
+            diffuse = loadMaterialTextures(material, aiTextureType_UNKNOWN, scene);
+        }
         auto specular = loadMaterialTextures(material, aiTextureType_SPECULAR, scene);
 
         // 1. Diffuse : texture du modele, sinon fallback BLANC 1x1 (jamais noir)
@@ -498,6 +543,46 @@ std::vector<unsigned int> Model::loadMaterialTextures(aiMaterial* mat, aiTexture
         }
 
         std::string fullPath = m_directory + "/" + texPath;
+
+        // Si le fichier n'existe pas sur disque, chercher dans les textures
+        // embarquees du FBX (scene->mTextures[]) par correspondance de nom.
+        if (!std::filesystem::exists(fullPath) && scene) {
+            bool foundEmb = false;
+            for (unsigned int e = 0; e < scene->mNumTextures; e++) {
+                const aiTexture* emb = scene->mTextures[e];
+                if (!emb) continue;
+                // aiTexture::mFilename est souvent vide pour les FBX
+                // embarques ; on identifie par l'index si le chemin est "*N"
+                // ou par le nom de fichier original (stocke dans mFilename
+                // pour certains formats, ou via achFormatHint).
+                std::string embName(emb->mFilename.C_Str());
+                if (!embName.empty() && embName == texPath) {
+                    textureIDs.push_back(loadEmbeddedTexture(emb, embName));
+                    foundEmb = true;
+                    break;
+                }
+            }
+            if (!foundEmb) {
+                // Dernier essai : si la texture est referencee sans "*"
+                // mais que le fichier n'existe pas, peut-etre qu'Assimp l'a
+                // extraite sous un nom generic ; on essaie toutes les
+                // textures embarquees dont le nom correspond partiellement.
+                for (unsigned int e = 0; e < scene->mNumTextures; e++) {
+                    const aiTexture* emb = scene->mTextures[e];
+                    if (!emb || emb->mHeight == 0) continue; // textures compressees seulement
+                    std::string embName(emb->mFilename.C_Str());
+                    // Cherche le nom de fichier (sans chemin) dans le nom embarque
+                    std::string texFilename = texFsPath.filename().string();
+                    if (!embName.empty() && embName.find(texFilename) != std::string::npos) {
+                        textureIDs.push_back(loadEmbeddedTexture(emb, embName));
+                        foundEmb = true;
+                        break;
+                    }
+                }
+            }
+            if (foundEmb) continue;
+        }
+
         textureIDs.push_back(loadTextureFromFile(fullPath));
     }
 

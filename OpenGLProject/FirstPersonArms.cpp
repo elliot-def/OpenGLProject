@@ -42,7 +42,7 @@ FirstPersonArms::FirstPersonArms(Camera* camera, LightManager* lightManager,
         if (m_idleAnimIndex >= 0) {
             m_animator->playAnimation(m_idleAnimIndex, true);
         } else if (scene->mNumAnimations > 0) {
-            m_animator->playAnimation(0, true);
+            m_animator->playAnimation(0u, true);
         }
         // Calcule la pose immédiatement : un crossfade ultérieur prendra un
         // instantané valide (au lieu de matrices identité jamais calculées) et

@@ -4,6 +4,20 @@
 #include <cmath>
 #include <cfloat>
 
+namespace {
+// Mixamo prefixed souvent les noms de bones par "mixamorig:".
+// Les fichiers d'animation et le modele peuvent avoir ou non ce prefixe.
+// On le retire pour que les channels matchent toujours.
+std::string stripMixamoPrefix(const std::string& name) {
+    const std::string prefix = "mixamorig:";
+    if (name.size() > prefix.size() &&
+        name.compare(0, prefix.size(), prefix) == 0) {
+        return name.substr(prefix.size());
+    }
+    return name;
+}
+} // namespace
+
 void Animator::setup(Model* model) {
     m_model = model;
     m_scene = model->getScene();
@@ -14,11 +28,19 @@ void Animator::setup(Model* model) {
 }
 
 void Animator::playAnimation(unsigned int animIndex, bool loop, bool crossfade) {
-    if (!m_scene || animIndex >= m_scene->mNumAnimations) {
+    const aiAnimation* anim = m_model ? m_model->getAnimation(animIndex) : nullptr;
+    if (!anim) {
         LOG_ERROR("[Animator] Animation index %u invalide", animIndex);
         return;
     }
-    const aiAnimation* newAnim = m_scene->mAnimations[animIndex];
+    playAnimation(anim, loop, crossfade);
+}
+
+void Animator::playAnimation(const aiAnimation* newAnim, bool loop, bool crossfade) {
+    if (!newAnim) {
+        LOG_ERROR("[Animator] Animation nullptr");
+        return;
+    }
 
     // Crossfade : on prend un instantané des transformées LOCALES de la
     // dernière frame rendue (stockées dans m_currentLocalTransforms par
@@ -51,11 +73,19 @@ void Animator::playAnimation(unsigned int animIndex, bool loop, bool crossfade) 
     }
 
     // Cache des canaux par nom : évite la recherche linéaire à chaque frame.
+    // Enregistre aussi sans le prefixe "mixamorig:" pour les animations FBX
+    // externes qui peuvent avoir des noms differents du modele principal.
     m_channelMap.clear();
     for (unsigned int i = 0; i < m_currentAnimation->mNumChannels; i++) {
         const aiNodeAnim* channel = m_currentAnimation->mChannels[i];
         if (!channel) continue;
-        m_channelMap[channel->mNodeName.C_Str()] = channel;
+        std::string name(channel->mNodeName.C_Str());
+        m_channelMap[name] = channel;
+        // Variante sans prefixe Mixamo (ex: "mixamorig:Hips" -> "Hips")
+        std::string stripped = stripMixamoPrefix(name);
+        if (stripped != name) {
+            m_channelMap[stripped] = channel;
+        }
     }
 
     m_loop = loop;
@@ -63,11 +93,23 @@ void Animator::playAnimation(unsigned int animIndex, bool loop, bool crossfade) 
     m_debugLastTime = 0.0f;
     m_debugHasLastRotation = false;
 
-    LOG_INFO("[Animator] Playing: %s (duration=%.1fs)",
-             m_currentAnimName.c_str(),
-             m_currentAnimation->mDuration / m_ticksPerSecond);
+    // Diagnostic one-shot au premier play (uniquement si aucun channel ne matche)
     if (m_debugPrintedAnimations.insert(m_currentAnimation).second) {
-        printAnimationDebug();
+        const auto& boneMap = m_model->getBoneInfoMap();
+        unsigned int matched = 0;
+        for (unsigned int i = 0; i < m_currentAnimation->mNumChannels; i++) {
+            const aiNodeAnim* ch = m_currentAnimation->mChannels[i];
+            if (!ch) continue;
+            std::string name(ch->mNodeName.C_Str());
+            if (boneMap.find(name) != boneMap.end() ||
+                boneMap.find(stripMixamoPrefix(name)) != boneMap.end()) {
+                matched++;
+            }
+        }
+        if (matched == 0 && m_currentAnimation->mNumChannels > 0) {
+            LOG_WARN("[Animator] %s: 0/%u channels matchent !",
+                     m_currentAnimName.c_str(), m_currentAnimation->mNumChannels);
+        }
     }
 }
 
@@ -286,8 +328,41 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
     // Quaternions dégénérés et échelles ×100 sont neutralisés par
     // interpolateNodeTransform (normalisation + gardes NaN + échelle ignorée).
     auto chanIt = m_channelMap.find(nodeName);
+    if (chanIt == m_channelMap.end()) {
+        // Essayer sans le prefixe Mixamo sur le nom du nœud modele aussi
+        std::string stripped = stripMixamoPrefix(nodeName);
+        if (stripped != nodeName) {
+            chanIt = m_channelMap.find(stripped);
+        }
+    }
     if (chanIt != m_channelMap.end()) {
         nodeTransform = interpolateNodeTransform(node, chanIt->second, animTime);
+
+        // ── Root motion lock : figer la translation du bone racine ─────
+        // Les animations Mixamo contiennent un deplacement du Hips (root
+        // motion). Comme la position du modele est deja geree par le jeu
+        // (setPosition du joueur), on annule cette translation.
+        //
+        // Pour les animations one-shot (turn) : on zero aussi la rotation
+        // Y du Hips, car le turn contient une rotation 90° qui s'ajoute
+        // a celle de getModelMatrix() (setDirection) → double rotation.
+        static const std::string kRootBoneName = "mixamorig:Hips";
+        if (nodeName == kRootBoneName || stripMixamoPrefix(nodeName) == "Hips") {
+            const glm::vec3 bindTrans = aiMatrixToGlm(node->mTransformation)[3];
+            nodeTransform[3] = glm::vec4(bindTrans, 1.0f);
+
+            if (!m_loop) {
+                // One-shot : zero la rotation Y (turn 90° integre)
+                glm::quat q = glm::quat_cast(glm::mat3(nodeTransform));
+                q.y = 0.0f;
+                float len = glm::length(q);
+                q = (len > 0.0001f) ? glm::normalize(q)
+                                    : glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+                glm::vec3 trans(nodeTransform[3]);
+                nodeTransform = glm::mat4_cast(q);
+                nodeTransform[3] = glm::vec4(trans, 1.0f);
+            }
+        }
     }
 
     // ── Crossfade : blender les transforms LOCALES (T·R pur) ─────────────

@@ -22,7 +22,7 @@ ModelEntity::ModelEntity(Camera* camera, LightManager* lightManager, Renderer* r
 		if (m_idleAnimIndex >= 0) {
 			m_animator->playAnimation(m_idleAnimIndex, true);
 		} else {
-			m_animator->playAnimation(0, true);
+			m_animator->playAnimation(0u, true);
 		}
 		m_animator->update(0.0f);
 	}
@@ -32,51 +32,52 @@ ModelEntity::~ModelEntity() {
 }
 
 void ModelEntity::detectAnimations() {
-	const aiScene* scene = m_model->getScene();
-	if (!scene || scene->mNumAnimations == 0) return;
+	const size_t numAnims = m_model->getNumAnimations();
+	if (numAnims == 0) return;
 
 	m_hasAnimations = true;
 
-	// Détection des animations du squelette conservé (le premier du fichier,
-	// masculin ici). Les fichiers contiennent parfois les animations des DEUX
-	// squelettes (human_1.glb : MaleArm + FemaleArm → "Idle-M"/"Idle-F",
-	// "Walk"/"Walk-F", "Run-M"/"Run-F"...). Règles communes : 1) la marche
-	// ("walk"/"marche") avant la course ("run"), 2) le squelette masculin
-	// (suffixe -M/_m) préféré, 3) la première occurrence plutôt que la dernière.
+	// Detection des animations (modele principal + animations externes).
+	// Regles : 1) "walk"/"walking"/"marche" > "run", 2) suffixe -M/_m prefere
+	// (GLB Mixamo), 3) premiere occurrence plutot que la derniere.
 	struct AnimPick { int index = -1; bool isWalk = false; bool isMale = false; };
 	AnimPick idle, walk, run, punchAny, punchJab, rest;
 
-	for (unsigned int i = 0; i < scene->mNumAnimations; i++) {
-		std::string name(scene->mAnimations[i]->mName.C_Str());
-		printf("[ModelEntity] Animation %u: \"%s\" (%.1fs)\n", i, name.c_str(),
-		       scene->mAnimations[i]->mDuration / (scene->mAnimations[i]->mTicksPerSecond > 0.0f ? scene->mAnimations[i]->mTicksPerSecond : 30.0f));
+	for (size_t i = 0; i < numAnims; i++) {
+		const aiAnimation* anim = m_model->getAnimation(i);
+		if (!anim) continue;
+		std::string name(anim->mName.C_Str());
+		const float tps = anim->mTicksPerSecond > 0.0f ? static_cast<float>(anim->mTicksPerSecond) : 30.0f;
+		printf("[ModelEntity] Animation %zu: \"%s\" (%.1fs)\n", i, name.c_str(),
+		       static_cast<float>(anim->mDuration) / tps);
 
 		std::string lower = name;
 		for (auto& c : lower) c = static_cast<char>(tolower(c));
 
 		const bool isMale   = lower.find("-m") != std::string::npos || lower.find("_m") != std::string::npos;
 		const bool isIdle   = lower.find("idle") != std::string::npos;
-		const bool isWalkNm = lower.find("walk") != std::string::npos || lower.find("marche") != std::string::npos;
+		const bool isWalkNm = lower.find("walk") != std::string::npos
+		                    || lower.find("marche") != std::string::npos;
 		const bool isRunNm  = lower.find("run") != std::string::npos;
 		const bool isPunch  = lower.find("punch") != std::string::npos;
 		const bool isCharge = lower.find("charge") != std::string::npos;
 		const bool isRest   = lower.find("rest") != std::string::npos;
 
-		// Idle : premier match, -M préféré
+		// Idle : premier match, -M prefere
 		if (isIdle && (idle.index < 0 || (isMale && !idle.isMale))) {
 			idle = { static_cast<int>(i), false, isMale };
 		}
-		// Marche : "walk"/"marche" > "run", -M préféré
+		// Marche : "walk"/"walking"/"marche" > "run", -M prefere
 		if ((isWalkNm || isRunNm) && (walk.index < 0
 			|| (isWalkNm && !walk.isWalk)
 			|| (isWalkNm == walk.isWalk && isMale && !walk.isMale))) {
 			walk = { static_cast<int>(i), isWalkNm, isMale };
 		}
-		// Course (sprint) : "run", -M préféré, premier match
+		// Course (sprint) : "run", -M prefere, premier match
 		if (isRunNm && (run.index < 0 || (isMale && !run.isMale))) {
 			run = { static_cast<int>(i), false, isMale };
 		}
-		// Punch (jab sur R) : "punch" SANS "charge" préféré (Left-Punch-M),
+		// Punch (jab sur R) : "punch" SANS "charge" prefere (Left-Punch-M),
 		// sinon n'importe quel punch (ex: Charge-Punch-M)
 		if (isPunch) {
 			if (isCharge) {
@@ -192,7 +193,8 @@ glm::mat4 ModelEntity::getModelMatrix() const {
         && dir == m_cachedDirPtr
         && dirVersion == m_cachedDirVersion
         && m_spinAxis == m_cachedSpinAxis
-        && m_spinAngle == m_cachedSpinAngle) {
+        && m_spinAngle == m_cachedSpinAngle
+        && m_scale == m_cachedScale) {
         return m_cachedModelMatrix;
     }
 
@@ -206,12 +208,16 @@ glm::mat4 ModelEntity::getModelMatrix() const {
     // Spin sur soi-même (hérité d'Entity)
     model = model * getSpinRotation();
 
+    // Echelle uniforme
+    model = glm::scale(model, glm::vec3(m_scale));
+
     m_cachedModelMatrix = model;
     m_cachedPos = m_position;
     m_cachedDirPtr = dir;
     m_cachedDirVersion = dirVersion;
     m_cachedSpinAxis = m_spinAxis;
     m_cachedSpinAngle = m_spinAngle;
+    m_cachedScale = m_scale;
     m_modelMatrixValid = true;
     return m_cachedModelMatrix;
 }
