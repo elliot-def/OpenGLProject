@@ -1,9 +1,8 @@
 #include "Animator.h"
+#include "Log.h"
 #include <algorithm>
 #include <cmath>
 #include <cfloat>
-#include <cstdio>
-#include <iostream>
 
 void Animator::setup(Model* model) {
     m_model = model;
@@ -16,7 +15,7 @@ void Animator::setup(Model* model) {
 
 void Animator::playAnimation(unsigned int animIndex, bool loop, bool crossfade) {
     if (!m_scene || animIndex >= m_scene->mNumAnimations) {
-        std::cerr << "[Animator] Animation index " << animIndex << " invalide" << std::endl;
+        LOG_ERROR("[Animator] Animation index %u invalide", animIndex);
         return;
     }
     const aiAnimation* newAnim = m_scene->mAnimations[animIndex];
@@ -64,8 +63,9 @@ void Animator::playAnimation(unsigned int animIndex, bool loop, bool crossfade) 
     m_debugLastTime = 0.0f;
     m_debugHasLastRotation = false;
 
-    std::cout << "[Animator] Playing: " << m_currentAnimName
-              << " (duration=" << m_currentAnimation->mDuration / m_ticksPerSecond << "s)" << std::endl;
+    LOG_INFO("[Animator] Playing: %s (duration=%.1fs)",
+             m_currentAnimName.c_str(),
+             m_currentAnimation->mDuration / m_ticksPerSecond);
     if (m_debugPrintedAnimations.insert(m_currentAnimation).second) {
         printAnimationDebug();
     }
@@ -120,7 +120,7 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
     for (unsigned int c = 0; c < anim->mNumChannels; c++) {
         aiNodeAnim* ch = anim->mChannels[c];
         if (!ch) {
-            std::cerr << "[Animator] Canal d'animation null a l'index " << c << " — ignore" << std::endl;
+            LOG_WARN("[Animator] Canal d'animation null a l'index %u", c);
             continue;
         }
         const unsigned int n = ch->mNumRotationKeys;
