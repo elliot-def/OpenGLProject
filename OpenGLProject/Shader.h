@@ -57,6 +57,19 @@ public:
     // count = nombre de matrices ; count > 0 requis.
     void setMat4Array(const std::string& name, const glm::mat4* mats, int count);
 
+    // Variantes "location directe" (hot path) : l'appelant fournit une GLint
+    // deja resolue une fois par shader (ex: cache dans LightManager/Spotlight)
+    // pour bypasser completement le hash map name->location a chaque frame.
+    // Location == -1 => no-op silencieux (meme comportement que par nom).
+    void setInt(int location, int value);
+    void setFloat(int location, float value);
+    void setVec3(int location, const glm::vec3& value);
+    void setVec4(int location, const glm::vec4& value);
+
+    // Resout (avec cache) la location d'un uniform. Retourne -1 si absent.
+    // Public pour les caches par shader (LightManager, Spotlight...).
+    int getUniformLocation(const std::string& name);
+
     // M�thodes pour modifier les matrices internes du shader
     void setModel(const glm::mat4& model) { m_model = model; }
     void setView(const glm::mat4& view) { m_view = view; }
@@ -85,9 +98,4 @@ private:
 
     // V�rifie les erreurs de compilation ou de linkage
     void checkCompileErrors(unsigned int shader, std::string type);
-
-    // R�cup�re l'emplacement d'un uniform dans le shader (avec cache)
-    int getUniformLocation(const std::string& name);
-
-	
 };

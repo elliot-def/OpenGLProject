@@ -15,22 +15,6 @@ LightManager::LightManager(Renderer* renderer, Player* player) {
     m_dirLight.ambient = glm::vec3(0.2f, 0.2f, 0.05f);
     m_dirLight.diffuse = glm::vec3(0.2f, 0.2f, 0.2f);
     m_dirLight.specular = glm::vec3(0.5f, 0.5f, 0.5f);
-
-    // --- PRÉCALCUL DES NOMS D'UNIFORMS ---
-    // On réserve la mémoire pour éviter les réallocations du vecteur
-    m_lightUniformNames.reserve(MAX_POINT_LIGHTS);
-    for (int i = 0; i < MAX_POINT_LIGHTS; ++i) {
-        std::string base = "lightSources[" + std::to_string(i) + "].";
-        LightUniformStrings names;
-        names.position = base + "position";
-        names.ambient = base + "ambient";
-        names.diffuse = base + "diffuse";
-        names.specular = base + "specular";
-        names.constant = base + "constant";
-        names.linear = base + "linear";
-        names.quadratic = base + "quadratic";
-        m_lightUniformNames.push_back(names);
-    }
 }
 
 LightManager::~LightManager() {
@@ -42,22 +26,6 @@ LightManager::~LightManager() {
 }
 void LightManager::addPointLight(LightSource* light) {
     if (m_lightSources.size() < MAX_POINT_LIGHTS) {
-        // 1. On récupère l'index de la nouvelle lumière
-        size_t newIndex = m_lightSources.size();
-
-        // 2. On génère ses chaînes d'uniforms associées
-        std::string base = "lightSources[" + std::to_string(newIndex) + "].";
-        LightUniformStrings names;
-        names.position = base + "position";
-        names.ambient = base + "ambient";
-        names.diffuse = base + "diffuse";
-        names.specular = base + "specular";
-        names.constant = base + "constant";
-        names.linear = base + "linear";
-        names.quadratic = base + "quadratic";
-
-        // 3. On l'ajoute au cache de noms et on stocke la lumière
-        m_lightUniformNames.push_back(names);
         m_lightSources.push_back(light);
     }
     else {
@@ -65,32 +33,62 @@ void LightManager::addPointLight(LightSource* light) {
     }
 }
 
+// Résout les locations une seule fois par shader (cle = id du programme GL).
+// Les noms ne sont construits qu'ici (premier usage) : le hot path
+// applyToShader() ne manipule plus que des GLint pré-calculées.
+const LightManager::LightLocations& LightManager::ensureLightLocations(Shader* shader) {
+    const unsigned int programId = shader->getID();
+    auto it = m_lightLocations.find(programId);
+    if (it != m_lightLocations.end()) {
+        return it->second;
+    }
+
+    LightLocations loc;
+    loc.numberLightSources = shader->getUniformLocation("numberLightSources");
+    for (int i = 0; i < MAX_POINT_LIGHTS; ++i) {
+        const std::string base = "lightSources[" + std::to_string(i) + "].";
+        loc.position[i]  = shader->getUniformLocation(base + "position");
+        loc.ambient[i]   = shader->getUniformLocation(base + "ambient");
+        loc.diffuse[i]   = shader->getUniformLocation(base + "diffuse");
+        loc.specular[i]  = shader->getUniformLocation(base + "specular");
+        loc.constant[i]  = shader->getUniformLocation(base + "constant");
+        loc.linear[i]    = shader->getUniformLocation(base + "linear");
+        loc.quadratic[i] = shader->getUniformLocation(base + "quadratic");
+    }
+    loc.dirDirection = shader->getUniformLocation("dirLight.direction");
+    loc.dirAmbient   = shader->getUniformLocation("dirLight.ambient");
+    loc.dirDiffuse   = shader->getUniformLocation("dirLight.diffuse");
+    loc.dirSpecular  = shader->getUniformLocation("dirLight.specular");
+
+    return m_lightLocations.emplace(programId, loc).first->second;
+}
+
 void LightManager::applyToShader(Shader* shader) {
+    // Hot path : uniquement des GLint pré-calculées (aucun hash de string).
+    const LightLocations& loc = ensureLightLocations(shader);
+
     // Lightsources
-    shader->setInt("numberLightSources", static_cast<int>(m_lightSources.size()));
+    shader->setInt(loc.numberLightSources, static_cast<int>(m_lightSources.size()));
 
     for (size_t i = 0; i < m_lightSources.size(); ++i) {
-        // Utilisation directe des chaînes précalculées (zéro allocation de mémoire ici !)
-        const auto& names = m_lightUniformNames[i];
+        shader->setVec3(loc.position[i],  m_lightSources[i]->getPosition());
+        shader->setVec3(loc.ambient[i],   m_lightSources[i]->getAmbient());
+        shader->setVec3(loc.diffuse[i],   m_lightSources[i]->getDiffuse());
+        shader->setVec3(loc.specular[i],  m_lightSources[i]->getSpecular());
 
-        shader->setVec3(names.position, m_lightSources[i]->getPosition());
-        shader->setVec3(names.ambient, m_lightSources[i]->getAmbient());
-        shader->setVec3(names.diffuse, m_lightSources[i]->getDiffuse());
-        shader->setVec3(names.specular, m_lightSources[i]->getSpecular());
-
-        shader->setFloat(names.constant, m_lightSources[i]->getConstant());
-        shader->setFloat(names.linear, m_lightSources[i]->getLinear());
-        shader->setFloat(names.quadratic, m_lightSources[i]->getQuadratic());
+        shader->setFloat(loc.constant[i],  m_lightSources[i]->getConstant());
+        shader->setFloat(loc.linear[i],    m_lightSources[i]->getLinear());
+        shader->setFloat(loc.quadratic[i], m_lightSources[i]->getQuadratic());
     }
 
     // Flashlight
     m_flashlight->applyToShader(shader, m_player->getFlashlightIsEnabled());
 
     // DirLight
-    shader->setVec3("dirLight.direction", m_dirLight.direction);
-    shader->setVec3("dirLight.ambient", m_dirLight.ambient);
-    shader->setVec3("dirLight.diffuse", m_dirLight.diffuse);
-    shader->setVec3("dirLight.specular", m_dirLight.specular);
+    shader->setVec3(loc.dirDirection, m_dirLight.direction);
+    shader->setVec3(loc.dirAmbient,   m_dirLight.ambient);
+    shader->setVec3(loc.dirDiffuse,   m_dirLight.diffuse);
+    shader->setVec3(loc.dirSpecular,  m_dirLight.specular);
 }
 
 void LightManager::update() {

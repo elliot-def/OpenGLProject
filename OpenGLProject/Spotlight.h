@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <unordered_map>
 #include "Entity.h"
 class Player;
 class Shader;
@@ -16,6 +17,23 @@ public:
 	void update(Player* player);
 	void applyToShader(Shader* shader, bool isEnabled);
 private:
+
+	// Locations GL des uniforms spotLight.*, resolues une seule fois par
+	// shader (cle = id du programme GL) au premier applyToShader().
+	struct SpotLocations {
+		int position    = -1;
+		int direction   = -1;
+		int ambient     = -1;
+		int diffuse     = -1;
+		int specular    = -1;
+		int constant    = -1;
+		int linear      = -1;
+		int quadratic   = -1;
+		int cutOff      = -1;
+		int outerCutOff = -1;
+	};
+	const SpotLocations& ensureLocations(Shader* shader);
+	std::unordered_map<unsigned int, SpotLocations> m_lightLocations;
 	/* Dans Entity :
 	glm::vec3 m_position;
 	Direction m_direction;

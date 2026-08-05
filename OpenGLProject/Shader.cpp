@@ -231,6 +231,30 @@ void Shader::setMat4Array(const std::string& name, const glm::mat4* mats, int co
     }
 }
 
+void Shader::setInt(int location, int value) {
+    if (location != -1) {
+        glUniform1i(location, value);
+    }
+}
+
+void Shader::setFloat(int location, float value) {
+    if (location != -1) {
+        glUniform1f(location, value);
+    }
+}
+
+void Shader::setVec3(int location, const glm::vec3& value) {
+    if (location != -1) {
+        glUniform3fv(location, 1, &value[0]);
+    }
+}
+
+void Shader::setVec4(int location, const glm::vec4& value) {
+    if (location != -1) {
+        glUniform4fv(location, 1, &value[0]);
+    }
+}
+
 int Shader::getUniformLocation(const std::string& name) {
     auto it = m_uniformLocations.find(name);
     if (it != m_uniformLocations.end()) {
