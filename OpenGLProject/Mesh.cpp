@@ -39,7 +39,7 @@ void Mesh::reloadGPUResources() {
     setupMesh(m_attributeMask);
 }
 
-void Mesh::setupMesh(unsigned int attributesMask = 0b0101) {
+void Mesh::setupMesh(unsigned int attributesMask) {
     m_indexCount = static_cast<GLsizei>(m_indices.size());
 
     glGenVertexArrays(1, &m_vao);
@@ -48,52 +48,94 @@ void Mesh::setupMesh(unsigned int attributesMask = 0b0101) {
 
     glBindVertexArray(m_vao);
 
+    // ── Layout interleve COMPACT (opti 7) ─────────────────────────────────
+    // Avant : on uploadait sizeof(Vertex) = 76 octets par sommet, meme pour un
+    // Cube (POSITION|COLOR = 24 o) ou un mesh statique (POSITION|NORMAL|
+    // TEXCOORD = 32 o). On ne copie plus que les attributs actifs du masque,
+    // dans l'ordre canonique : position, normale, couleur, UV, boneIDs, poids.
+    // Le stride et les offsets par attribut sont calcules une seule fois ici.
+    unsigned int offsets[6] = { 0, 0, 0, 0, 0, 0 };
+    unsigned int stride = 0;
+    auto addAttr = [&](unsigned int location, unsigned int sizeBytes) {
+        offsets[location] = stride;
+        stride += sizeBytes;
+    };
+    if (attributesMask & (unsigned int)VertexAttribute::POSITION) addAttr(0, 3 * sizeof(float));
+    if (attributesMask & (unsigned int)VertexAttribute::NORMAL)   addAttr(1, 3 * sizeof(float));
+    if (attributesMask & (unsigned int)VertexAttribute::COLOR)    addAttr(2, 3 * sizeof(float));
+    if (attributesMask & (unsigned int)VertexAttribute::TEXCOORD) addAttr(3, 2 * sizeof(float));
+    if (attributesMask & (unsigned int)VertexAttribute::SKINNING) {
+        addAttr(4, MAX_BONE_INFLUENCE * sizeof(int));
+        addAttr(5, MAX_BONE_INFLUENCE * sizeof(float));
+    }
+
+    // Buffer compact : les champs bone/weights ne sont PAS envoyes quand
+    // SKINNING n'est pas dans le masque (gain ~3x sur les meshes non-skinnes).
+    std::vector<unsigned char> packed;
+    packed.reserve(m_vertices.size() * stride);
+    for (const Vertex& v : m_vertices) {
+        if (attributesMask & (unsigned int)VertexAttribute::POSITION) {
+            const float f[3] = { v.getX(), v.getY(), v.getZ() };
+            packed.insert(packed.end(), reinterpret_cast<const unsigned char*>(f),
+                          reinterpret_cast<const unsigned char*>(f) + sizeof(f));
+        }
+        if (attributesMask & (unsigned int)VertexAttribute::NORMAL) {
+            const float f[3] = { v.getNX(), v.getNY(), v.getNZ() };
+            packed.insert(packed.end(), reinterpret_cast<const unsigned char*>(f),
+                          reinterpret_cast<const unsigned char*>(f) + sizeof(f));
+        }
+        if (attributesMask & (unsigned int)VertexAttribute::COLOR) {
+            const float f[3] = { v.getR(), v.getG(), v.getB() };
+            packed.insert(packed.end(), reinterpret_cast<const unsigned char*>(f),
+                          reinterpret_cast<const unsigned char*>(f) + sizeof(f));
+        }
+        if (attributesMask & (unsigned int)VertexAttribute::TEXCOORD) {
+            const float f[2] = { v.getS(), v.getT() };
+            packed.insert(packed.end(), reinterpret_cast<const unsigned char*>(f),
+                          reinterpret_cast<const unsigned char*>(f) + sizeof(f));
+        }
+        if (attributesMask & (unsigned int)VertexAttribute::SKINNING) {
+            const int ids[MAX_BONE_INFLUENCE] = { v.m_boneIDs[0], v.m_boneIDs[1], v.m_boneIDs[2], v.m_boneIDs[3] };
+            packed.insert(packed.end(), reinterpret_cast<const unsigned char*>(ids),
+                          reinterpret_cast<const unsigned char*>(ids) + sizeof(ids));
+            const float w[MAX_BONE_INFLUENCE] = { v.m_weights[0], v.m_weights[1], v.m_weights[2], v.m_weights[3] };
+            packed.insert(packed.end(), reinterpret_cast<const unsigned char*>(w),
+                          reinterpret_cast<const unsigned char*>(w) + sizeof(w));
+        }
+    }
+
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(Vertex), m_vertices.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, packed.size(),
+                 packed.empty() ? nullptr : packed.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(unsigned int), m_indices.data(), GL_STATIC_DRAW);
 
     if (attributesMask & (unsigned int)VertexAttribute::POSITION) {
         glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)(size_t)offsets[0]);
     }
 
     if (attributesMask & (unsigned int)VertexAttribute::NORMAL) {
         glEnableVertexAttribArray(1);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-            (void*)(3 * sizeof(float)));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(size_t)offsets[1]);
     }
 
     if (attributesMask & (unsigned int)VertexAttribute::COLOR) {
         glEnableVertexAttribArray(2);
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-            (void*)(6 * sizeof(float)));
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)(size_t)offsets[2]);
     }
 
     if (attributesMask & (unsigned int)VertexAttribute::TEXCOORD) {
         glEnableVertexAttribArray(3);
-        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-            (void*)(9 * sizeof(float)));
+        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, stride, (void*)(size_t)offsets[3]);
     }
 
     if (attributesMask & (unsigned int)VertexAttribute::SKINNING) {
-        struct SkinLayoutProbe {
-            char  pre[11 * sizeof(float)];
-            int   boneIDs[MAX_BONE_INFLUENCE];
-            float weights[MAX_BONE_INFLUENCE];
-        };
-        static_assert(std::is_standard_layout<SkinLayoutProbe>::value,
-                      "SkinLayoutProbe doit etre standard-layout pour offsetof");
-        static_assert(sizeof(SkinLayoutProbe) == sizeof(Vertex),
-                      "Vertex layout drift: skin stride != sizeof(Vertex)");
-
         glEnableVertexAttribArray(4);
-        glVertexAttribIPointer(4, MAX_BONE_INFLUENCE, GL_INT, sizeof(Vertex),
-                               (void*)offsetof(SkinLayoutProbe, boneIDs));
+        glVertexAttribIPointer(4, MAX_BONE_INFLUENCE, GL_INT, stride, (void*)(size_t)offsets[4]);
         glEnableVertexAttribArray(5);
-        glVertexAttribPointer(5, MAX_BONE_INFLUENCE, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                              (void*)offsetof(SkinLayoutProbe, weights));
+        glVertexAttribPointer(5, MAX_BONE_INFLUENCE, GL_FLOAT, GL_FALSE, stride, (void*)(size_t)offsets[5]);
     }
 
     glBindVertexArray(0);
