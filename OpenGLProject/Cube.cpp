@@ -215,7 +215,13 @@ void Cube::draw() {
         drawSeveralLightShader();
     }
     else {
-		std::cout << "Shader name not found in Cube draw : " << m_shader->getName() << std::endl;
+        // Type de shader inconnu : log UNE SEULE fois (pas de cout a chaque
+        // frame dans le chemin de rendu).
+        static bool s_warned = false;
+        if (!s_warned) {
+            s_warned = true;
+            std::cout << "Shader name not found in Cube draw : " << m_shader->getName() << std::endl;
+        }
     }
     
     m_mesh->draw();
@@ -223,7 +229,13 @@ void Cube::draw() {
 
 void Cube::drawLightSourceShader() {
     if (!m_lightSource) {
-        throw std::invalid_argument("Error: Light not set.");
+        // Pas de light source : rien a envoyer. Log UNE SEULE fois au lieu
+        // d'une exception dans le chemin de rendu (60+ fps).
+        static bool s_warned = false;
+        if (!s_warned) {
+            s_warned = true;
+            std::cout << "[Cube] drawLightSourceShader : light source non definie." << std::endl;
+        }
         return;
     }
 
@@ -232,7 +244,12 @@ void Cube::drawLightSourceShader() {
 
 void Cube::drawSeveralLightShader() {
     if (!m_player) {
-        throw std::invalid_argument("Error: No camera set for Flashlight shader.");
+        // Log UNE SEULE fois, pas d'exception dans le chemin de rendu.
+        static bool s_warned = false;
+        if (!s_warned) {
+            s_warned = true;
+            std::cout << "[Cube] drawSeveralLightShader : aucun joueur." << std::endl;
+        }
         return;
     }
 
@@ -242,8 +259,14 @@ void Cube::drawSeveralLightShader() {
 
 	for (Texture * texture : m_textures){
         if (!texture->hasSpecular()) {
-            throw std::invalid_argument("Error: No specular map texture set for specularMap shader.");
-            return;
+            // Texture sans specular : ignoree (log unique) au lieu de thrower
+            // en plein draw() et de tout interrompre.
+            static bool s_warnedSpec = false;
+            if (!s_warnedSpec) {
+                s_warnedSpec = true;
+                std::cout << "[Cube] drawSeveralLightShader : texture sans specular ignoree." << std::endl;
+            }
+            continue;
         }
         texture->applyToShader(m_shader);
     }
