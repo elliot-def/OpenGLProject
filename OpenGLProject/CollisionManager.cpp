@@ -87,7 +87,7 @@ AABB CollisionManager::computeWorldAABB(const std::vector<Mesh*>& meshes,
 }
 
 // Test sphère / AABB
-// Retourne la normale et la pénétration si collision détectée
+// Retourne la normale et la pénétration si collision detectee
 CollisionResult CollisionManager::testSphereAABB(glm::vec3   center,
     float       radius,
     const AABB& box)
@@ -103,7 +103,7 @@ CollisionResult CollisionManager::testSphereAABB(glm::vec3   center,
 
     bool insideBox = (closest == center);
     if (insideBox) {
-        // Centre à l'intérieur de la boîte : cherche la face la plus proche
+        // Centre à l'intérieur de la boite : cherche la face la plus proche
         // pour avoir une normale cohérente
         glm::vec3 halfSize = (box.max - box.min) * 0.5f;
         glm::vec3 boxCenter = box.center();
@@ -136,7 +136,7 @@ CollisionResult CollisionManager::testSphereAABB(glm::vec3   center,
     return result;
 }
 
-// Test sphère / OBB (boîte orientée : rotation prise en compte)
+// Test sphère / OBB (boite orientée : rotation prise en compte)
 // On passe la sphère dans le repère local du box (Rᵀ·d), on fait un test
 // AABB classique, puis on ramène la normale en world space (R·n). C'est ce
 // qui rend la hitbox des objets rotatés (cube qui tourne) fidèle au visuel.
@@ -187,7 +187,7 @@ CollisionResult CollisionManager::testSphereOBB(glm::vec3   center,
         penetration = radius - dist;
     }
 
-    // Normale en world space : suit l'orientation de la boîte (une face
+    // Normale en world space : suit l'orientation de la boite (une face
     // inclinée renvoie une normale inclinée → le joueur peut s'y tenir).
     result.normal = box.rotation * localNormal;
     result.penetration = penetration;
@@ -270,7 +270,7 @@ CollisionResult CollisionManager::testSphereAll(glm::vec3 center, float radius) 
     // reconstruire un BVH par frame annulerait le gain — le coût de
     // m_dynamicBoxes reste borné par le nombre d'objets mobiles réellement
     // actifs (souvent < 10 dans ce projet).
-    // Test OBB : les objets dynamiques peuvent être rotatés (cube qui tourne),
+    // Test OBB : les objets dynamiques peuvent etre rotatés (cube qui tourne),
     // une AABB ne peut pas représenter leur hitbox fidèlement.
     for (const auto& [key, db] : m_dynamicBoxes) {
         CollisionResult r = testSphereOBB(center, radius, db.obb);
@@ -398,7 +398,7 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
     float     height)
 {
     if (std::isnan(currentPos.x) || std::isinf(currentPos.x)) {
-        std::cerr << "[Collision] Position NaN/Inf détectée !" << std::endl;
+        std::cerr << "[Collision] Position NaN/Inf detectee !" << std::endl;
         return currentPos;
     }
 
@@ -517,14 +517,14 @@ bool CollisionManager::tryJump(float jumpVelocity) {
 // ─────────────────────────────────────────────────────────────────────────────
 void CollisionManager::printInfo() const {
     std::cout << "=== CollisionManager (AABB) ===" << std::endl;
-    std::cout << "  Statiques  : " << m_staticBoxes.size() << " boîte(s)" << std::endl;
+    std::cout << "  Statiques  : " << m_staticBoxes.size() << " boite(s)" << std::endl;
     for (const auto& sb : m_staticBoxes) {
         std::cout << "    [" << sb.name << "] "
             << "min(" << sb.aabb.min.x << "," << sb.aabb.min.y << "," << sb.aabb.min.z << ") "
             << "max(" << sb.aabb.max.x << "," << sb.aabb.max.y << "," << sb.aabb.max.z << ")"
             << std::endl;
     }
-    std::cout << "  Dynamiques : " << m_dynamicBoxes.size() << " boîte(s)" << std::endl;
+    std::cout << "  Dynamiques : " << m_dynamicBoxes.size() << " boite(s)" << std::endl;
     for (const auto& [key, db] : m_dynamicBoxes) {
         std::cout << "    [" << key << "] "
             << "min(" << db.aabb.min.x << "," << db.aabb.min.y << "," << db.aabb.min.z << ") "

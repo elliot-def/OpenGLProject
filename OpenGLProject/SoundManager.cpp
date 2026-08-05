@@ -72,10 +72,10 @@ SoundManager::~SoundManager() {
 // ─── Initialisation OpenAL ────────────────────────────────────────────────────
 
 void SoundManager::initOpenAL() {
-    // Ouvrir le périphérique audio par défaut
+    // Ouvrir le peripherique audio par défaut
     m_device = alcOpenDevice(nullptr);
     if (!m_device)
-        throw std::runtime_error("[SoundManager] Impossible d'ouvrir le périphérique OpenAL.");
+        throw std::runtime_error("[SoundManager] Impossible d'ouvrir le peripherique OpenAL.");
 
     // Créer le contexte avec la liste d'attributs pour activer EFX
     ALint attrs[] = {
@@ -97,12 +97,12 @@ void SoundManager::initOpenAL() {
     if (m_efxAvailable)
         std::cout << "[SoundManager] Extension EFX disponible (reverb, filtres actifs)." << std::endl;
     else
-        std::cout << "[SoundManager] Extension EFX absente (reverb/filtres désactivés)." << std::endl;
+        std::cout << "[SoundManager] Extension EFX absente (reverb/filtres desactives)." << std::endl;
 
     // Modèle d'atténuation par défaut : distance inverse clampée (réaliste)
     alDistanceModel(AL_INVERSE_DISTANCE_CLAMPED);
 
-    std::cout << "[SoundManager] OpenAL initialisé. Vendor : "
+    std::cout << "[SoundManager] OpenAL initialise. Vendor : "
         << alGetString(AL_VENDOR) << std::endl;
 }
 
@@ -124,7 +124,7 @@ Sound* SoundManager::load(const std::string& name,
     const std::string& filePath,
     bool loop, float gain, float pitch)
 {
-    // Cache : si déjà chargé, retourner le son existant
+    // Cache : si déjà charge, retourner le son existant
     auto it = m_sounds.find(name);
     if (it != m_sounds.end())
         return it->second.get();
@@ -133,7 +133,7 @@ Sound* SoundManager::load(const std::string& name,
     Sound* ptr = sound.get();
     m_sounds.emplace(name, std::move(sound));
 
-    std::cout << "[SoundManager] Son chargé : \"" << name << "\" ← " << filePath << std::endl;
+    std::cout << "[SoundManager] Son charge : \"" << name << "\" ← " << filePath << std::endl;
     return ptr;
 }
 
@@ -234,7 +234,7 @@ void SoundManager::setSpeedOfSound(float speed) {
 
 unsigned int SoundManager::createReverbEffect(ReverbPreset preset) {
     if (!m_efxAvailable) {
-        std::cerr << "[SoundManager] EFX non disponible, reverb ignorée." << std::endl;
+        std::cerr << "[SoundManager] EFX non disponible, reverb ignoree." << std::endl;
         return 0;
     }
 
@@ -271,7 +271,7 @@ unsigned int SoundManager::createReverbEffect(ReverbPreset preset) {
     m_effectSlots.push_back(slot);
     m_currentReverbSlot = slot;
 
-    std::cout << "[SoundManager] Reverb slot créé (id=" << slot << ")." << std::endl;
+    std::cout << "[SoundManager] Reverb slot cree (id=" << slot << ")." << std::endl;
     return slot;
 }
 
@@ -396,7 +396,7 @@ void SoundManager::update() {
 // ─── Debug ────────────────────────────────────────────────────────────────────
 
 void SoundManager::printSoundList() const {
-    std::cout << "=== Sons chargés (" << m_sounds.size() << ") ===" << std::endl;
+    std::cout << "=== Sons charges (" << m_sounds.size() << ") ===" << std::endl;
     for (const auto& [name, sound] : m_sounds) {
         std::cout << "  [" << name << "] "
             << sound->getFilePath()

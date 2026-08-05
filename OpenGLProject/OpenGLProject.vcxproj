@@ -191,6 +191,7 @@
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="Shader.cpp" />
+    <ClCompile Include="Skybox.cpp" />
     <ClCompile Include="Sound.cpp" />
     <ClCompile Include="SoundManager.cpp" />
     <ClCompile Include="Spotlight.cpp" />
@@ -267,6 +268,7 @@
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderManager.h" />
     <ClInclude Include="ShaderType.h" />
+    <ClInclude Include="Skybox.h" />
     <ClInclude Include="Sound.h" />
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="Spotlight.h" />
@@ -297,6 +299,8 @@
     <None Include="res\shaders\model\model.vert" />
     <None Include="res\shaders\shape\shape.frag" />
     <None Include="res\shaders\shape\shape.vert" />
+    <None Include="res\shaders\skybox\skybox.frag" />
+    <None Include="res\shaders\skybox\skybox.vert" />
     <None Include="res\shaders\skinned\skinned.frag" />
     <None Include="res\shaders\skinned\skinned.vert" />
     <None Include="res\shaders\text\text.frag" />

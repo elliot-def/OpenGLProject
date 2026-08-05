@@ -61,7 +61,7 @@ void OptionsMenu::loadJSON() {
 
         createOptions(isMuted, volume);
 
-        // Application des paramètres au SoundManager
+        // Application des parametres au SoundManager
         if (m_soundManager) {
             m_soundManager->setMute(isMuted);
             m_soundManager->setMasterVolume(volume);
@@ -87,15 +87,15 @@ void OptionsMenu::exportJSON() {
             j["volume"] = m_soundManager->getMasterVolume();
         }
         else {
-            throw std::runtime_error("SoundManager non initialisé, impossible d'exporter les paramètres.");
+            throw std::runtime_error("SoundManager non initialise, impossible d'exporter les parametres.");
         }
 
         // On génère la string JSON et on l'écrit d'un coup avec writeText()
         if (!optionFile.writeText(j.dump(4))) {
-            throw std::runtime_error("Impossible d'écrire dans le fichier d'options.");
+            throw std::runtime_error("Impossible d'ecrire dans le fichier d'options.");
         }
 
-        std::cout << "[Options] Parametres exportés avec succes.\n";
+        std::cout << "[Options] Parametres exportes avec succes.\n";
     }
     catch (const std::exception& e) {
         std::cerr << "[Options] Erreur lors de l'export JSON : " << e.what() << "\n";

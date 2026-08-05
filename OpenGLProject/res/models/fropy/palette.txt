@@ -1,0 +1,3 @@
+Peau : #FFB065
+Cheveux : #241c11
+Lèvres : #4f1a00

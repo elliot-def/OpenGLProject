@@ -12,11 +12,11 @@
 
 static const char* STEP_NAMES[] = {
     "Initialisation...",          // 1 (systèmes + polices)
-    "Réseau...",                  // 2
-    "Textures & Lumières...",     // 3
+    "Reseau...",                  // 2
+    "Textures & Lumieres...",     // 3
     "Décors & Collisions...",     // 4
     "Steam...",                   // 5
-    "Modèles 3D...",              // 6
+    "Modeles 3D...",              // 6
     "Finalisation..."             // 7
 };
 
@@ -145,7 +145,7 @@ LoadingScreen::LoadingScreen() {
     m_stepLoc     = glGetUniformLocation(m_shader, "uStep");
     m_stepCntLoc  = glGetUniformLocation(m_shader, "uStepCount");
     glGenVertexArrays(1, &m_vao);
-    printf("[LoadingScreen] Initialisé.\n");
+    printf("[LoadingScreen] Initialise.\n");
 }
 
 LoadingScreen::~LoadingScreen() {

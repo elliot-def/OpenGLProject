@@ -422,6 +422,45 @@ void Model::loadModel(const std::string& path) {
     patchGlbAnimationRotations(m_scene, path);
 
     processNode(m_scene->mRootNode, m_scene);
+
+    // Identifier les noeuds joints du squelette conserve (apres processNode,
+    // qui a deja ecarte les meshes des autres squelettes). L'Animator s'en
+    // sert pour ne skinner que ce squelette.
+    buildJointNodes();
+}
+
+// ---------------------------------------------------------------------------
+// Squelette conserve : noeuds joints par nom (premier de l'ordre du fichier)
+// ---------------------------------------------------------------------------
+
+void Model::buildJointNodes() {
+    m_jointNodes.clear();
+    if (!m_scene || !m_scene->mRootNode) return;
+
+    std::unordered_set<std::string> claimed;
+    collectJointNodes(m_scene->mRootNode, claimed);
+
+    if (m_boneCounter > 0 && m_jointNodes.empty()) {
+        std::cerr << "[Model] Aucun noeud joint identifie (" << m_boneCounter
+                  << " bones) : l'Animator retombera sur la recherche par nom." << std::endl;
+    }
+}
+
+void Model::collectJointNodes(const aiNode* node, std::unordered_set<std::string>& claimed) {
+    if (!node) return;
+
+    // Reclamer le premier noeud de chaque nom de bone enregistre : le parcours
+    // depth-first suit le meme ordre que l'enregistrement des bones dans
+    // processMesh, donc c'est bien le squelette du mesh conserve qui gagne.
+    // Les noeuds homonymes des autres rigs (ex: COG de FemaleArm) sont ignores.
+    const std::string nodeName(node->mName.C_Str());
+    if (m_boneInfoMap.find(nodeName) != m_boneInfoMap.end() && claimed.insert(nodeName).second) {
+        m_jointNodes.insert(node);
+    }
+
+    for (unsigned int i = 0; i < node->mNumChildren; i++) {
+        collectJointNodes(node->mChildren[i], claimed);
+    }
 }
 
 void Model::processNode(aiNode* node, const aiScene* scene) {
@@ -436,9 +475,14 @@ void Model::processNode(aiNode* node, const aiScene* scene) {
                       << ", node=\"" << node->mName.C_Str() << "\")" << std::endl;
             continue;
         }
-        m_processedMeshIndices.insert(meshIndex);
         aiMesh* mesh = scene->mMeshes[meshIndex];
-        m_meshes.push_back(processMesh(mesh, scene));
+        Mesh* processed = processMesh(mesh, scene);
+        // processMesh() peut retourner nullptr : mesh d'un AUTRE squelette
+        // (même noms de bones mais offsets différents) → à ignorer.
+        if (processed) {
+            m_processedMeshIndices.insert(meshIndex);
+            m_meshes.push_back(processed);
+        }
     }
 
     // Traiter r�cursivement les enfants
@@ -448,6 +492,39 @@ void Model::processNode(aiNode* node, const aiScene* scene) {
 }
 
 Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
+    // Garde anti-doublon de squelette : un mesh qui référence des bones déjà
+    // enregistrés (même nom) mais avec une matrice d'offset DIFFÉRENTE
+    // appartient à un AUTRE squelette. Ex: human_1.glb contient MaleArm et
+    // FemaleArm, deux rigs dont les noms de bones sont identiques (COG, Hip,
+    // Thigh.Right...). Comme les bone IDs sont attribués PAR NOM dans
+    // m_boneInfoMap, garder les deux meshes → le second personnage est skiné
+    // avec les matrices du premier et les deux se dessinent superposés à la
+    // même position (décalage en hauteur). On ne conserve que le premier
+    // squelette rencontré (ordre du fichier).
+    for (unsigned int b = 0; b < mesh->mNumBones; b++) {
+        const aiBone* bone = mesh->mBones[b];
+        const std::string boneName(bone->mName.C_Str());
+        auto it = m_boneInfoMap.find(boneName);
+        if (it == m_boneInfoMap.end()) continue; // nouveau bone : pas un conflit
+
+        const glm::mat4 incoming = aiMatrixToGlm(bone->mOffsetMatrix);
+        const glm::mat4& existing = it->second.offsetMatrix;
+        bool same = true;
+        for (int c = 0; c < 4 && same; c++) {
+            for (int r = 0; r < 4; r++) {
+                if (std::fabs(existing[c][r] - incoming[c][r]) > 1e-4f) {
+                    same = false;
+                    break;
+                }
+            }
+        }
+        if (!same) {
+            std::cout << "[Model] Mesh ignore (squelette different) : \""
+                      << mesh->mName.C_Str() << "\" (bone \"" << boneName << "\")" << std::endl;
+            return nullptr;
+        }
+    }
+
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     std::vector<unsigned int> textureIDs;

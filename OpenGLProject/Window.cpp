@@ -141,7 +141,7 @@ void Window::setWindowIcon(const char* iconPath) {
 }
 
 // ---------------------------------------------------------------------------
-// Contexte GL partagé (thread de chargement)
+// Contexte GL partage (thread de chargement)
 // ---------------------------------------------------------------------------
 
 GLFWwindow* Window::createSharedContext() const {
@@ -149,7 +149,7 @@ GLFWwindow* Window::createSharedContext() const {
     GLFWwindow* w = glfwCreateWindow(1, 1, "loader", nullptr, m_window);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);  // restore default
     if (!w) {
-        printf("[Window] ERREUR: impossible de créer le contexte partagé.\n");
+        printf("[Window] ERREUR: impossible de creer le contexte partage.\n");
     }
     return w;
 }

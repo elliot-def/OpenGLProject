@@ -122,6 +122,7 @@ void FirstPersonArms::loadArmBonesConfig() {
         }
 
     } catch (const std::exception& e) {
+        std::cerr << "Exception caught: " << e.what() << '\n';
     }
 }
 

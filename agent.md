@@ -224,6 +224,7 @@ les transparents sont triés par distance caméra puis dessinés avec `glDepthMa
 - **Forward declarations** dans les headers pour limiter la surcharge ; `class Foo;` est préféré à `#include "Foo.h"`.
 - **Pas d'exceptions partout** — préférer `throw`/`out_of_range`/`runtime_error` quand pertinent (cohérent avec `ShaderManager::getShader`).
 - **Emojis/symboles décoratifs** interdits dans le code ; commentaires box-drawing `─` OK.
+- **Encodage des sorties console & textes in-game** : aucun accent ni caractère hors ASCII de base (0x20–0x7E) dans les `printf`, `std::cout`, `std::cerr`, `renderText()`, et toute chaîne affichée à l'écran. La console Windows n'interprète pas l'UTF-8 et affiche `�` pour `é`, `è`, `à`, `ù`, `ç`, `ê`, etc. Utiliser les équivalents sans accent : `e` pour `é`/`è`/`ê`, `a` pour `à`/`â`, `c` pour `ç`, `u` pour `ù`/`û`. Exemples : `"Initialisation"` (pas `"Initialisation"`), `"Deja pret"` (pas `"Déjà prêt"`), `"Arrete"` (pas `"Arrêté"`). Les commentaires restent en français avec accents, ils ne sont pas affichés à l'utilisateur.
 
 ### GPU / OpenGL
 - `glad.c` est l'unique `.c` du projet (loader auto-généré).

@@ -256,7 +256,18 @@ void Animator::update(float deltaTime) {
 void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentTransform, float animTime) {
     std::string nodeName(node->mName.C_Str());
     const auto& boneMap = m_model->getBoneInfoMap();
-    bool isBone = (boneMap.find(nodeName) != boneMap.end());
+
+    // Un nœud n'est un bone que s'il appartient au squelette CONSERVÉ
+    // (ensemble de joints collecté au chargement). Le nom seul ne suffit pas :
+    // human_1.glb contient MaleArm ET FemaleArm avec des noms de bones
+    // identiques (COG, Hip...) — les nœuds du second rig (visités après le
+    // premier) écraseraient les bone matrices du premier (même boneId attribué
+    // par nom) et déformeraient le personnage conservé. Fallback sur la
+    // recherche par nom si l'ensemble est vide (modèles sans infos joints).
+    const auto& jointNodes = m_model->getJointNodes();
+    bool isBone = jointNodes.empty()
+        ? (boneMap.find(nodeName) != boneMap.end())
+        : (jointNodes.find(node) != jointNodes.end());
 
     // Bind-pose par défaut (utilisé pour les nœuds non-bones comme ArmsRig,
     // RootNode, camera, IK handles — leur quaternion FBX est instable).
@@ -275,8 +286,9 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
 
     // ── Crossfade : blender les transforms LOCALES (T·R pur) ─────────────
     // Stocker la transformée locale courante (servira d'instantané si un
-    // fondu est déclenché plus tard).
-    m_currentLocalTransforms[nodeName] = nodeTransform;
+    // fondu est déclenché plus tard). Clé = nœud (pas nom) pour isoler les
+    // squelettes homonymes (voir Animator.h).
+    m_currentLocalTransforms[node] = nodeTransform;
 
     // Pendant un fondu, blender la transformée locale figée (instantané)
     // vers la transformée courante de la nouvelle animation. Le blend se
@@ -284,7 +296,7 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
     // translation et la rotation évoluent de façon synchrone, les doigts
     // ne peuvent pas overshoot.
     if (m_crossfading && m_fade < 1.0f) {
-        auto prevIt = m_prevLocalTransforms.find(nodeName);
+        auto prevIt = m_prevLocalTransforms.find(node);
         if (prevIt != m_prevLocalTransforms.end()) {
             nodeTransform = blendLocalTransforms(prevIt->second, nodeTransform, m_fade);
         }

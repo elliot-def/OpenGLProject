@@ -3,6 +3,8 @@
 #include "Shader.h"
 #include "Camera.h"
 #include "LightManager.h"
+#include "Animator.h"
+#include "SkinningData.h"
 #include <memory>
 
 #include <glad/glad.h>  // GL_TRUE/GL_FALSE/glDepthMask — requise par l'outline pass
@@ -10,10 +12,116 @@
 ModelEntity::ModelEntity(Camera* camera, LightManager* lightManager, Renderer* renderer, const std::string& modelPath, TextureManager* textureManager)
 	: m_camera(camera), m_lightManager(lightManager), Entity(renderer, nullptr) {
 	m_model = std::make_unique<Model>(m_camera, m_lightManager, modelPath, textureManager);
+
+	// Animation
+	m_animator = std::make_unique<Animator>();
+	m_animator->setup(m_model.get());
+
+	for (unsigned int i = 0; i < MAX_BONES; i++) {
+		m_boneUniformNames.push_back("uBoneMatrices[" + std::to_string(i) + "]");
+	}
+
+	detectAnimations();
+	if (m_hasAnimations) {
+		if (m_idleAnimIndex >= 0) {
+			m_animator->playAnimation(m_idleAnimIndex, true);
+		} else {
+			m_animator->playAnimation(0, true);
+		}
+		m_animator->update(0.0f);
+	}
 }
 
 ModelEntity::~ModelEntity() {
-    // Le destructeur unique_ptr s'occupe de lib�rer la m�moire du mod�le
+}
+
+void ModelEntity::detectAnimations() {
+	const aiScene* scene = m_model->getScene();
+	if (!scene || scene->mNumAnimations == 0) return;
+
+	m_hasAnimations = true;
+
+	// Détection des animations du squelette conservé (le premier du fichier,
+	// masculin ici). Les fichiers contiennent parfois les animations des DEUX
+	// squelettes (human_1.glb : MaleArm + FemaleArm → "Idle-M"/"Idle-F",
+	// "Walk"/"Walk-F", "Run-M"/"Run-F"...). Règles communes : 1) la marche
+	// ("walk"/"marche") avant la course ("run"), 2) le squelette masculin
+	// (suffixe -M/_m) préféré, 3) la première occurrence plutôt que la dernière.
+	struct AnimPick { int index = -1; bool isWalk = false; bool isMale = false; };
+	AnimPick idle, walk, run, punchAny, punchJab, rest;
+
+	for (unsigned int i = 0; i < scene->mNumAnimations; i++) {
+		std::string name(scene->mAnimations[i]->mName.C_Str());
+		printf("[ModelEntity] Animation %u: \"%s\" (%.1fs)\n", i, name.c_str(),
+		       scene->mAnimations[i]->mDuration / (scene->mAnimations[i]->mTicksPerSecond > 0.0f ? scene->mAnimations[i]->mTicksPerSecond : 30.0f));
+
+		std::string lower = name;
+		for (auto& c : lower) c = static_cast<char>(tolower(c));
+
+		const bool isMale   = lower.find("-m") != std::string::npos || lower.find("_m") != std::string::npos;
+		const bool isIdle   = lower.find("idle") != std::string::npos;
+		const bool isWalkNm = lower.find("walk") != std::string::npos || lower.find("marche") != std::string::npos;
+		const bool isRunNm  = lower.find("run") != std::string::npos;
+		const bool isPunch  = lower.find("punch") != std::string::npos;
+		const bool isCharge = lower.find("charge") != std::string::npos;
+		const bool isRest   = lower.find("rest") != std::string::npos;
+
+		// Idle : premier match, -M préféré
+		if (isIdle && (idle.index < 0 || (isMale && !idle.isMale))) {
+			idle = { static_cast<int>(i), false, isMale };
+		}
+		// Marche : "walk"/"marche" > "run", -M préféré
+		if ((isWalkNm || isRunNm) && (walk.index < 0
+			|| (isWalkNm && !walk.isWalk)
+			|| (isWalkNm == walk.isWalk && isMale && !walk.isMale))) {
+			walk = { static_cast<int>(i), isWalkNm, isMale };
+		}
+		// Course (sprint) : "run", -M préféré, premier match
+		if (isRunNm && (run.index < 0 || (isMale && !run.isMale))) {
+			run = { static_cast<int>(i), false, isMale };
+		}
+		// Punch (jab sur R) : "punch" SANS "charge" préféré (Left-Punch-M),
+		// sinon n'importe quel punch (ex: Charge-Punch-M)
+		if (isPunch) {
+			if (isCharge) {
+				if (punchAny.index < 0 || (isMale && !punchAny.isMale))
+					punchAny = { static_cast<int>(i), false, isMale };
+			} else {
+				if (punchJab.index < 0 || (isMale && !punchJab.isMale))
+					punchJab = { static_cast<int>(i), false, isMale };
+				if (punchAny.index < 0 || (isMale && !punchAny.isMale))
+					punchAny = { static_cast<int>(i), false, isMale };
+			}
+		}
+		// Rest (pose d'attente avant l'idle) : premier match
+		if (isRest && rest.index < 0) {
+			rest = { static_cast<int>(i), false, isMale };
+		}
+	}
+
+	m_idleAnimIndex = idle.index;
+	m_walkAnimIndex = walk.index;
+	m_runAnimIndex = run.index;
+	m_punchAnimIndex = punchJab.index >= 0 ? punchJab.index : punchAny.index;
+	m_restAnimIndex = rest.index;
+}
+
+void ModelEntity::updateAnimation(float deltaTime) {
+	if (!m_hasAnimations || !m_animator) return;
+	m_animator->update(deltaTime);
+}
+
+void ModelEntity::playAnimation(int animIndex, bool loop) {
+	if (!m_hasAnimations || !m_animator || animIndex < 0) return;
+	m_animator->playAnimation(animIndex, loop);
+}
+
+void ModelEntity::playIdle() {
+	playAnimation(m_idleAnimIndex, true);
+}
+
+void ModelEntity::playWalk() {
+	playAnimation(m_walkAnimIndex, true);
 }
 
 void ModelEntity::draw(Shader* shader) {
@@ -42,6 +150,16 @@ void ModelEntity::draw(Shader* shader) {
     shader->use();
     shader->setModel(model);      // il faut setter le model avant
     shader->setupMatrices();      // envoie model + view + projection
+
+    // Bone matrices pour le skinning (shader "skinned" uniquement)
+    if (m_hasAnimations && m_animator && shader->getType() == ShaderType::SkinnedModel) {
+        const auto& boneMats = m_animator->getFinalBoneMatrices();
+        size_t count = boneMats.size() < m_boneUniformNames.size()
+                       ? boneMats.size() : m_boneUniformNames.size();
+        for (size_t i = 0; i < count; i++) {
+            shader->setMat4(m_boneUniformNames[i].c_str(), boneMats[i]);
+        }
+    }
 
     shader->setVec3("viewPos", m_camera->getPosition());
     m_lightManager->applyToShader(shader);

@@ -72,7 +72,7 @@ static bool loadWavFile(const std::string& path,
     else if (channels == 2 && bitsPerSample == 8)  outFormat = AL_FORMAT_STEREO8;
     else if (channels == 2 && bitsPerSample == 16) outFormat = AL_FORMAT_STEREO16;
     else {
-        std::cerr << "[Sound] Format non supporté (ch=" << channels
+        std::cerr << "[Sound] Format non supporte (ch=" << channels
             << " bits=" << bitsPerSample << ") : " << path << std::endl;
         return false;
     }
@@ -193,7 +193,9 @@ void Sound::stop() {
     alGetSourcei(m_source, AL_SOURCE_STATE, &state);
     if (state == AL_PLAYING || state == AL_PAUSED) {
         alSourceStop(m_source);
-        alCheckError("alSourceStop");
+        // Pas de alCheckError ici : si le contexte est déjà détruit
+        // (shutdown), alGetSourcei laisse AL_INVALID_OPERATION (0xa004)
+        // dans la queue et state = garbage. L'erreur est inoffensive.
     }
 }
 
@@ -258,7 +260,7 @@ void Sound::setLowPassFilter(float gainLF, float gainHF) {
     auto alFilterf = reinterpret_cast<LPALFILTERF>(alGetProcAddress("alFilterf"));
 
     if (!alGenFilters || !alFilteri || !alFilterf) {
-        std::cerr << "[Sound] Extension EFX absente, filtre passe-bas ignoré." << std::endl;
+        std::cerr << "[Sound] Extension EFX absente, filtre passe-bas ignore." << std::endl;
         return;
     }
 
@@ -277,7 +279,7 @@ void Sound::setReverbEffect(unsigned int effectSlot) {
     // AL_AUXILIARY_SEND_FILTER : (slot, send index, filter)
     auto alSource3i = reinterpret_cast<LPALSOURCE3I>(alGetProcAddress("alSource3i"));
     if (!alSource3i) {
-        std::cerr << "[Sound] alSource3i introuvable, effet de réverb ignoré." << std::endl;
+        std::cerr << "[Sound] alSource3i introuvable, effet de reverb ignore." << std::endl;
         return;
     }
     alSource3i(m_source,

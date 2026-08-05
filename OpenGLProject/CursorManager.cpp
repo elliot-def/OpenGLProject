@@ -65,7 +65,7 @@ void CursorManager::setCustomCursor(const char* cursorPath) {
             glfwSetCursor(m_window->getGLFWwindow(), m_GLFWcursor);
         }
         else {
-            std::cerr << "Erreur: Impossible de créer le curseur GLFW" << std::endl;
+            std::cerr << "Erreur: Impossible de creer le curseur GLFW" << std::endl;
         }
 
         stbi_image_free(cursor_pixels);

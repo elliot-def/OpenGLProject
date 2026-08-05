@@ -14,6 +14,8 @@ Steam API for lobbies : https://partner.steamgames.com/doc/sdk/api
 
 Blender's community for 3D models editing : https://www.blender.org/community/
 
+Team FreeStylized for the Skybox (NON-COMMERCIAL ONLY): https://freestylized.com/skybox/sky_77/
+
 I used IA for some design (such as game's icon) because i'm poor, but i swear i'll replace them with the game's fonds
 
 France should have win against Spain in world cup semi-final 2026

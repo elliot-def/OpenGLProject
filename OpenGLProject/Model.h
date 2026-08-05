@@ -82,6 +82,12 @@ public:
     const std::string& getSourcePath() const { return m_sourcePath; }
     const std::unordered_map<std::string, BoneInfo>& getBoneInfoMap() const { return m_boneInfoMap; }
 
+    // Noeuds joints du squelette CONSERVE (le premier de l'ordre du fichier).
+    // L'Animator n'ecrit les bone matrices que pour ces noeuds : les autres
+    // squelettes du fichier (ex: FemaleArm dans human_1.glb) partagent les
+    // MEMES noms de bones mais ne doivent pas ecraser les matrices du premier.
+    const std::unordered_set<const aiNode*>& getJointNodes() const { return m_jointNodes; }
+
     // Getters pour les hitbox
     const BoundingBox& getBoundingBox() const { return m_boundingBox; }
     const BoundingSphere& getBoundingSphere() const { return m_boundingSphere; }
@@ -129,6 +135,15 @@ private:
     // depuis plusieurs nœuds (fr�quent avec Mixamo/Blender). Sans ce set,
     // deux Mesh* identiques sont pouss�s dans m_meshes → z-fighting � l'�cran.
     std::unordered_set<unsigned int> m_processedMeshIndices;
+
+    // Noeuds joints du squelette conserve (voir getJointNodes()). Construit
+    // apres processNode() : parcours depth-first de l'arbre, on reclame le
+    // PREMIER noeud de chaque nom de bone enregistre. Comme l'enregistrement
+    // des bones (processMesh) suit le meme ordre, c'est le squelette du mesh
+    // conserve — les noeuds homonymes des autres rigs sont ignores.
+    std::unordered_set<const aiNode*> m_jointNodes;
+    void buildJointNodes();
+    void collectJointNodes(const aiNode* node, std::unordered_set<std::string>& claimed);
 
     // Chargement
     unsigned int loadTextureFromFile(const std::string& path);

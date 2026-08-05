@@ -103,9 +103,12 @@ private:
     // avec l'ancien blend sur matrices finales → plus d'overshoot des doigts).
     static constexpr float kCrossfadeDuration = 0.25f; // durée du fondu (idle <-> marche)
     // Transformées LOCALES de TOUS les nœuds (bones + conteneurs) : mises à jour
-    // chaque frame dans computeBoneTransform(). Clé = nom du nœud.
-    std::unordered_map<std::string, glm::mat4> m_currentLocalTransforms;
-    std::unordered_map<std::string, glm::mat4> m_prevLocalTransforms; // instantané
+    // chaque frame dans computeBoneTransform(). Clé = POINTEUR du nœud (et non
+    // son nom) : un fichier peut contenir plusieurs squelettes aux noms de bones
+    // IDENTIQUES (ex: human_1.glb → MaleArm + FemaleArm) ; une clé par nom
+    // laisserait les nœuds du second rig écraser l'instantané du premier.
+    std::unordered_map<const aiNode*, glm::mat4> m_currentLocalTransforms;
+    std::unordered_map<const aiNode*, glm::mat4> m_prevLocalTransforms; // instantané
     float m_fade = 1.0f;                               // facteur de blend courant (0→1)
     float m_fadeTimer = 0.0f;                          // progression du fondu (s)
     bool m_crossfading = false;                        // fondu en cours ?

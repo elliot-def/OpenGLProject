@@ -4,6 +4,10 @@
 #include "config.h"
 #include "LoadingScreen.h"
 #include "SteamManager.h"
+#include "Animator.h"
+#include "TextRenderer.h"
+#include "Skybox.h"
+#include "constants/file.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -37,7 +41,7 @@ Game::~Game() {
     if (m_steamManager) {
         m_steamManager->shutdown();
     }
-    if (m_loaderWindow) m_window->destroySharedContext(m_loaderWindow);
+    if (m_loaderWindow && m_window) m_window->destroySharedContext(m_loaderWindow);
 
     // Détruire le SoundManager AVANT glfwTerminate() : ce dernier peut
     // invalider le contexte OpenAL, ce qui ferait échouer alSourceStop
@@ -50,29 +54,30 @@ Game::~Game() {
 }
 
 // ---------------------------------------------------------------------------
-// Initialisation : Window + Renderer, puis Steam en async.
-// Si Steam est déjà prêt (ou échoue), les ressources sont chargées directement.
-// Sinon, le chargement est différé et piloté par run() (non-bloquant).
+// Initialisation : Steam d'abord (bloquant) puis Window + Renderer.
+// L'overlay Steam a besoin d'être initialisé avant la création du contexte
+// OpenGL (hook wglCreateContext). On utilise init() qui lance Steam si absent
+// et retente jusqu'à 10 secondes.
 // ---------------------------------------------------------------------------
 
 void Game::initialize() {
+    // Steam d'abord (bloquant) : lance Steam si absent, retente 10× 1s.
+    // La fenêtre n'est créée qu'après → l'overlay pourra hooker le contexte.
+    m_steamManager = std::make_unique<SteamManager>();
+    bool steamOk = m_steamManager->init();
+
+    if (steamOk) {
+        printf("[Game] Steam initialise, creation de la fenetre...\n");
+    } else {
+        printf("[Game] Steam non disponible, fonctionnement hors-ligne.\n");
+    }
+
+    // Création de la fenêtre et du contexte OpenGL APRÈS SteamAPI_InitEx
     m_window   = std::make_unique<Window>();
     m_renderer = std::make_unique<Renderer>();
-
     m_loadingScreen = std::make_unique<LoadingScreen>();
 
-    // SteamManager juste après Window/Renderer, en async (non-bloquant)
-    m_steamManager = std::make_unique<SteamManager>();
-    SteamInitStatus status = m_steamManager->initAsyncStart();
-
-    if (status == SteamInitStatus::READY) {
-        printf("[Game] Steam déjà prêt, chargement des ressources...\n");
-        loadResources();  // passe en LOADING ou READY en interne
-    } else if (status == SteamInitStatus::FAILED) {
-        printf("[Game] Steam non disponible, fonctionnement hors-ligne.\n");
-        loadResources();
-    }
-    // else: m_initPhase reste STEAM_WAIT (défaut), le polling se fera dans run()
+    loadResources();  // passe en LOADING ou READY en interne
 }
 
 // ---------------------------------------------------------------------------
@@ -90,7 +95,7 @@ void Game::loadResources() {
 
     constexpr int TOTAL_STEPS = 7;
     int step = 0;
-    m_loadingScreen->setStep(0, 0);  // pas d'indicateur pendant STEAM_WAIT
+    m_loadingScreen->setStep(0, 0);  // pas d'indicateur au début du chargement
 
     // ── Partie synchrone : tout sauf les modèles 3D ──
 
@@ -170,25 +175,25 @@ void Game::loadResources() {
 
     if (m_steamManager && m_steamManager->isInitialized()) {
         m_steamManager->setOnInviteReceived([this](CSteamID lobbyID) {
-            printf("[Game] Invitation reçue, tentative de rejoindre le lobby %llu...\n",
+            printf("[Game] Invitation recue, tentative de rejoindre le lobby %llu...\n",
                    lobbyID.ConvertToUint64());
             m_steamManager->joinLobby(lobbyID);
         });
 
         m_steamManager->setOnLobbyCreated([this](CSteamID lobbyID) {
-            printf("[Game] Lobby créé avec succès, ouverture de l'invitation...\n");
+            printf("[Game] Lobby cree avec succes, ouverture de l'invitation...\n");
             m_steamManager->openInviteDialog();
         });
 
         m_steamManager->setOnLobbyEntered([this](CSteamID lobbyID) {
-            printf("[Game] Connecté au lobby %llu !\n", lobbyID.ConvertToUint64());
+            printf("[Game] Connecte au lobby %llu !\n", lobbyID.ConvertToUint64());
             if (m_socket) {
                 // TODO: utiliser le lobby pour établir la connexion réseau
             }
         });
 
         m_steamManager->setOnLobbyLeft([this]() {
-            printf("[Game] Quitté le lobby.\n");
+            printf("[Game] Quitte le lobby.\n");
         });
 
         if (m_argc > 0 && m_argv != nullptr) {
@@ -199,20 +204,23 @@ void Game::loadResources() {
     }
 
     glGetString(GL_VERSION) ? std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl
-        : throw std::runtime_error("Impossible de récupérer la version OpenGL");
+        : throw std::runtime_error("Impossible de recuperer la version OpenGL");
 
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
 
-    // ── Partie asynchrone : modèles 3D sur un thread séparé ──
+    // ── Skybox nocturne : cubemap chargé dans le contexte principal ──
+    m_skybox = std::make_unique<Skybox>(Constants::File::SKYBOX_NIGHT_PATH);
+
+    // ── Partie asynchrone : modèles 3D sur un thread separe ──
     m_loaderWindow = m_window->createSharedContext();
     if (m_loaderWindow) {
         m_loadingDone = false;
         m_loadingThread = std::thread(&Game::loadModelsAsync, this);
         m_initPhase = InitPhase::LOADING;
-        printf("[Game] Modèles en cours de chargement (thread séparé)...\n");
+        printf("[Game] Modeles en cours de chargement (thread separe)...\n");
     } else {
-        // Fallback : chargement synchrone si le contexte partagé échoue
-        printf("[Game] Contexte partagé indisponible, chargement synchrone.\n");
+        // Fallback : chargement synchrone si le contexte partage échoue
+        printf("[Game] Contexte partage indisponible, chargement synchrone.\n");
         loadModelsAsync();
         m_loadingScreen.reset();
         m_initPhase = InitPhase::READY;
@@ -222,25 +230,6 @@ void Game::loadResources() {
 void Game::run() {
     while (!m_window->getShouldClose()) {
         m_renderer->handleFrameTiming();
-
-        // ---- Phase d'init : attente Steam (non-bloquante) ----
-        if (m_initPhase == InitPhase::STEAM_WAIT) {
-            SteamInitStatus status = m_steamManager->initAsyncPoll(m_renderer->getDeltaTime());
-
-            if (status != SteamInitStatus::WAITING) {
-                if (status == SteamInitStatus::READY)
-                    printf("[Game] Steam connecté, chargement des ressources...\n");
-                else
-                    printf("[Game] Steam non disponible (timeout), chargement hors-ligne...\n");
-                loadResources();  // passe en LOADING (ou READY en fallback)
-            }
-
-            if (m_loadingScreen) {
-                m_loadingScreen->draw(m_renderer->getDeltaTime());
-                m_window->update();
-            }
-            continue;
-        }
 
         // ---- Phase d'init : chargement asynchrone des modèles ----
         if (m_initPhase == InitPhase::LOADING) {
@@ -252,7 +241,7 @@ void Game::run() {
                     m_loadingThread.join();
 
                     // Recréer les VAO dans le contexte principal (les VAO ne
-                    // sont pas partagés entre contextes OpenGL).
+                    // sont pas partages entre contextes OpenGL).
                     auto reloadMeshes = [](const std::vector<Mesh*>& meshes) {
                         for (Mesh* m : meshes) m->reloadGPUResources();
                     };
@@ -267,7 +256,7 @@ void Game::run() {
                     }
                 }
 
-                m_loadingScreen->setStep(7, 7);  // toutes les étapes complétées
+                m_loadingScreen->setStep(7, 7);  // toutes les etapes completees
 
                 m_loadingFadeTimer += dt;
 
@@ -287,7 +276,7 @@ void Game::run() {
                     } else {
                         m_loadingScreen.reset();
                         m_initPhase = InitPhase::READY;
-                        printf("[Game] Chargement terminé !\n");
+                        printf("[Game] Chargement termine !\n");
                     }
                 }
             } else {
@@ -358,13 +347,87 @@ void Game::update() {
     m_soundManager->update();
 
     m_collisionManager->updateDynamic("backpack", m_modelEntity->getModel()->getMeshes(), m_modelEntity->getModelMatrix());
-    m_collisionManager->updateDynamic("fropy", m_fropyEntity->getModel()->getMeshes(), m_fropyEntity->getModelMatrix());
+    m_collisionManager->updateDynamic("fropy_low_poly", m_fropyEntity->getModel()->getMeshes(), m_fropyEntity->getModelMatrix());
     m_fropyEntity->update();
 
     // Humain 3ème personne : suit la position et la direction du joueur.
     if (m_humanEntity) {
         m_humanEntity->setPosition(m_player->getPosition());
         m_humanEntity->setDirection(*m_player->getDirection());
+
+        // ── Animations du personnage 3P ────────────────────────────────────
+        // États : run (sprint), walk (marche), rest→idle (immobile : on joue
+        // "Rest" pendant kHumanRestToIdleDelay avant de basculer sur l'idle), et
+        // punch one-shot (jab sur R = KEY_PUSH) prioritaire qui reprend l'état
+        // de mouvement une fois terminé.
+        if (m_humanEntity->hasAnimations()) {
+            const float dt = m_renderer->getDeltaTime();
+
+            // Détection du mouvement par le delta de position horizontal
+            static glm::vec3 lastHumanPos = m_player->getPosition();
+            const glm::vec3 delta = m_player->getPosition() - lastHumanPos;
+            const float horizSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z))
+                                     / std::max(dt, 1e-5f);
+            const bool isMoving = horizSpeed > 0.1f;
+            lastHumanPos = m_player->getPosition();
+
+            const int idleIdx  = m_humanEntity->getIdleAnimIndex();
+            const int walkIdx  = m_humanEntity->getWalkAnimIndex();
+            const int runIdx   = m_humanEntity->getRunAnimIndex();
+            const int punchIdx = m_humanEntity->getPunchAnimIndex();
+            const int restIdx  = m_humanEntity->getRestAnimIndex();
+
+            // ── Sélection de l'animation de repos (hors punch) ──
+            static int lastAnimIdx = -1;
+            static float restTimer = 0.0f;
+            static constexpr float kHumanRestToIdleDelay = 2.5f; // "quelques temps" avant l'idle
+
+            // ── Jab (touche R, front montant) : punch one-shot ──
+            static bool prevRDown = false;
+            static bool punching = false;
+            const bool rDown = m_inputManager->getKey("Push")->getStatus();
+            if (rDown && !prevRDown && !punching && punchIdx >= 0) {
+                m_humanEntity->playAnimation(punchIdx, false);
+                punching = true;
+                // Marquer l'animation courante : à la fin du punch, la cible de
+                // mouvement (walk/run/rest/idle) différera forcément de
+                // lastAnimIdx → la machine rejoue la bonne animation au lieu de
+                // rester figée sur la dernière pose du punch.
+                lastAnimIdx = punchIdx;
+            }
+            prevRDown = rDown;
+
+            // Fin du punch (animation non-loop terminée) : on reprend la
+            // machine à états — la cible de mouvement rejouée diffère de
+            // lastAnimIdx (= punch) donc elle reprend proprement.
+            if (punching && m_humanEntity->getAnimator()->isFinished()) {
+                punching = false;
+            }
+
+            int targetIdx = -1;
+            if (!punching) {
+                if (isMoving) {
+                    restTimer = 0.0f;
+                    targetIdx = (m_player->getIsSprinting() && runIdx >= 0) ? runIdx : walkIdx;
+                } else {
+                    // Immobile : "Rest" pendant le délai, puis idle
+                    if (restIdx >= 0 && restTimer < kHumanRestToIdleDelay) {
+                        targetIdx = restIdx;
+                        restTimer += dt;
+                    } else {
+                        targetIdx = idleIdx;
+                    }
+                }
+
+                // Ne (re)lancer que si l'animation cible diffère de l'actuelle
+                if (targetIdx >= 0 && targetIdx != lastAnimIdx) {
+                    m_humanEntity->playAnimation(targetIdx, true);
+                    lastAnimIdx = targetIdx;
+                }
+            }
+
+            m_humanEntity->updateAnimation(dt);
+        }
     }
 
     // Mise à jour du bobbing des bras en première personne
@@ -374,6 +437,12 @@ void Game::update() {
 }
 
 void Game::draw() {
+    // 0. Ciel : rendu en premier (depth LEQUAL + mask off), la géométrie de
+    // la scène le recouvre ensuite naturellement grâce au depth test.
+    if (m_skybox) {
+        m_skybox->draw(m_shaderManager->getShader("skybox"), m_camera.get());
+    }
+
     // 1. Opaques
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -388,7 +457,7 @@ void Game::draw() {
 
     // Humain 3ème personne (visible uniquement en vue 3P)
     if (m_humanEntity && m_player->isThirdPerson()) {
-        m_humanEntity->draw(m_shaderManager->getShader("model"));
+        m_humanEntity->draw(m_shaderManager->getShader("skinned"));
     }
 
     // 2. Transparences
@@ -416,6 +485,67 @@ void Game::draw() {
     if (m_firstPersonArms && !m_player->isThirdPerson()) {
         m_firstPersonArms->draw(m_shaderManager->getShader("skinned"));
     }
+
+    // ── HUD debug (personnage 3P) : liste des animations du modèle ────────
+    // Liste TOUTES les animations du modèle avec leur index. La ligne de
+    // l'animation EN COURS est surlignée en vert, et les animations détectées
+    // comme idle/walk par ModelEntity::detectAnimations() sont marquées
+    // "(idle)"/"(walk)" pour vérifier le choix (ex: "Walk" au lieu de "Walk-F").
+    // Texte 2D dessiné sans depth test (comme les menus).
+    if (m_humanEntity && m_humanEntity->hasAnimations() && m_player->isThirdPerson()
+        && m_textRenderers && !m_textRenderers->empty()) {
+        const aiScene* scene = m_humanEntity->getModel()->getScene();
+        const Animator* animator = m_humanEntity->getAnimator();
+        const int idleIdx  = m_humanEntity->getIdleAnimIndex();
+        const int walkIdx  = m_humanEntity->getWalkAnimIndex();
+        const int runIdx   = m_humanEntity->getRunAnimIndex();
+        const int punchIdx = m_humanEntity->getPunchAnimIndex();
+        const int restIdx  = m_humanEntity->getRestAnimIndex();
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDisable(GL_DEPTH_TEST);
+
+        TextRenderer* hud = (*m_textRenderers)[0].get();
+        const float scale = 0.30f;
+        const float lineH = 34.0f;
+        float y = 20.0f;
+
+        // En-tête : couleur neutre (le VERT est réservé à l'animation en cours)
+        hud->renderText("Animations du modele (vert = en cours)",
+                        20.0f, y, scale, 0.85f, 0.85f, 0.85f);
+        y += lineH;
+
+        // Garde anti-débordement : ne jamais lister plus de lignes que ne peut
+        // afficher l'écran (human_1.glb n'en a que 13, mais un modèle futur
+        // pourrait en avoir beaucoup plus).
+        constexpr unsigned int MAX_HUD_ANIMS = 32;
+
+        if (scene) {
+            for (unsigned int i = 0; i < scene->mNumAnimations && i < MAX_HUD_ANIMS; i++) {
+                const std::string name(scene->mAnimations[i]->mName.C_Str());
+                std::string line = "[" + std::to_string(i) + "] " + name;
+                if (idleIdx  >= 0 && i == static_cast<unsigned int>(idleIdx))  line += "  (idle)";
+                if (walkIdx  >= 0 && i == static_cast<unsigned int>(walkIdx))  line += "  (walk)";
+                if (runIdx   >= 0 && i == static_cast<unsigned int>(runIdx))   line += "  (run)";
+                if (punchIdx >= 0 && i == static_cast<unsigned int>(punchIdx)) line += "  (punch)";
+                if (restIdx  >= 0 && i == static_cast<unsigned int>(restIdx))  line += "  (rest)";
+
+                // Vert si c'est l'animation en cours, sinon blanc/gris
+                const bool isCurrent = animator && (scene->mAnimations[i] == animator->getCurrentAnimation());
+                hud->renderText(line, 20.0f, y, scale,
+                    isCurrent ? 0.35f : 0.85f,
+                    isCurrent ? 0.95f : 0.85f,
+                    isCurrent ? 0.45f : 0.85f);
+                y += lineH;
+            }
+        }
+
+        // Restaurer l'état GL : désactiver le blend (sinon le passage opaque de
+        // la frame suivante serait dessiné avec le blending actif) + depth test.
+        glDisable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+    }
 }
 
 void Game::changeState(GameState newState) {
@@ -434,7 +564,7 @@ void Game::changeState(GameState newState) {
         m_soundManager->applyReverbToAll(ReverbPreset::NONE);
 
         sound = m_soundManager->load("on&on", "res/sounds/on&on.wav", true, 0.5f, 1.0f);
-        sound->play();
+        // sound->play();
         break;
     case STATE_PAUSED:
         m_inputManager->setContext(InputContext::PAUSED);
@@ -445,7 +575,7 @@ void Game::changeState(GameState newState) {
 }
 
 // ---------------------------------------------------------------------------
-// Chargement asynchrone des modèles 3D (exécuté sur un thread séparé)
+// Chargement asynchrone des modèles 3D (exécuté sur un thread separe)
 // ---------------------------------------------------------------------------
 
 void Game::loadModelsAsync() {
@@ -456,18 +586,18 @@ void Game::loadModelsAsync() {
     m_modelEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(),
                                     "./res/models/backpack/backpack.obj", m_textureManager.get());
 
-    printf("[Game]   → Chargement de fropy...\n");
+    printf("[Game]   → Chargement de fropy (low poly)...\n");
     m_fropyEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(),
-                                    "./res/models/fropy/fropy.obj", m_textureManager.get());
+                                    "./res/models/fropy/fropy_low_poly.obj", m_textureManager.get());
     m_fropyEntity->setPosition(glm::vec3(3.0f, 5.0f, 0.0f));
     m_fropyEntity->setSpin(20.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 
-    printf("[Game]   → Chargement des bras (riggés)...\n");
+    printf("[Game]   → Chargement des bras (rigges)...\n");
     m_firstPersonArms = std::make_unique<FirstPersonArms>(m_camera.get(), m_lightManager.get(),
                                              "./res/rigging/arm/arms_rig.glb", m_textureManager.get());
     m_inputManager->setFirstPersonArms(m_firstPersonArms.get());
 
-    printf("[Game]   → Chargement de l'humain (riggé)...\n");
+    printf("[Game]   → Chargement de l'humain (rigge)...\n");
     m_humanEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(),
                                     "./res/rigging/human/human_1.glb", m_textureManager.get());
 

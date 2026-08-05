@@ -99,7 +99,12 @@ protected:
     std::string m_title;
     float m_titleX, m_titleY, m_titleWidth, m_titleHeight;
     bool m_drawBackground;
-    std::unique_ptr<Rectangle> m_background; // Rectangle du fond, créé une fois
+    // `class Rectangle` (type specifier élabore) : dans les TU qui incluent
+    // windows.h AVANT Menu.h (ex: Game.cpp via win_compat.h -> config.h),
+    // la fonction GDI wingdi.h `Rectangle(HDC,...)` est déclarée en premier et
+    // HIDE le nom de la classe au niveau global. Sans le specifier élabore,
+    // `std::unique_ptr<Rectangle>` résout vers la FONCTION -> C2923.
+    std::unique_ptr<class Rectangle> m_background; // Rectangle du fond, créé une fois
 
     void drawTextCentered(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);
     void drawTextRightAligned(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);

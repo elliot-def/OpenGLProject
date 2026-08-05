@@ -31,6 +31,7 @@ class ModelEntity;
 class FirstPersonArms;
 class SteamManager;
 class LoadingScreen;
+class Skybox;
 
 class Game {
 public:
@@ -66,15 +67,16 @@ private:
     ModelEntity* m_humanEntity = nullptr;
     std::unique_ptr<FirstPersonArms> m_firstPersonArms;
     std::unique_ptr<SteamManager> m_steamManager;
+    std::unique_ptr<Skybox> m_skybox;
 
     bool m_isRunning = true;
     
     int m_argc;
     char** m_argv;
 
-    // Steam en async d'abord, puis chargement différé (modèles en thread)
-    enum class InitPhase { STEAM_WAIT, LOADING, READY };
-    InitPhase m_initPhase = InitPhase::STEAM_WAIT;
+    // Phases de chargement (modèles 3D en thread séparé)
+    enum class InitPhase { LOADING, READY };
+    InitPhase m_initPhase = InitPhase::LOADING;
 
     // Thread de chargement des modèles 3D (contexte GL partagé)
     std::atomic<bool> m_loadingDone{false};
