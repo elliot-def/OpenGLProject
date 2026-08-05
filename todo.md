@@ -6,6 +6,8 @@ Implémentation futures :
 	- Map Editor
 	- Texture avec du relief comme le mur dans le tuto learnopenGL
 
+Séparer les animations et modèles
+
 Comment enlever le cmd ?
 
 Rendre les hitbox plus fidèles au modèles 3D (en troisième personne pour les joueurs)
