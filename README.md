@@ -51,6 +51,3 @@ Avant de faire tourner ce code sur votre machine, il vous faut (normalement tout
 1. Installer Visual Studio 2026+
 2. Lancer le projet "OpenGLProject.sln"
 3. Compiler (Debug ou Release)
-4. (Optionnel) Déposer un asset skinned dans `OpenGLProject/res/rigging/<nom>/<nom>.glb`
-   (ou `.fbx` en fallback). Il sera auto-chargé par `Game::initialize()` et animé
-   par l'`Animator` via le shader `skinned`.
