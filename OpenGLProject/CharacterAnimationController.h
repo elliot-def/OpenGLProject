@@ -32,7 +32,7 @@ public:
 
     // Dessine le HUD de debug listant les animations du modele (3P seulement).
     // Appele dans Game::draw() apres le rendu opaque, avant le flush texte.
-    static void drawDebugHUD(const ModelEntity* entity,
+    static void drawDebugHUD(ModelEntity* entity,
                              const std::vector<std::unique_ptr<TextRenderer>>& renderers);
 
 private:

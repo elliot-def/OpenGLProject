@@ -66,7 +66,7 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
 }
 
 // static
-void CharacterAnimationController::drawDebugHUD(const ModelEntity* entity,
+void CharacterAnimationController::drawDebugHUD(ModelEntity* entity,
                                                 const std::vector<std::unique_ptr<TextRenderer>>& renderers) {
     if (!entity || !entity->hasAnimations() || renderers.empty()) return;
 
