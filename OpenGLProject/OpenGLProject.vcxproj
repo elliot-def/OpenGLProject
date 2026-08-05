@@ -147,6 +147,7 @@
     <ClCompile Include="Outlineable.h" />
     <ClCompile Include="Animator.cpp" />
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CharacterAnimationController.cpp" />
     <ClCompile Include="CheckboxInput.cpp" />
     <ClCompile Include="CollisionManager.cpp" />
     <ClCompile Include="Cube.cpp" />

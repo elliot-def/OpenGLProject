@@ -430,65 +430,9 @@ void Game::draw() {
         m_firstPersonArms->draw(m_shaderManager->getShader("skinned"));
     }
 
-    // ── HUD debug (personnage 3P) : liste des animations du modèle ────────
-    // Liste TOUTES les animations du modèle avec leur index. La ligne de
-    // l'animation EN COURS est surlignée en vert, et les animations détectées
-    // comme idle/walk par ModelEntity::detectAnimations() sont marquées
-    // "(idle)"/"(walk)" pour vérifier le choix (ex: "Walk" au lieu de "Walk-F").
-    // Texte 2D dessiné sans depth test (comme les menus).
-    if (m_humanEntity && m_humanEntity->hasAnimations() && m_player->isThirdPerson()
-        && m_textRenderers && !m_textRenderers->empty()) {
-        const aiScene* scene = m_humanEntity->getModel()->getScene();
-        const Animator* animator = m_humanEntity->getAnimator();
-        const int idleIdx  = m_humanEntity->getIdleAnimIndex();
-        const int walkIdx  = m_humanEntity->getWalkAnimIndex();
-        const int runIdx   = m_humanEntity->getRunAnimIndex();
-        const int punchIdx = m_humanEntity->getPunchAnimIndex();
-        const int restIdx  = m_humanEntity->getRestAnimIndex();
-
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDisable(GL_DEPTH_TEST);
-
-        TextRenderer* hud = (*m_textRenderers)[0].get();
-        const float scale = 0.30f;
-        const float lineH = 34.0f;
-        float y = 20.0f;
-
-        // En-tête : couleur neutre (le VERT est réservé à l'animation en cours)
-        hud->renderText("Animations du modele (vert = en cours)",
-                        20.0f, y, scale, 0.85f, 0.85f, 0.85f);
-        y += lineH;
-
-        // Garde anti-débordement : ne jamais lister plus de lignes que ne peut
-        // afficher l'écran (human_1.glb n'en a que 13, mais un modèle futur
-        // pourrait en avoir beaucoup plus).
-        constexpr unsigned int MAX_HUD_ANIMS = 32;
-
-        if (scene) {
-            for (unsigned int i = 0; i < scene->mNumAnimations && i < MAX_HUD_ANIMS; i++) {
-                const std::string name(scene->mAnimations[i]->mName.C_Str());
-                std::string line = "[" + std::to_string(i) + "] " + name;
-                if (idleIdx  >= 0 && i == static_cast<unsigned int>(idleIdx))  line += "  (idle)";
-                if (walkIdx  >= 0 && i == static_cast<unsigned int>(walkIdx))  line += "  (walk)";
-                if (runIdx   >= 0 && i == static_cast<unsigned int>(runIdx))   line += "  (run)";
-                if (punchIdx >= 0 && i == static_cast<unsigned int>(punchIdx)) line += "  (punch)";
-                if (restIdx  >= 0 && i == static_cast<unsigned int>(restIdx))  line += "  (rest)";
-
-                // Vert si c'est l'animation en cours, sinon blanc/gris
-                const bool isCurrent = animator && (scene->mAnimations[i] == animator->getCurrentAnimation());
-                hud->renderText(line, 20.0f, y, scale,
-                    isCurrent ? 0.35f : 0.85f,
-                    isCurrent ? 0.95f : 0.85f,
-                    isCurrent ? 0.45f : 0.85f);
-                y += lineH;
-            }
-        }
-
-        // Restaurer l'état GL : désactiver le blend (sinon le passage opaque de
-        // la frame suivante serait dessiné avec le blending actif) + depth test.
-        glDisable(GL_BLEND);
-        glEnable(GL_DEPTH_TEST);
+    // ── HUD debug (personnage 3P) : liste des animations du modele ────────
+    if (m_humanEntity && m_player->isThirdPerson() && m_textRenderers) {
+        CharacterAnimationController::drawDebugHUD(m_humanEntity, *m_textRenderers);
     }
 
     // Tout le texte de la frame (HUD, menus...) est dessiné en UN SEUL draw
