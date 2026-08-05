@@ -14,30 +14,7 @@ DA :
 Sons bitcrushed
 Low-poly les modèles
 
-## Performance
-
-**1. Les bone matrices sont envoyées une par une alors qu'un envoi groupé existe déjà**  
-Dans `FirstPersonArms::draw()` et `ModelEntity::draw()`, tu boucles sur les ~128 bones et appelles `shader->setMat4(m_boneUniformNames[i].c_str(), boneMats[i])` pour chacune. Or `Shader::setMat4Array()` existe déjà et fait un seul `glUniformMatrix4fv(location, count, ...)`. Il suffit de déclarer `uBoneMatrices` comme tableau côté shader et de récupérer une seule fois la location de `uBoneMatrices[0]`, puis d'appeler `setMat4Array` avec tout le tableau contigu. Tu passes de ~128 appels GL + 128 hachages de string à 1 seul appel, par entité skinnée, par frame.
-
-**2. Le cache d'uniforms de `Shader` reste un hachage de string à chaque appel**  
-`getUniformLocation` cache bien la `GLint` dans une `unordered_map<string,int>`, mais chaque `setVec3("spotLight.position", ...)` reconstruit potentiellement une string temporaire et refait un hash + une comparaison, à chaque frame, pour chaque lumière (`LightManager::applyToShader`, `Spotlight::applyToShader`). `LightManager` précalcule déjà les noms d'uniforms en dur — l'étape logique suivante est de précalculer aussi les `GLint` (une fois par shader, au premier usage) et de les stocker directement, pour bypasser complètement le hash map côté hot path.
-
-**3. Rendu de texte non batché (`TextRenderer::renderText`)**  
-Chaque caractère fait un `glBindTexture` + `glBufferSubData` + `glDrawArrays` séparé, et `glGetUniformLocation("projection"/"textColor")` est refait à chaque appel de `renderText` (pas caché). Le HUD debug dans `Game::draw()` peut lister jusqu'à 32 lignes d'animations _chaque frame_ en mode 3e personne : ça fait potentiellement des centaines de draw calls rien que pour du texte. Deux gains possibles : cacher les deux uniform locations dans le constructeur de `TextRenderer`, et à terme batcher tous les glyphes d'une frame dans un seul VBO/draw call (atlas de police).
-
-**4. Recalcul trigonométrique redondant dans `Direction`**  
-`getDirectionVector()` refait `cos`/`sin`/`radians` à chaque appel, et `rotateRight90KeepY()` / `getDirectionVectorKeepY()` rappellent chacun `getDirectionVector()` en interne. Dans `Player::processDirectionKey`, appelé pour chaque touche de direction active, le vecteur peut être recalculé plusieurs fois dans la même frame. Un simple flag "dirty" (recalcul uniquement quand yaw/pitch change) éliminerait ces recalculs.
-
-**5. `ModelEntity::getModelMatrix()` reconstruit la matrice à chaque appel**  
-Elle est appelée dans `draw()`, `drawDebug()`, `checkCollision()`, `getWorldBoundingBox()`, et dans `Game::update()` pour `updateDynamic(...)` — soit 3-4 fois par frame minimum, avec `translate`+`rotate`+multiplication à chaque fois. Un cache "calculé une fois par frame" (invalidé quand position/direction/spin changent) évite ce travail redondant.
-
-**6. Exceptions et `std::cout` dans le chemin de rendu**  
-`Cube::drawLightSourceShader()` / `drawSeveralLightShader()` font `throw std::invalid_argument(...)` en plein `draw()` (avec un `return;` mort juste après, signe que la logique n'est pas finalisée). Et la branche `else` de `Cube::draw()` fait un `std::cout` à chaque frame si le type de shader n'est pas reconnu. Les exceptions/`iostream` sont coûteuses et n'ont rien à faire dans une boucle appelée 60+ fois par seconde — remplace par un `assert`/log une seule fois, ou une gestion silencieuse.
-
-**7. Format de `Vertex` universel et surdimensionné**  
-`Vertex` fait 76 octets (position + normale + couleur + UV + 4 bone IDs + 4 poids), et `Mesh` utilise toujours `sizeof(Vertex)` comme stride, même pour un `Cube` qui n'active que POSITION+COLOR ou un `Triangle` 2D. Tu uploades et bind donc 3x plus de données que nécessaire par sommet pour tout ce qui n'est pas skinné. Une piste : des structs de vertex plus légers par cas d'usage (2D, statique 3D, skinné), ou au minimum ne pas envoyer les champs bone/poids quand `SKINNING` n'est pas dans le masque (ce que `SharedQuad`, qui bypass carrément `Vertex`, fait déjà bien).
-
-### Organisation / propreté
+## Organisation / propreté
 
 **1. Gestion mémoire hétérogène**  
 Le projet mélange `std::unique_ptr` (dans `Game`, `ModelEntity`) et `new`/`delete` bruts partout ailleurs (`Cube`, `LightSource`, `Mesh`, `Menu::m_shapes`/`m_ranges`/`m_checkboxes`/`m_selects`, `Model::m_meshes`). Chaque conteneur de pointeurs bruts a son propre rituel de nettoyage manuel (`Menu::clear()`, destructeurs de `MenuRange`/`MenuCheckbox`/`MenuSelect`...). Standardiser sur `unique_ptr`/`vector<unique_ptr<T>>` réduirait le risque de fuite et simplifierait beaucoup ces classes.
