@@ -70,10 +70,18 @@ public:
     void setOutlineShader(Shader* s) { m_outlineShader = s; }
     Shader* getOutlineShader() const { return m_outlineShader; }
 
+    // Borrow Direction from another entity (e.g. Spotlight borrows from Player).
+    // The borrower must NOT outlive the owner. After this call, m_ownsDirection
+    // is false and Direction will NOT be deleted by ~Entity.
+    void setBorrowedDirection(Direction* dir) {
+        if (m_ownsDirection) { delete m_direction; m_ownsDirection = false; }
+        m_direction = dir;
+    }
+
 protected:
-    Renderer* m_renderer;     // Renderer pour dessiner et gerer le rendu
-    Direction* m_direction = nullptr;   // Orientation de l'entit� (yaw/pitch)
-    bool m_ownsDirection = false;        // true si Entity a alloué m_direction
+    Renderer* m_renderer;
+    Direction* m_direction = nullptr;   // Orientation : owned (if m_ownsDirection) or borrowed
+    bool m_ownsDirection = false;        // true = Entity a alloue m_direction, le detruit
     CollisionManager* m_collisionManager;
 
     glm::vec3 m_position;     // Position dans l'espace 3D    

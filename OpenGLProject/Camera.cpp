@@ -1,5 +1,7 @@
 #include "Camera.h"
 #include "CollisionManager.h"
+#include "Entity.h"
+#include "Renderer.h"
 
 #include "constants/camera.h"
 #include "constants/player.h"

@@ -1,5 +1,6 @@
 #include "LightManager.h"
 
+#include <stdexcept>
 #include "Shader.h"
 #include "LightSource.h"
 #include "Spotlight.h"

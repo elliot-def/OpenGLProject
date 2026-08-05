@@ -21,14 +21,12 @@ Spotlight::Spotlight(Renderer* renderer,
 
 void Spotlight::update(glm::vec3 position, Direction* direction) {
 	m_position = position;
-	if (m_ownsDirection) { delete m_direction; m_ownsDirection = false; }
-	m_direction = direction;
+	setBorrowedDirection(direction);
 }
 
 void Spotlight::update(Player* player) {
 	m_position = player->getPosition() + Constants::Player::PLAYER_EYE_HEIGHT;
-	if (m_ownsDirection) { delete m_direction; m_ownsDirection = false; }
-	m_direction = player->getDirection();
+	setBorrowedDirection(player->getDirection());
 }
 
 const Spotlight::SpotLocations& Spotlight::ensureLocations(Shader* shader) {

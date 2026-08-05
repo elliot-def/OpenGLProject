@@ -1,4 +1,5 @@
 ﻿#include "FirstPersonArms.h"
+#include <iostream>
 #include "Model.h"
 #include "Mesh.h"
 #include "Shader.h"

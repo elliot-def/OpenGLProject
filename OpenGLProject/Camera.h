@@ -1,14 +1,11 @@
 #pragma once
 
-#include <glm/glm.hpp>                  // Pour les vecteurs et matrices
-#include <glm/ext/matrix_transform.hpp> // Pour glm::lookAt et transformations 3D
-#include <iostream>
+#include <glm/glm.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include "Direction.h"
 
-#include "Renderer.h"  // Gestion du rendu OpenGL
-#include "Entity.h"    // Classe de base pour tous les objets du jeu
-#include "Direction.h" // Classe pour stocker les angles de rotation de la cam�ra
-
-// Classe Camera : gere la vue 3D dans le jeu
+class Entity;
+class Renderer;
 class CollisionManager;
 
 class Camera {

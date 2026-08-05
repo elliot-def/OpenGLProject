@@ -4,12 +4,7 @@
 
 #include "constants/player.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
 #include <glm/glm.hpp>
-
-
 
 class CollisionManager;
 class Camera;
