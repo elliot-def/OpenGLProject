@@ -32,6 +32,7 @@ class FirstPersonArms;
 class SteamManager;
 class LoadingScreen;
 class Skybox;
+class CharacterAnimationController;
 
 class Game {
 public:
@@ -68,6 +69,7 @@ private:
     std::unique_ptr<FirstPersonArms> m_firstPersonArms;
     std::unique_ptr<SteamManager> m_steamManager;
     std::unique_ptr<Skybox> m_skybox;
+    std::unique_ptr<CharacterAnimationController> m_characterAnim;
 
     bool m_isRunning = true;
     

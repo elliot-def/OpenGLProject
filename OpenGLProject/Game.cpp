@@ -7,6 +7,7 @@
 #include "Animator.h"
 #include "TextRenderer.h"
 #include "Skybox.h"
+#include "CharacterAnimationController.h"
 #include "constants/file.h"
 
 #include <glad/glad.h>
@@ -358,87 +359,20 @@ void Game::update() {
     m_collisionManager->updateDynamic("fropy_low_poly", m_fropyEntity->getModel()->getMeshes(), m_fropyEntity->getModelMatrix());
     m_fropyEntity->update();
 
-    // Humain 3ème personne : suit la position et la direction du joueur.
+    // Humain 3eme personne : suit la position et la direction du joueur.
     if (m_humanEntity) {
         m_humanEntity->setPosition(m_player->getPosition());
         m_humanEntity->setDirection(*m_player->getDirection());
 
-        // ── Animations du personnage 3P ────────────────────────────────────
-        // États : run (sprint), walk (marche), rest→idle (immobile : on joue
-        // "Rest" pendant kHumanRestToIdleDelay avant de basculer sur l'idle), et
-        // punch one-shot (jab sur R = KEY_PUSH) prioritaire qui reprend l'état
-        // de mouvement une fois terminé.
-        if (m_humanEntity->hasAnimations()) {
-            const float dt = m_renderer->getDeltaTime();
-
-            // Détection du mouvement par le delta de position horizontal
-            static glm::vec3 lastHumanPos = m_player->getPosition();
-            const glm::vec3 delta = m_player->getPosition() - lastHumanPos;
-            const float horizSpeed = glm::length(glm::vec3(delta.x, 0.0f, delta.z))
-                                     / std::max(dt, 1e-5f);
-            const bool isMoving = horizSpeed > 0.1f;
-            lastHumanPos = m_player->getPosition();
-
-            const int idleIdx  = m_humanEntity->getIdleAnimIndex();
-            const int walkIdx  = m_humanEntity->getWalkAnimIndex();
-            const int runIdx   = m_humanEntity->getRunAnimIndex();
-            const int punchIdx = m_humanEntity->getPunchAnimIndex();
-            const int restIdx  = m_humanEntity->getRestAnimIndex();
-
-            // ── Sélection de l'animation de repos (hors punch) ──
-            static int lastAnimIdx = -1;
-            static float restTimer = 0.0f;
-            static constexpr float kHumanRestToIdleDelay = 2.5f; // "quelques temps" avant l'idle
-
-            // ── Jab (touche R, front montant) : punch one-shot ──
-            static bool prevRDown = false;
-            static bool punching = false;
-            const bool rDown = m_inputManager->getKey("Push")->getStatus();
-            if (rDown && !prevRDown && !punching && punchIdx >= 0) {
-                m_humanEntity->playAnimation(punchIdx, false);
-                punching = true;
-                // Marquer l'animation courante : à la fin du punch, la cible de
-                // mouvement (walk/run/rest/idle) différera forcément de
-                // lastAnimIdx → la machine rejoue la bonne animation au lieu de
-                // rester figée sur la dernière pose du punch.
-                lastAnimIdx = punchIdx;
-            }
-            prevRDown = rDown;
-
-            // Fin du punch (animation non-loop terminée) : on reprend la
-            // machine à états — la cible de mouvement rejouée diffère de
-            // lastAnimIdx (= punch) donc elle reprend proprement.
-            if (punching && m_humanEntity->getAnimator()->isFinished()) {
-                punching = false;
-            }
-
-            int targetIdx = -1;
-            if (!punching) {
-                if (isMoving) {
-                    restTimer = 0.0f;
-                    targetIdx = (m_player->getIsSprinting() && runIdx >= 0) ? runIdx : walkIdx;
-                } else {
-                    // Immobile : "Rest" pendant le délai, puis idle
-                    if (restIdx >= 0 && restTimer < kHumanRestToIdleDelay) {
-                        targetIdx = restIdx;
-                        restTimer += dt;
-                    } else {
-                        targetIdx = idleIdx;
-                    }
-                }
-
-                // Ne (re)lancer que si l'animation cible diffère de l'actuelle
-                if (targetIdx >= 0 && targetIdx != lastAnimIdx) {
-                    m_humanEntity->playAnimation(targetIdx, true);
-                    lastAnimIdx = targetIdx;
-                }
-            }
-
-            m_humanEntity->updateAnimation(dt);
+        // Animation du personnage 3P : deleguee au CharacterAnimationController
+        if (m_characterAnim) {
+            m_characterAnim->update(m_player->getPosition(),
+                                    m_renderer->getDeltaTime(),
+                                    m_player->getIsSprinting());
         }
     }
 
-    // Mise à jour du bobbing des bras en première personne
+    // Mise a jour du bobbing des bras en premiere personne
     if (m_firstPersonArms) {
         m_firstPersonArms->update(m_renderer->getDeltaTime(), m_player->getPosition(), m_player->getIsSprinting());
     }
@@ -624,6 +558,9 @@ void Game::loadModelsAsync() {
     printf("[Game]   → Chargement de l'humain (rigge)...\n");
     m_humanEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(),
                                     "./res/rigging/human/human_1.glb", m_textureManager.get());
+
+    // Controleur d'animation du personnage 3P (extrait de Game::update)
+    m_characterAnim = std::make_unique<CharacterAnimationController>(m_humanEntity, m_inputManager.get());
 
     if (m_loaderWindow)
         glfwMakeContextCurrent(nullptr);
