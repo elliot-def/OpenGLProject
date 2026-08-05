@@ -14,7 +14,9 @@ Rendre les hitbox plus fidèles au modèles 3D (en troisième personne pour les 
 
 Ajouter des bulles de dialogues ?
 
-PlantUML depuis freebuff
+PlantUML depuis freebuff*
+
+Trouver une skybox libre de droit
 
 DA : 
 	- Sons bitcrushed
