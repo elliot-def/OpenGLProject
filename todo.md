@@ -8,6 +8,8 @@ Implémentation futures :
 
 Comment enlever le cmd ?
 
+PlantUML depuis freebuff
+
 DA : 
 Sons bitcrushed
 Low-poly les modèles
