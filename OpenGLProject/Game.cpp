@@ -87,8 +87,10 @@ void Game::initialize() {
 
 void Game::loadResources() {
     auto loadingTick = [this](float dt = 0.016f) -> bool {
+        beginTextFrame();
         m_loadingScreen->draw(dt);
         m_loadingScreen->drawLabel();
+        flushTextFrame();
         m_window->update();
         return !m_window->getShouldClose();
     };
@@ -262,8 +264,10 @@ void Game::run() {
 
                 if (m_loadingFadeTimer < LOADING_EXTRA_DELAY) {
                     // Délai post-chargement : loading screen à 100%
+                    beginTextFrame();
                     m_loadingScreen->draw(dt);
                     m_loadingScreen->drawLabel();
+                    flushTextFrame();
                 } else {
                     // Fondu : alpha décroît de 1.0 à 0.0
                     float elapsed = m_loadingFadeTimer - LOADING_EXTRA_DELAY;
@@ -280,8 +284,10 @@ void Game::run() {
                     }
                 }
             } else {
+                beginTextFrame();
                 m_loadingScreen->draw(dt);
                 m_loadingScreen->drawLabel();
+                flushTextFrame();
             }
             m_window->update();
             continue;
@@ -302,7 +308,9 @@ void Game::run() {
             
             m_renderer->clear();
             // DRAW
+            beginTextFrame();
             m_menuManager->draw();
+            flushTextFrame();
 
             m_window->update();
             break;
@@ -437,6 +445,8 @@ void Game::update() {
 }
 
 void Game::draw() {
+    beginTextFrame();  // vide le batch de glyphes de la frame
+
     // 0. Ciel : rendu en premier (depth LEQUAL + mask off), la géométrie de
     // la scène le recouvre ensuite naturellement grâce au depth test.
     if (m_skybox) {
@@ -546,6 +556,20 @@ void Game::draw() {
         glDisable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
     }
+
+    // Tout le texte de la frame (HUD, menus...) est dessiné en UN SEUL draw
+    // call batche, au-dessus du reste de la scène.
+    flushTextFrame();
+}
+
+void Game::beginTextFrame() {
+    if (!m_textRenderers) return;
+    for (auto& tr : *m_textRenderers) tr->beginFrame();
+}
+
+void Game::flushTextFrame() {
+    if (!m_textRenderers) return;
+    for (auto& tr : *m_textRenderers) tr->flush();
 }
 
 void Game::changeState(GameState newState) {

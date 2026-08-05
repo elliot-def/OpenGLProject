@@ -94,4 +94,9 @@ private:
     void loadResources();  // Chargement des ressources lourdes (textures, modèles, sons...)
     void update();
     void draw();
+
+    // TextRenderer : délimitation de frame pour le batching des glyphes
+    // (1 seul draw call de texte par frame au lieu de ~2 draw calls par glyphe).
+    void beginTextFrame();
+    void flushTextFrame();
 };
