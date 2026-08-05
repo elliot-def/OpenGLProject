@@ -20,6 +20,8 @@ private:
 
 	// Locations GL des uniforms spotLight.*, resolues une seule fois par
 	// shader (cle = id du programme GL) au premier applyToShader().
+	// Valide car les shaders (ShaderManager) sont crees une fois au demarrage
+	// et ne sont jamais detruits/recrees en cours de jeu.
 	struct SpotLocations {
 		int position    = -1;
 		int direction   = -1;

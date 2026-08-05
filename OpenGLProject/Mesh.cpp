@@ -1,9 +1,6 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include <cstddef>
-#include <type_traits>
-
 #include "Mesh.h"
 #include "SkinningData.h"
 

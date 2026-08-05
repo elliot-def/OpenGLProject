@@ -34,6 +34,8 @@ private:
     // Locations GL des uniforms lumiere, resolues UNE SEULE FOIS par shader
     // (cle = id du programme GL) au premier applyToShader(). Le hot path
     // n'utilise alors que des GLint : plus aucun hash/compare de string.
+    // Valide car les shaders (ShaderManager) sont crees une fois au demarrage
+    // et ne sont jamais detruits/recrees en cours de jeu.
     struct LightLocations {
         int numberLightSources = -1;
         int position[Constants::Shader::MAX_LIGHTS_SOURCES] = {};

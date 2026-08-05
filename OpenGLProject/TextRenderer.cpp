@@ -188,14 +188,15 @@ void TextRenderer::flush() {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_atlasTexture);
 
+    // Le texte est un overlay : on sauvegarde puis restaure les etats GL
+    // autour du draw (blend + depth) pour ne ni dependre ni impacter le rendu
+    // qui suit (meme comportement que l'ancien HUD qui les manipulait autour
+    // du texte).
+    const GLboolean depthEnabled = glIsEnabled(GL_DEPTH_TEST);
+    const GLboolean blendEnabled = glIsEnabled(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // Le texte est un overlay : desactiver le depth test pendant le draw
-    // (meme comportement que l'ancien HUD qui le desactivait autour du texte),
-    // puis restaurer l'etat precedent.
-    const GLboolean depthEnabled = glIsEnabled(GL_DEPTH_TEST);
-    glDisable(GL_DEPTH_TEST);
 
     glBindVertexArray(m_VAO);
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
@@ -208,10 +209,10 @@ void TextRenderer::flush() {
     glDrawArrays(GL_TRIANGLES, 0, m_batchVertexCount);
 
     if (depthEnabled) glEnable(GL_DEPTH_TEST);
+    if (!blendEnabled) glDisable(GL_BLEND);
 
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
-    glDisable(GL_BLEND);
     glUseProgram(0);
 
     m_batchVertices.clear();
