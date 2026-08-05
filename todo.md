@@ -6,7 +6,7 @@ Implémentation futures :
 	- Map Editor
 	- Texture avec du relief comme le mur dans le tuto learnopenGL
 
-Séparer les animations et modèles
+Séparer les animations et modèles dans l'arborescence
 
 Comment enlever le cmd ?
 
