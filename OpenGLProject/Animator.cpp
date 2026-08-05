@@ -55,6 +55,7 @@ void Animator::playAnimation(unsigned int animIndex, bool loop, bool crossfade) 
     m_channelMap.clear();
     for (unsigned int i = 0; i < m_currentAnimation->mNumChannels; i++) {
         const aiNodeAnim* channel = m_currentAnimation->mChannels[i];
+        if (!channel) continue;
         m_channelMap[channel->mNodeName.C_Str()] = channel;
     }
 
@@ -83,6 +84,7 @@ void Animator::printAnimationDebug() const {
 
     for (unsigned int i = 0; i < m_currentAnimation->mNumChannels; i++) {
         const aiNodeAnim* channel = m_currentAnimation->mChannels[i];
+        if (!channel) continue;
         if (channel->mNumRotationKeys > 0) {
             rotationChannels++;
             rotationKeys += channel->mNumRotationKeys;
@@ -117,6 +119,10 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
 
     for (unsigned int c = 0; c < anim->mNumChannels; c++) {
         aiNodeAnim* ch = anim->mChannels[c];
+        if (!ch) {
+            std::cerr << "[Animator] Canal d'animation null a l'index " << c << " — ignore" << std::endl;
+            continue;
+        }
         const unsigned int n = ch->mNumRotationKeys;
         if (n == 0) continue;
 

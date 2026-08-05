@@ -221,12 +221,22 @@ bool patchGlbAnimationRotations(const aiScene* scene, const std::string& path) {
             if (!valid || repairedKeys.empty()) continue;
 
             aiNodeAnim* targetChannel = channelIt->second;
-            delete[] targetChannel->mRotationKeys;
-            targetChannel->mNumRotationKeys = static_cast<unsigned int>(repairedKeys.size());
-            targetChannel->mRotationKeys = new aiQuatKey[repairedKeys.size()];
-            std::copy(repairedKeys.begin(), repairedKeys.end(), targetChannel->mRotationKeys);
+            if (!targetChannel) {
+                std::cerr << "[Model] Canal d'animation null pour le noeud \"" << nodeName << "\" — ignore" << std::endl;
+                continue;
+            }
+            // In-place overwrite : on ne delete[] JAMAIS la memoire allouee
+            // par Assimp (CRT different → heap corruption). On ecrase les
+            // cles corrompues dans le buffer existant et on reduit le count.
+            // repairedKeys.size() <= times.size() == targetChannel->mNumRotationKeys
+            // (readFloatAccessor lit le meme accessor qu'Assimp) donc pas de
+            // depassement.
+            unsigned int newSize = std::min(targetChannel->mNumRotationKeys,
+                                            static_cast<unsigned int>(repairedKeys.size()));
+            std::copy_n(repairedKeys.begin(), newSize, targetChannel->mRotationKeys);
+            targetChannel->mNumRotationKeys = newSize;
             restoredChannels++;
-            restoredKeys += targetChannel->mNumRotationKeys;
+            restoredKeys += newSize;
         }
     }
 
