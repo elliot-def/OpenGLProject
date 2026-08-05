@@ -126,16 +126,9 @@ void ModelEntity::draw(Shader* shader) {
 
     // ── OUTLINE PASS ─────────────────────────────────────────────────────────────
     if (m_outlineEnabled && m_outlineShader) {
-        m_outlineShader->use();
-        glm::mat4 outline_model = glm::scale(model, glm::vec3(1.0f + m_outlineThickness));
-        m_outlineShader->setMat4("uModel", outline_model);
-        m_outlineShader->setMat4("uView", m_camera->getViewMatrix());
-        m_outlineShader->setMat4("uProjection", shader->getProjection());
-        m_outlineShader->setVec3("uOutlineColor", m_outlineColor);
-
-        glDepthMask(GL_FALSE);
-        m_model->draw(*m_outlineShader);
-        glDepthMask(GL_TRUE);
+        Outline::draw3DModel(m_outlineShader, shader,
+                             m_outlineColor, m_outlineThickness,
+                             model, *m_model);
     }
 
     shader->use();

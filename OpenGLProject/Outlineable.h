@@ -2,23 +2,26 @@
 
 #include <glm/glm.hpp>
 
+class Shader;
+class Mesh;
+class Model;
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Outlineable : mixin d'état pour l'outline (silhouette haute couleur)
+// Outlineable : mixin d'etat pour l'outline (silhouette haute couleur)
 //
-// Permet à n'importe quelle entité (Shape, Cube, Entity) d'avoir un outline
+// Permet a n'importe quelle entite (Shape, Cube, Entity) d'avoir un outline
 // activable par-instance sans dupliquer les setters/getters dans chaque
-// hiérarchie. Pattern : héritage multiple `class Foo : public Outlineable`.
+// hierarchie. Pattern : heritage multiple `class Foo : public Outlineable`.
 //
-// Trois états : activé, couleur, épaisseur. L'épaisseur est un multiplicateur
-// scalaire relatif (1.0 = pas d'expansion ; 1.05 = 5% plus grand que l'original).
-// Le rendu lui-même délègue au draw() de l'entité qui appelle l'outline shader
-// stocké séparément (m_outlineShader, voir Shape/Entity/Cube).
+// Les fonctions du namespace Outline centralisent le rendu d'outline
+// (implementations dans OutlinePass.cpp) pour eviter la duplication dans
+// ~6 draw() differents.
 // ─────────────────────────────────────────────────────────────────────────────
 
 struct Outlineable {
     bool        m_outlineEnabled   = false;
-    glm::vec3   m_outlineColor     = glm::vec3(1.0f); // blanc par défaut
-    float       m_outlineThickness = 0.05f;           // 5 % plus large que l'original
+    glm::vec3   m_outlineColor     = glm::vec3(1.0f);
+    float       m_outlineThickness = 0.05f;
 
     void setOutlineEnabled(bool enabled)             { m_outlineEnabled = enabled; }
     void setOutlineColor(const glm::vec3& color)     { m_outlineColor   = color; }
@@ -28,3 +31,23 @@ struct Outlineable {
     const glm::vec3&  getOutlineColor()  const { return m_outlineColor; }
     float             getOutlineThickness() const { return m_outlineThickness; }
 };
+
+namespace Outline {
+
+// Outline 2D pour les formes utilisant SharedQuad (Rectangle, Image, MaskImage).
+void draw2D(Shader* outlineShader,
+            const glm::vec3& outlineColor, float outlineThickness,
+            const glm::vec3& position, const glm::vec2& size, float rotation,
+            const glm::mat4& projection);
+
+// Outline 3D pour les objets avec Mesh (Cube, Triangle).
+void draw3DMesh(Shader* outlineShader, Shader* mainShader,
+                const glm::vec3& outlineColor, float outlineThickness,
+                const glm::mat4& modelMatrix, Mesh* mesh);
+
+// Outline 3D pour ModelEntity (Model::draw).
+void draw3DModel(Shader* outlineShader, Shader* mainShader,
+                 const glm::vec3& outlineColor, float outlineThickness,
+                 const glm::mat4& modelMatrix, Model& model);
+
+} // namespace Outline

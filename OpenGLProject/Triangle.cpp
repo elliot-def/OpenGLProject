@@ -15,22 +15,16 @@ Triangle::~Triangle() = default;
 
 
 void Triangle::draw() {
-    // ── OUTLINE PASS (silhouette pleine couleur) ───────────────────────────────
+    // ── OUTLINE PASS ─────────────────────────────────────────────────────────────
     if (m_outlineEnabled && m_outlineShader) {
-        m_outlineShader->use();
-        Transformation outline_trans;
-        glm::vec2 outline_size = m_size * (1.0f + m_outlineThickness);
-        outline_trans.translate(m_position)
+        // Triangle utilise une transformation 2D (position/size/rotation)
+        Transformation trans;
+        trans.translate(m_position)
             .rotate(glm::vec3(0.0f, 0.0f, 1.0f), m_rotation)
-            .scale(glm::vec3(outline_size.x, outline_size.y, 1.0f));
-        m_outlineShader->setTransformation("uModel", &outline_trans);
-        m_outlineShader->setupMatrices2D();
-        m_outlineShader->setMat4("uView", glm::mat4(1.0f));
-        m_outlineShader->setVec3("uOutlineColor", m_outlineColor);
-
-        glDepthMask(GL_FALSE);
-        m_mesh->draw();
-        glDepthMask(GL_TRUE);
+            .scale(glm::vec3(m_size.x, m_size.y, 1.0f));
+        Outline::draw3DMesh(m_outlineShader, m_shader,
+                            m_outlineColor, m_outlineThickness,
+                            trans.getMatrix(), m_mesh);
     }
 
     m_shader->use();

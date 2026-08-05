@@ -183,19 +183,9 @@ void Cube::update() {
 void Cube::draw() {
     // OUTLINE PASS
     if (m_outlineEnabled && m_outlineShader) {
-        m_outlineShader->use();
-        glm::mat4 outline_model = glm::scale(
-            m_transformation->getMatrix(),
-            glm::vec3(1.0f + m_outlineThickness)
-        );
-        m_outlineShader->setMat4("uModel", outline_model);
-        m_outlineShader->setMat4("uView", m_shader->getCamera()->getViewMatrix());
-        m_outlineShader->setMat4("uProjection", m_shader->getProjection());
-        m_outlineShader->setVec3("uOutlineColor", m_outlineColor);
-
-        glDepthMask(GL_FALSE);
-        m_mesh->draw();
-        glDepthMask(GL_TRUE);
+        Outline::draw3DMesh(m_outlineShader, m_shader,
+                            m_outlineColor, m_outlineThickness,
+                            m_transformation->getMatrix(), m_mesh.get());
     }
 
     m_shader->setModel(m_transformation->getMatrix());

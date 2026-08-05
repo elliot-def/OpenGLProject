@@ -24,22 +24,8 @@ void MaskImage::draw(glm::vec3 color) {
 
     // ── OUTLINE PASS ─────────────────────────────────────────────────────────────
     if (m_outlineEnabled && m_outlineShader) {
-        m_outlineShader->use();
-        glm::vec2 outline_size = m_size * (1.0f + m_outlineThickness);
-        glm::mat4 outline_model = glm::mat4(1.0f);
-        outline_model = glm::translate(outline_model, m_position);
-        outline_model = glm::translate(outline_model, glm::vec3(outline_size.x * 0.5f, outline_size.y * 0.5f, 0.0f));
-        outline_model = glm::rotate(outline_model, glm::radians(m_rotation), glm::vec3(0.0f, 0.0f, 1.0f));
-        outline_model = glm::translate(outline_model, glm::vec3(-outline_size.x * 0.5f, -outline_size.y * 0.5f, 0.0f));
-        outline_model = glm::scale(outline_model, glm::vec3(outline_size.x, outline_size.y, 1.0f));
-        m_outlineShader->setMat4("uModel", outline_model);
-        m_outlineShader->setMat4("uView", glm::mat4(1.0f));
-        m_outlineShader->setMat4("uProjection", projection);
-        m_outlineShader->setVec3("uOutlineColor", m_outlineColor);
-
-        glDepthMask(GL_FALSE);
-        SharedQuad::draw();
-        glDepthMask(GL_TRUE);
+        Outline::draw2D(m_outlineShader, m_outlineColor, m_outlineThickness,
+                        m_position, m_size, m_rotation, projection);
     }
 
     m_shader->use();

@@ -169,6 +169,7 @@
     <ClCompile Include="MaskImage.cpp" />
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="MenuManager.cpp" />
+    <ClCompile Include="OutlinePass.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Entity.cpp" />
     <ClCompile Include="Model.cpp" />
