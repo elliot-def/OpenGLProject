@@ -13,6 +13,7 @@ class TextureManager;
 class Camera;
 class LightManager;
 class Animator;
+class Direction;
 
 struct BoundingBox;
 
@@ -68,6 +69,20 @@ public:
 
 
 private:
+
+    // ── Cache de la matrice modele ───────────────────────────────────────
+    // getModelMatrix() est appele 3-4 fois par frame (draw, drawDebug,
+    // checkCollision, getWorldBoundingBox, updateDynamic/BVH). La matrice
+    // n'est reconstruite que si position / direction / spin ont change depuis
+    // le dernier appel. La comparaison de cles est robuste meme si un
+    // mutateur est contourne (m_position/m_spinAngle modifies directement).
+    mutable glm::mat4 m_cachedModelMatrix{ 1.0f };
+    mutable glm::vec3 m_cachedPos{ 0.0f };
+    mutable const Direction* m_cachedDirPtr = nullptr;
+    mutable unsigned int m_cachedDirVersion = 0;
+    mutable glm::vec3 m_cachedSpinAxis{ 0.0f };
+    mutable float m_cachedSpinAngle = 0.0f;
+    mutable bool m_modelMatrixValid = false;
     Camera* m_camera;
 	LightManager* m_lightManager;
     std::unique_ptr<Model> m_model;

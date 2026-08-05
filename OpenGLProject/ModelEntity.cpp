@@ -121,13 +121,8 @@ void ModelEntity::playWalk() {
 }
 
 void ModelEntity::draw(Shader* shader) {
-    // Reconstruction de la matrice modele (meme logique que getModelMatrix()).
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, m_position);
-    glm::vec3 dir = m_direction->getDirectionVector();
-    float yaw = atan2(dir.x, dir.z);
-    model = glm::rotate(model, yaw, glm::vec3(0, 1, 0));
-    model = model * getSpinRotation();
+    // Matrice modele (cachee : recompute seulement si pos/direction/spin changent)
+    glm::mat4 model = getModelMatrix();
 
     // ── OUTLINE PASS ─────────────────────────────────────────────────────────────
     if (m_outlineEnabled && m_outlineShader) {
@@ -167,13 +162,7 @@ void ModelEntity::draw(Shader* shader) {
 void ModelEntity::drawDebug(Shader* shader) {
     shader->use();
 
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, m_position);
-
-    glm::vec3 dir = m_direction->getDirectionVector();
-    float yaw = atan2(dir.x, dir.z);
-    model = glm::rotate(model, yaw, glm::vec3(0, 1, 0));
-    model = model * getSpinRotation();
+    glm::mat4 model = getModelMatrix();
 
     shader->setMat4("model", model);
 
@@ -199,15 +188,37 @@ BoundingBox ModelEntity::getWorldBoundingBox() const {
 }
 
 glm::mat4 ModelEntity::getModelMatrix() const {
+    // Cache : retourne la matrice deja calculee si rien n'a change depuis le
+    // dernier appel (position / pointeur de direction / version de direction /
+    // axe + angle de spin). Evite le translate+rotate+multiplie a chaque
+    // appel (3-4 appels par frame sans ce cache).
+    const Direction* dir = m_direction;
+    const unsigned int dirVersion = dir->getVersion();
+    if (m_modelMatrixValid
+        && m_position == m_cachedPos
+        && dir == m_cachedDirPtr
+        && dirVersion == m_cachedDirVersion
+        && m_spinAxis == m_cachedSpinAxis
+        && m_spinAngle == m_cachedSpinAngle) {
+        return m_cachedModelMatrix;
+    }
+
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, m_position);
 
-    glm::vec3 dir = m_direction->getDirectionVector();
-    float yaw = atan2(dir.x, dir.z);
+    glm::vec3 dirVec = dir->getDirectionVector();
+    float yaw = atan2(dirVec.x, dirVec.z);
     model = glm::rotate(model, yaw, glm::vec3(0, 1, 0));
 
     // Spin sur soi-même (hérité d'Entity)
     model = model * getSpinRotation();
 
-    return model;
+    m_cachedModelMatrix = model;
+    m_cachedPos = m_position;
+    m_cachedDirPtr = dir;
+    m_cachedDirVersion = dirVersion;
+    m_cachedSpinAxis = m_spinAxis;
+    m_cachedSpinAngle = m_spinAngle;
+    m_modelMatrixValid = true;
+    return m_cachedModelMatrix;
 }
