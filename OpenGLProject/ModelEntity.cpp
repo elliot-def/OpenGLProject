@@ -194,7 +194,8 @@ glm::mat4 ModelEntity::getModelMatrix() const {
         && dirVersion == m_cachedDirVersion
         && m_spinAxis == m_cachedSpinAxis
         && m_spinAngle == m_cachedSpinAngle
-        && m_scale == m_cachedScale) {
+        && m_scale == m_cachedScale
+        && m_yawOffsetDeg == m_cachedYawOffsetDeg) {
         return m_cachedModelMatrix;
     }
 
@@ -202,7 +203,9 @@ glm::mat4 ModelEntity::getModelMatrix() const {
     model = glm::translate(model, m_position);
 
     glm::vec3 dirVec = dir->getDirectionVector();
-    float yaw = atan2(dirVec.x, dirVec.z);
+    // yaw = direction de la camera + offset de cap (ex: orienter le modele 3P
+    // vers le sens de marche pour aligner l'animation avec la trajectoire).
+    float yaw = atan2(dirVec.x, dirVec.z) + glm::radians(m_yawOffsetDeg);
     model = glm::rotate(model, yaw, glm::vec3(0, 1, 0));
 
     // Spin sur soi-même (hérité d'Entity)
@@ -218,6 +221,7 @@ glm::mat4 ModelEntity::getModelMatrix() const {
     m_cachedSpinAxis = m_spinAxis;
     m_cachedSpinAngle = m_spinAngle;
     m_cachedScale = m_scale;
+    m_cachedYawOffsetDeg = m_yawOffsetDeg;
     m_modelMatrixValid = true;
     return m_cachedModelMatrix;
 }

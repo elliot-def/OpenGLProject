@@ -450,10 +450,11 @@ void Game::draw() {
     }
 
     // ── HUD debug (personnage 3P) : liste des animations du modele ────────
-    // Desactive par defaut (couteux en FPS). Decommenter pour debugger.
-    // if (m_humanEntity && m_player->isThirdPerson() && m_textRenderers) {
-    //     CharacterAnimationController::drawDebugHUD(m_humanEntity, *m_textRenderers);
-    // }
+    // Actif pour verification (voir RUNNING JUMP). Couteux en FPS :
+    // re-commenter une fois le debug termine.
+    if (m_humanEntity && m_player->isThirdPerson() && m_textRenderers) {
+        CharacterAnimationController::drawDebugHUD(m_humanEntity, *m_textRenderers);
+    }
 
     // Tout le texte de la frame (HUD, menus...) est dessiné en UN SEUL draw
     // call batche, au-dessus du reste de la scène.

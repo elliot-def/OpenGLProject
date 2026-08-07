@@ -55,11 +55,15 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
         movingRight = lateralSpeed > 0.1f;
     }
 
-    // Hysterese strafe : idem, seuils decales
+    // Hysterese strafe : le strafe ne se joue que pour un deplacement (quasi)
+    // purement lateral. Des qu'on avance OU recule en meme temps (diagonale),
+    // on joue la marche avant/arriere a la place du strafe : la composante
+    // avant est alors >= kStrafeMaxForwardSpeed, le meme seuil que le walkback.
     const float absLat = std::abs(lateralSpeed);
-    if (absLat > 0.25f && absLat > std::abs(forwardSpeed) * 0.7f)
+    const float absFwd = std::abs(forwardSpeed);
+    if (absLat > 0.25f && absLat > absFwd * 0.7f && absFwd < kStrafeMaxForwardSpeed)
         m_isStrafing = true;
-    else if (absLat < 0.08f || absLat < std::abs(forwardSpeed) * 0.4f)
+    else if (absLat < 0.08f || absLat < absFwd * 0.4f || absFwd >= kStrafeMaxForwardSpeed)
         m_isStrafing = false;
 
     // ── Indices ──────────────────────────────────────────────────────────
@@ -90,9 +94,15 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
         m_punching = false;
     }
 
+    // Memo du sprint au sol : utilise pour choisir running jump / jump (le
+    // sprint est coupe en l'air par Player::getIsSprinting).
+    if (isGrounded) m_wasSprintingWhenGrounded = isSprinting;
+
     // ── One-shot: jump ─────────────────────────────────────────────────
+    // Running jump uniquement si on sprintait ET qu'on se deplacait reellement
+    // (m_isMoving) : debout + Shift tenu + saut → jump simple.
     if (isJumpingUp && !m_jumping && !m_punching && !m_turning) {
-        const int jmp = (isSprinting && runJumpIdx >= 0) ? runJumpIdx : jumpIdx;
+        const int jmp = (m_wasSprintingWhenGrounded && m_isMoving && runJumpIdx >= 0) ? runJumpIdx : jumpIdx;
         if (jmp >= 0) {
             m_entity->playAnimation(jmp, false);
             m_jumping = true;
@@ -107,7 +117,7 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
         if (isGrounded || m_entity->getAnimator()->isFinished()) {
             // Si l'animation est finie mais pas encore au sol : relance
             if (!isGrounded && m_entity->getAnimator()->isFinished()) {
-                const int jmp = (isSprinting && runJumpIdx >= 0) ? runJumpIdx : jumpIdx;
+                const int jmp = (m_wasSprintingWhenGrounded && m_isMoving && runJumpIdx >= 0) ? runJumpIdx : jumpIdx;
                 if (jmp >= 0) m_entity->playAnimation(jmp, false);
             } else {
                 m_jumping = false;
@@ -129,6 +139,11 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
     }
 
     // ── Boucle continue (hors one-shot) ─────────────────────────────────
+    // Offset de cap cible : en marche avant (walk/run, dont les diagonales
+    // Z+Q / Z+D), le modele pivote vers le sens reel du deplacement pour que
+    // l'animation de marche soit alignee avec la trajectoire. Strafe (lateral
+    // pur), recul et idle gardent le modele face a la camera (offset 0).
+    float targetYawOffsetDeg = 0.0f;
     if (!m_punching && !m_jumping && !m_turning) {
         int targetIdx = -1;
 
@@ -141,12 +156,31 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
             }
         } else if (m_isMoving) {
             m_restTimer = 0.0f;
-            if (forwardSpeed < -0.15f && walkBackIdx >= 0) {
+            if (forwardSpeed < -kStrafeMaxForwardSpeed && walkBackIdx >= 0) {
                 targetIdx = walkBackIdx;
             } else if (isSprinting && runIdx >= 0) {
                 targetIdx = runIdx;
             } else {
                 targetIdx = walkIdx;
+            }
+            // Marche avant OU recul (y compris diagonales) : on oriente le
+            // modele pour aligner l'animation avec la trajectoire. thetaDeg =
+            // angle du deplacement par rapport a la direction de la camera.
+            //  - Avant (walk/run)  : le modele fait face au deplacement
+            //    (ex: Z+Q → offset +45°, Z+D → -45°).
+            //  - Recul  (walkback) : le modele fait face a l'OPPOSE du
+            //    deplacement (offset 180° - theta), pour que les pas arriere
+            //    de l'anim (vers l'arriere du corps) suivent la trajectoire.
+            //    Ex: S+Q → -45° (modele face avant-droite, pas vers
+            //    l'arriere-gauche). Recul droit (S seul) → offset 0°.
+            if (targetIdx >= 0 && (targetIdx == runIdx || targetIdx == walkIdx || targetIdx == walkBackIdx)) {
+                const float thetaDeg = glm::degrees(std::atan2(lateralSpeed, forwardSpeed));
+                if (targetIdx == walkBackIdx) {
+                    targetYawOffsetDeg = 180.0f - thetaDeg;
+                    if (targetYawOffsetDeg > 180.0f) targetYawOffsetDeg -= 360.0f;
+                } else {
+                    targetYawOffsetDeg = glm::clamp(-thetaDeg, -90.0f, 90.0f);
+                }
             }
         } else {
             // Immobile : rest -> idle
@@ -171,6 +205,12 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
         // Reset du cooldown quand on sort d'un one-shot
         m_animChangeTimer = 0.0f;
     }
+
+    // Lissage de l'offset de cap (pivotement progressif, pas de snap) puis
+    // application au modele (utilise par getModelMatrix).
+    const float blend = 1.0f - std::exp(-dt * kYawOffsetSmoothRate);
+    m_modelYawOffsetDeg += (targetYawOffsetDeg - m_modelYawOffsetDeg) * blend;
+    m_entity->setYawOffsetDeg(m_modelYawOffsetDeg);
 
     m_entity->updateAnimation(dt);
 }
@@ -231,7 +271,7 @@ void CharacterAnimationController::drawDebugHUD(ModelEntity* entity,
         if (idx == turnL)     line += "  TURN_L";
         if (idx == turnR)     line += "  TURN_R";
         if (idx == jumpI)     line += "  JUMP";
-        if (idx == runJumpI)  line += "  SPRINT";
+        if (idx == runJumpI)  line += "  RUNNING JUMP";
         if (idx == walkBackI) line += "  WALK_BACK";
 
         const bool isCurrent = animator && (anim == animator->getCurrentAnimation());

@@ -50,6 +50,11 @@ private:
 
     bool m_prevRDown = false;
 
+    // Sprint memorise au sol : Player::getIsSprinting() coupe le sprint en
+    // l'air, donc au moment du saut (1er frame decolle) isSprinting vaut deja
+    // false. On se souvient de l'etat au sol pour choisir running jump / jump.
+    bool m_wasSprintingWhenGrounded = false;
+
     // ── Hysterese anti-clignotement (collision contre un mur) ───────────
     // Quand le joueur pousse contre un mur, la vitesse horizontale oscille
     // pres de zero, ce qui faisait clignoter idle/walk. On utilise un latch :
@@ -57,6 +62,7 @@ private:
     bool m_isMoving = false;
     bool m_isStrafing = false;
     float m_animChangeTimer = 0.0f;  // cooldown entre changements d'anim
+    float m_modelYawOffsetDeg = 0.0f; // offset de cap lisse applique au modele 3P
 
     static constexpr float kRestToIdleDelay = 2.5f;
     static constexpr float kTurnYawThreshold = 30.0f; // degres pour declencher turn
@@ -64,4 +70,11 @@ private:
     static constexpr float kMoveStartSpeed = 0.25f;    // seuil haut pour commencer a bouger
     static constexpr float kMoveStopSpeed  = 0.06f;    // seuil bas pour arreter de bouger
     static constexpr float kAnimChangeCooldown = 0.15f; // delai min entre 2 changements
+    // Composante avant/arriere max au-dessus de laquelle on prefere la marche
+    // avant/arriere au strafe : des qu'on avance ou recule en meme temps que
+    // lateralement (diagonale), on joue walk/run/walkback, pas le strafe.
+    static constexpr float kStrafeMaxForwardSpeed = 0.15f;
+    // Vitesse (1/s) du pivotement du modele vers le sens de marche (diagonales).
+    // Plus la valeur est haute, plus le pivot est rapide (12 ≈ 80 ms).
+    static constexpr float kYawOffsetSmoothRate = 12.0f;
 };

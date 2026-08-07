@@ -75,6 +75,12 @@ public:
     void setScale(float scale) { m_scale = scale; m_modelMatrixValid = false; }
     float getScale() const { return m_scale; }
 
+    // Decalage de cap (yaw) applique EN PLUS de la direction du joueur, en
+    // degres (0 = modele face a la camera). Sert a orienter le modele 3P vers
+    // le sens reel du deplacement (voir CharacterAnimationController).
+    void setYawOffsetDeg(float deg) { m_yawOffsetDeg = deg; m_modelMatrixValid = false; }
+    float getYawOffsetDeg() const { return m_yawOffsetDeg; }
+
     // Retourne l'Animator pour un contrôle avancé
     Animator* getAnimator() { return m_animator.get(); }
     const Animator* getAnimator() const { return m_animator.get(); }
@@ -115,6 +121,7 @@ private:
     mutable glm::vec3 m_cachedSpinAxis{ 0.0f };
     mutable float m_cachedSpinAngle = 0.0f;
     mutable float m_cachedScale = 0.0f;
+    mutable float m_cachedYawOffsetDeg = 0.0f;
     mutable bool m_modelMatrixValid = false;
     Camera* m_camera;
 	LightManager* m_lightManager;
@@ -134,6 +141,7 @@ private:
     int m_jumpIdx = -1;           int m_runJumpIdx = -1;
     int m_walkBackIdx = -1;
     float m_scale = 1.0f;       // echelle uniforme du modele
+    float m_yawOffsetDeg = 0.0f; // offset de cap (degres) ajoute a la rotation du modele
 
     void detectAnimations();
 };
