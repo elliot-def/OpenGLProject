@@ -51,10 +51,15 @@ public:
 
     inline void setIsSprinting(bool isSprinting) { m_isSprinting = isSprinting; };
 
+    // Sprint effectif : vrai uniquement si la touche est tenue (m_isSprinting)
+    // ET que le joueur est au sol (grounded) ou en no-clip (gravité désactivée).
+    // En l'air, la vitesse ET les animations de course retombent sur la marche.
+    bool canSprint() const;
+    bool getIsSprinting() const;
+
     // Getters
 
     inline bool getFlashlightIsEnabled() { return m_isFlashlightEnabled; };
-    inline bool getIsSprinting() { return m_isSprinting; };
     inline bool getWantsToMove() { return m_wantsToMove; };
 
     // Retourne la position des yeux du joueur (pour la cam�ra)

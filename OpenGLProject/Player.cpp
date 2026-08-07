@@ -12,8 +12,22 @@ void Player::draw(Shader* shader)
 {
 }
 
+bool Player::canSprint() const {
+    // Sprint autorisé uniquement si le joueur est au sol (grounded) ou en
+    // no-clip (gravité désactivée) : pas de sprint en l'air.
+    return m_collisionManager && (m_collisionManager->getIsPlayerGrounded() || !m_useGravity);
+}
+
+bool Player::getIsSprinting() const {
+    // Filtre intégré : même si Shift est tenu, on ne sprinte pas en l'air.
+    // Le sprint reprend automatiquement dès l'atterrissage (Shift tenu).
+    return m_isSprinting && canSprint();
+}
+
 void Player::processDirectionKey(int direction) {
-    float velocity = m_isSprinting ? Constants::Player::PLAYER_SPRINTING_SPEED : Constants::Player::PLAYER_WALKING_SPEED;
+    // getIsSprinting() intègre déjà le filtre grounded/no-clip : en l'air,
+    // on retombe sur la vitesse de marche même si la touche est tenue.
+    float velocity = getIsSprinting() ? Constants::Player::PLAYER_SPRINTING_SPEED : Constants::Player::PLAYER_WALKING_SPEED;
     float deltaTime = m_renderer->getDeltaTime();
     float distance = velocity * deltaTime;
 

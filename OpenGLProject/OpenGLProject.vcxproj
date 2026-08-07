@@ -177,6 +177,7 @@
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="ModelEntity.cpp" />
     <ClCompile Include="ModelEntity.h" />
+    <ClCompile Include="ModelLoader.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="OptionsMenu.cpp" />
     <ClCompile Include="Packet.cpp" />
@@ -249,6 +250,7 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Entity.h" />
     <ClInclude Include="Model.h" />
+    <ClInclude Include="ModelLoader.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="OptionsMenu.h" />
     <ClInclude Include="Packet.h" />

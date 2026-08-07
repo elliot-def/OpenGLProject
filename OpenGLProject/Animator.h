@@ -90,6 +90,14 @@ private:
     // bones) — un conteneur figé désynchronise sa hiérarchie d'enfants.
     std::unordered_map<std::string, const aiNodeAnim*> m_channelMap;
 
+    // FBX importé par Assimp avec la décomposition RrTt : chaque bone est
+    // éclaté en nœuds "bone_$AssimpFbx$_Translation" / "bone_$AssimpFbx$_PreRotation"
+    // / "bone". Dans ce cas la position vient du wrapper _Translation (bind) et
+    // le canal d'animation ne doit fournir QUE la rotation — sinon la
+    // translation du canal s'ajoute à celle du wrapper → segments étirés. Les
+    // canaux de rotation portent alors le suffixe "_$AssimpFbx$_Rotation".
+    bool m_usesFbxRrTtHelpers = false;
+
     // Les animations sont partagées entre plusieurs transitions fire -> idle.
     // Éviter de retrier/reparcourir leurs clés à chaque transition : ce travail
     // est nécessaire une seule fois par aiAnimation après son import.

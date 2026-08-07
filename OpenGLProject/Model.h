@@ -109,6 +109,9 @@ public:
     void loadExternalAnimations(const std::vector<std::string>& paths);
     const aiAnimation* getAnimation(size_t index) const;
     size_t getNumAnimations() const;
+    // Nombre de clips externes (chargés via loadExternalAnimations). Les
+    // animations embarquées du modèle occupent les index [0, getNumAnimations()-externes[.
+    size_t getNumExternalAnimations() const { return m_externalAnimations.size(); }
 
 private:
     std::string m_sourcePath;

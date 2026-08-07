@@ -50,6 +50,7 @@
     <ClCompile Include="Model.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="ModelEntity.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="ModelEntity.h"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="ModelLoader.cpp"><Filter>Core</Filter></ClCompile>
     <ClCompile Include="Texture.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="TextureManager.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="ImageLoader.cpp"><Filter>Graphics</Filter></ClCompile>
@@ -113,6 +114,7 @@
     <ClInclude Include="Vertex.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="Mesh.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="Model.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="ModelLoader.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="Texture.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="TextureManager.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="ImageLoader.h"><Filter>Graphics</Filter></ClInclude>

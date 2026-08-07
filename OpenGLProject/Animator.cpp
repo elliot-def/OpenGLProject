@@ -5,16 +5,35 @@
 #include <cfloat>
 
 namespace {
-// Mixamo prefixed souvent les noms de bones par "mixamorig:".
-// Les fichiers d'animation et le modele peuvent avoir ou non ce prefixe.
-// On le retire pour que les channels matchent toujours.
+// Mixamo prefixe souvent les noms de bones par "mixamorig:". Mais certains
+// exports (personnages "Ch22", re-exports Blender...) utilisent
+// "mixamorig1:", "mixamorig2:" etc. Les fichiers d'animation et le modele
+// peuvent avoir des prefixes differents : on retire "mixamorig" + chiffres
+// + ":" pour que les channels matchent toujours.
 std::string stripMixamoPrefix(const std::string& name) {
-    const std::string prefix = "mixamorig:";
+    const std::string prefix = "mixamorig";
     if (name.size() > prefix.size() &&
         name.compare(0, prefix.size(), prefix) == 0) {
-        return name.substr(prefix.size());
+        size_t i = prefix.size();
+        while (i < name.size() && name[i] >= '0' && name[i] <= '9') i++;
+        if (i < name.size() && name[i] == ':')
+            return name.substr(i + 1);
     }
     return name;
+}
+
+// Normalise un nom de bone/canal : retire le prefixe Mixamo ("mixamorig:",
+// "mixamorig2:", ...) ET le suffixe Assimp FBX "_$AssimpFbx$_Rotation" des
+// canaux de rotation des bones avec PreRotation (decomposition RrTt).
+// Ex: "mixamorig2:LeftArm_$AssimpFbx$_Rotation" -> "LeftArm".
+std::string normalizeNodeName(const std::string& name) {
+    std::string n = stripMixamoPrefix(name);
+    const std::string rotSuffix = "_$AssimpFbx$_Rotation";
+    if (n.size() > rotSuffix.size() &&
+        n.compare(n.size() - rotSuffix.size(), rotSuffix.size(), rotSuffix) == 0) {
+        n = n.substr(0, n.size() - rotSuffix.size());
+    }
+    return n;
 }
 } // namespace
 
@@ -25,6 +44,30 @@ void Animator::setup(Model* model) {
     m_repairedAnimations.clear();
     m_debugPrintedAnimations.clear();
     m_finalBoneMatrices.resize(MAX_BONES, glm::mat4(1.0f));
+
+    // Détecte la decomposition RrTt d'Assimp : un nœud "*_$AssimpFbx$_Translation"
+    // dans l'arbre indique un FBX dont les bones ont été éclatés en
+    // Translation/PreRotation/bone. Dans ce cas, les canaux d'animation ne
+    // fournissent que la rotation (voir interpolateNodeTransform).
+    m_usesFbxRrTtHelpers = false;
+    if (m_scene && m_scene->mRootNode) {
+        std::vector<const aiNode*> stack{ m_scene->mRootNode };
+        while (!stack.empty()) {
+            const aiNode* n = stack.back();
+            stack.pop_back();
+            if (std::string(n->mName.C_Str()).find("_$AssimpFbx$_Translation") != std::string::npos) {
+                m_usesFbxRrTtHelpers = true;
+                break;
+            }
+            for (unsigned int c = 0; c < n->mNumChildren; c++)
+                stack.push_back(n->mChildren[c]);
+        }
+        // Diagnostic one-shot : le mode RrTt change la facon dont les canaux
+        // sont appliques (rotation seule + translation bind). Le savoir au
+        // lancement aide a interpreter les logs suivants.
+        LOG_INFO("[Animator] Decomposition FBX RrTt (Assimp helpers): %s",
+                 m_usesFbxRrTtHelpers ? "oui" : "non");
+    }
 }
 
 void Animator::playAnimation(unsigned int animIndex, bool loop, bool crossfade) {
@@ -73,18 +116,19 @@ void Animator::playAnimation(const aiAnimation* newAnim, bool loop, bool crossfa
     }
 
     // Cache des canaux par nom : évite la recherche linéaire à chaque frame.
-    // Enregistre aussi sans le prefixe "mixamorig:" pour les animations FBX
-    // externes qui peuvent avoir des noms differents du modele principal.
+    // Enregistre aussi la variante NORMALISEE (prefixe Mixamo retire + suffixe
+    // "_$AssimpFbx$_Rotation" retire) pour que les canaux des animations FBX
+    // externes matchent les bones du modele, meme avec des prefixes differents
+    // ("mixamorig:" vs "mixamorig2:") et des canaux RrTt ("LeftArm_$AssimpFbx$_Rotation").
     m_channelMap.clear();
     for (unsigned int i = 0; i < m_currentAnimation->mNumChannels; i++) {
         const aiNodeAnim* channel = m_currentAnimation->mChannels[i];
         if (!channel) continue;
         std::string name(channel->mNodeName.C_Str());
         m_channelMap[name] = channel;
-        // Variante sans prefixe Mixamo (ex: "mixamorig:Hips" -> "Hips")
-        std::string stripped = stripMixamoPrefix(name);
-        if (stripped != name) {
-            m_channelMap[stripped] = channel;
+        std::string normalized = normalizeNodeName(name);
+        if (normalized != name) {
+            m_channelMap[normalized] = channel;
         }
     }
 
@@ -96,14 +140,15 @@ void Animator::playAnimation(const aiAnimation* newAnim, bool loop, bool crossfa
     // Diagnostic one-shot au premier play (uniquement si aucun channel ne matche)
     if (m_debugPrintedAnimations.insert(m_currentAnimation).second) {
         const auto& boneMap = m_model->getBoneInfoMap();
+        // Un canal matche si son nom NORMALISE (prefixe Mixamo + suffixe
+        // Assimp FBX retires) correspond a celui d'un bone du modele.
         unsigned int matched = 0;
         for (unsigned int i = 0; i < m_currentAnimation->mNumChannels; i++) {
             const aiNodeAnim* ch = m_currentAnimation->mChannels[i];
             if (!ch) continue;
-            std::string name(ch->mNodeName.C_Str());
-            if (boneMap.find(name) != boneMap.end() ||
-                boneMap.find(stripMixamoPrefix(name)) != boneMap.end()) {
-                matched++;
+            const std::string norm = normalizeNodeName(ch->mNodeName.C_Str());
+            for (const auto& pair : boneMap) {
+                if (normalizeNodeName(pair.first) == norm) { matched++; break; }
             }
         }
         if (matched == 0 && m_currentAnimation->mNumChannels > 0) {
@@ -329,10 +374,11 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
     // interpolateNodeTransform (normalisation + gardes NaN + échelle ignorée).
     auto chanIt = m_channelMap.find(nodeName);
     if (chanIt == m_channelMap.end()) {
-        // Essayer sans le prefixe Mixamo sur le nom du nœud modele aussi
-        std::string stripped = stripMixamoPrefix(nodeName);
-        if (stripped != nodeName) {
-            chanIt = m_channelMap.find(stripped);
+        // Essayer avec le nom normalisé (prefixe Mixamo + suffixe Assimp FBX
+        // retires) : couvre "mixamorig2:LeftArm" -> canal "mixamorig:LeftArm_$AssimpFbx$_Rotation".
+        std::string normalized = normalizeNodeName(nodeName);
+        if (normalized != nodeName) {
+            chanIt = m_channelMap.find(normalized);
         }
     }
     if (chanIt != m_channelMap.end()) {
@@ -500,7 +546,17 @@ glm::mat4 Animator::interpolateNodeTransform(const aiNode* node, const aiNodeAni
         (sz > 0.0001f) ? col2 / sz : col2);
     const glm::quat bindRotation = glm::quat_cast(rot3);
 
-    glm::vec3 translation = interpolateTranslation(animTime, channel, bindTranslation);
+    glm::vec3 translation;
+    if (m_usesFbxRrTtHelpers) {
+        // FBX RrTt : la position est portee par le nœud wrapper
+        // "bone_$AssimpFbx$_Translation" (bind). Appliquer la translation du
+        // canal (ex: 0,55.13,0 pour l'avant-bras) en PLUS de celle du wrapper
+        // (0,25.51,0) etirait le segment (~2x). On garde donc la translation
+        // de bind pose : le canal ne fournit que la rotation.
+        translation = bindTranslation;
+    } else {
+        translation = interpolateTranslation(animTime, channel, bindTranslation);
+    }
     glm::quat rotation = interpolateRotation(animTime, channel, bindRotation);
     // IGNORER l'échelle d'animation : le FBX stocke un ×100 global
     // dans les keyframes, mais les vertices sont déjà à la bonne taille.

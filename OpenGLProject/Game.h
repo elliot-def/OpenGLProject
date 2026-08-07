@@ -33,6 +33,7 @@ class SteamManager;
 class LoadingScreen;
 class Skybox;
 class CharacterAnimationController;
+class ModelLoader;
 
 class Game {
 public:
@@ -63,13 +64,16 @@ private:
     std::unique_ptr<MenuManager> m_menuManager;
     std::unique_ptr<std::vector<std::unique_ptr<TextRenderer>>> m_textRenderers;
 
-    ModelEntity* m_modelEntity;
-    ModelEntity* m_fropyEntity;
+    // Vues non-propriétaires : le ModelLoader possède les entités et les
+    // détruit ; Game ne garde que des pointeurs (remplis via adoptLoadedEntities()).
+    ModelEntity* m_modelEntity = nullptr;
+    ModelEntity* m_fropyEntity = nullptr;
     ModelEntity* m_humanEntity = nullptr;
-    std::unique_ptr<FirstPersonArms> m_firstPersonArms;
+    FirstPersonArms* m_firstPersonArms = nullptr;
     std::unique_ptr<SteamManager> m_steamManager;
     std::unique_ptr<Skybox> m_skybox;
-    std::unique_ptr<CharacterAnimationController> m_characterAnim;
+    CharacterAnimationController* m_characterAnim = nullptr;
+    std::unique_ptr<ModelLoader> m_modelLoader;  // possède les entités 3D chargées
 
     bool m_isRunning = true;
     
@@ -84,7 +88,9 @@ private:
     std::atomic<bool> m_loadingDone{false};
     std::thread       m_loadingThread;
     GLFWwindow*       m_loaderWindow = nullptr;
-    void loadModelsAsync();  // exécuté sur le thread de chargement
+    // Copie dans Game les pointeurs vers les entités possédées par m_modelLoader.
+    // À appeler dès que le chargement est terminé (thread joint ou fallback synchrone).
+    void adoptLoadedEntities();
 
     static constexpr float LOADING_EXTRA_DELAY   = 0.5f;   // délai après 100%
     static constexpr float LOADING_FADE_DURATION = 0.5f;   // durée du fondu

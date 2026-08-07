@@ -18,6 +18,7 @@ La progression est basé sur https://learnopengl.com/.
   + `textures/`   : Les différentes textures à afficher (.png);
   + `models/`     : Modèles statiques de décor (backpack, etc.);
   + `rigging/`    : **Modèles skinned** (avant-bras, personnages riggués) avec squelette + clips d'animation Assimp;
+    * `mixamo/`    : Assets Mixamo — `animation/` (clips séparés) et `models/` (personnages riggués, ex: `Remy.fbx`);
 - `fichiers .h & .cpp` : Les fichiers headers et sources. 
 
 ##  Sous-systèmes notables
@@ -25,7 +26,7 @@ La progression est basé sur https://learnopengl.com/.
 - **Pipeline skinned** (`SkinningData.h` + `AnimationClip.h` + `Animator.h/.cpp` + `Model.cpp` + `res/shaders/skinned/skinned.{vert,frag}`):
   extraction bones/animations via Assimp -> stockage dans `Vertex.m_boneIDs[4]` + `Vertex.m_weights[4]` (auto-padding si > 4 influences) -> upload de `uBoneMatrices[100]` au GPU.
   Limite `MAX_BONE_INFLUENCE=4` ancrée par `static_assert` dans `Vertex.h` (toute réordonnancement de champs casse la compilation au lieu de dériver en bug GPU silencieux).
-  Asset path: `res/rigging/<nom>/<nom>.glb` (fallback `.fbx`). Chargé dans `Game::initialize()` puis joué par `Animator::update(dt)`.
+  Asset path: `res/rigging/<nom>/<nom>.glb` (fallback `.fbx`), clips Mixamo dans `res/rigging/mixamo/animation/`. Chargé dans `Game::initialize()` puis joué par `Animator::update(dt)`.
 
 - **Avant-bras first-person** (`ArmsRenderer.h/.cpp`):
   helper isolé qui rend les avant-bras riggués en vue subjective. Encapsule toute la math:

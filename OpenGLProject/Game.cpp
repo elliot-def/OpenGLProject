@@ -4,7 +4,7 @@
 #include "config.h"
 #include "LoadingScreen.h"
 #include "SteamManager.h"
-#include "Animator.h"
+#include "ModelLoader.h"
 #include "TextRenderer.h"
 #include "Skybox.h"
 #include "CharacterAnimationController.h"
@@ -34,10 +34,13 @@ Game::Game(int argc, char* argv[]) : m_argc(argc), m_argv(argv) {
 
 Game::~Game() {
     if (m_loadingThread.joinable()) m_loadingThread.join();
+
+    // Détruire explicitement le loader (entités + ressources GPU des meshes)
+    // TANT QUE le contexte GL principal est encore vivant : sinon elles
+    // seraient libérées lors de la destruction des membres, APRÈS glfwTerminate().
+    m_modelLoader.reset();
+
 	SharedQuad::destroy();
-    delete m_humanEntity;
-    delete m_fropyEntity;
-    delete m_modelEntity;
     if (m_socket) m_socket->stop();
     if (m_steamManager) {
         m_steamManager->shutdown();
@@ -215,16 +218,22 @@ void Game::loadResources() {
     m_skybox = std::make_unique<Skybox>(Constants::File::SKYBOX_NIGHT_PATH);
 
     // ── Partie asynchrone : modèles 3D sur un thread separe ──
+    m_modelLoader = std::make_unique<ModelLoader>(m_camera.get(), m_lightManager.get(), m_renderer.get(),
+                                                  m_textureManager.get(), m_inputManager.get());
     m_loaderWindow = m_window->createSharedContext();
     if (m_loaderWindow) {
         m_loadingDone = false;
-        m_loadingThread = std::thread(&Game::loadModelsAsync, this);
+        m_loadingThread = std::thread([this]() {
+            m_modelLoader->load(m_loaderWindow);
+            m_loadingDone = true;
+        });
         m_initPhase = InitPhase::LOADING;
         printf("[Game] Modeles en cours de chargement (thread separe)...\n");
     } else {
         // Fallback : chargement synchrone si le contexte partage échoue
         printf("[Game] Contexte partage indisponible, chargement synchrone.\n");
-        loadModelsAsync();
+        m_modelLoader->load(nullptr);
+        adoptLoadedEntities();
         m_loadingScreen.reset();
         m_initPhase = InitPhase::READY;
     }
@@ -242,6 +251,7 @@ void Game::run() {
                 // Rejoindre le thread une seule fois
                 if (m_loadingThread.joinable()) {
                     m_loadingThread.join();
+                    adoptLoadedEntities();
 
                     // Recréer les VAO dans le contexte principal (les VAO ne
                     // sont pas partages entre contextes OpenGL).
@@ -487,94 +497,17 @@ void Game::changeState(GameState newState) {
 }
 
 // ---------------------------------------------------------------------------
-// Chargement asynchrone des modèles 3D (exécuté sur un thread separe)
+// Le chargement des modèles 3D a été extrait dans ModelLoader::load()
+// (exécuté sur le thread de chargement, voir loadResources()).
 // ---------------------------------------------------------------------------
 
-void Game::loadModelsAsync() {
-    if (m_loaderWindow)
-        glfwMakeContextCurrent(m_loaderWindow);
-
-    printf("[Game]   → Chargement du backpack...\n");
-    m_modelEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(),
-                                    "./res/models/backpack/backpack.obj", m_textureManager.get());
-
-    printf("[Game]   → Chargement de fropy (low poly)...\n");
-    m_fropyEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(),
-                                    "./res/models/fropy/fropy_low_poly.obj", m_textureManager.get());
-    m_fropyEntity->setPosition(glm::vec3(3.0f, 5.0f, 0.0f));
-    m_fropyEntity->setSpin(20.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-
-    printf("[Game]   → Chargement des bras (rigges)...\n");
-    m_firstPersonArms = std::make_unique<FirstPersonArms>(m_camera.get(), m_lightManager.get(),
-                                             "./res/rigging/arm/arms_rig.glb", m_textureManager.get());
-    m_inputManager->setFirstPersonArms(m_firstPersonArms.get());
-
-    printf("[Game]   → Chargement de Remy (rigge)...\n");
-    m_humanEntity = new ModelEntity(m_camera.get(), m_lightManager.get(), m_renderer.get(),
-                                    "./res/rigging/remy/Remy.fbx", m_textureManager.get());
-
-    // Auto-scale : hauteur cible ~1.8 unites (~1.80m) divisee par la hauteur
-    // reelle de la bounding box du modele (qui inclut le x100 FBX).
-    {
-        const float modelHeight = m_humanEntity->getModel()->getBoundingBox().getSize().y;
-        constexpr float targetHeight = 1.8f;
-        if (modelHeight > 0.001f) {
-            m_humanEntity->setScale(targetHeight / modelHeight);
-            printf("[Game]   Remy auto-scale: %.4f (model=%.1f -> target=%.1f)\n",
-                   targetHeight / modelHeight, modelHeight, targetHeight);
-        }
-    }
-
-    // Charger les animations externes (FBX separes Mixamo)
-    {
-        const std::string animDir = "./res/rigging/remy/";
-        std::vector<std::string> animPaths = {
-            animDir + "idle.fbx",
-            animDir + "walking.fbx",
-            animDir + "standard run.fbx",
-            animDir + "jump.fbx",
-            animDir + "left strafe.fbx",
-            animDir + "right strafe.fbx",
-            animDir + "left strafe walking.fbx",
-            animDir + "right strafe walking.fbx",
-            animDir + "left turn 90.fbx",
-            animDir + "right turn 90.fbx",
-            animDir + "Running Jump.fbx",
-            animDir + "Walking Backwards.fbx",
-        };
-        m_humanEntity->getModel()->loadExternalAnimations(animPaths);
-
-        // Toutes les animations Mixamo s'appellent "mixamo.com" ->
-        // impossible de les distinguer par nom. On les identifie par leur
-        // ordre de chargement (connu, voir animPaths ci-dessus).
-        // Index 0 = Remy.fbx (T-pose 0s), on le saute.
-        m_humanEntity->setIdleAnimIndex(1);         // idle.fbx
-        m_humanEntity->setWalkAnimIndex(2);         // walking.fbx
-        m_humanEntity->setRunAnimIndex(3);          // standard run.fbx
-        m_humanEntity->setJumpIdx(4);               // jump.fbx
-        m_humanEntity->setStrafeLeftIdx(5);         // left strafe.fbx
-        m_humanEntity->setStrafeRightIdx(6);        // right strafe.fbx
-        m_humanEntity->setStrafeWalkLeftIdx(7);     // left strafe walking.fbx
-        m_humanEntity->setStrafeWalkRightIdx(8);    // right strafe walking.fbx
-        m_humanEntity->setTurnLeftIdx(9);           // left turn 90.fbx
-        m_humanEntity->setTurnRightIdx(10);         // right turn 90.fbx
-        m_humanEntity->setRunJumpIdx(11);           // Running Jump.fbx
-        m_humanEntity->setWalkBackIdx(12);          // Walking Backwards.fbx
-        // punch = -1 (pas d'anim de punch)
-        // rest  = -1 (pas d'anim de rest)
-
-        // Jouer l'idle
-        m_humanEntity->getAnimator()->playAnimation(1u, true);
-        m_humanEntity->getAnimator()->update(0.0f);
-    }
-
-    // Controleur d'animation du personnage 3P (extrait de Game::update)
-    m_characterAnim = std::make_unique<CharacterAnimationController>(m_humanEntity, m_inputManager.get());
-
-    if (m_loaderWindow)
-        glfwMakeContextCurrent(nullptr);
-
-    m_loadingDone = true;
+void Game::adoptLoadedEntities() {
+    // Vues non-propriétaires vers les entités possédées par le ModelLoader.
+    m_modelEntity     = m_modelLoader->getModelEntity();
+    m_fropyEntity     = m_modelLoader->getFropyEntity();
+    m_humanEntity     = m_modelLoader->getHumanEntity();
+    m_firstPersonArms = m_modelLoader->getFirstPersonArms();
+    m_characterAnim   = m_modelLoader->getCharacterAnim();
 }
 
 void Game::stop() {
