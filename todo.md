@@ -18,6 +18,8 @@ PlantUML depuis freebuff*
 
 Trouver une skybox libre de droit
 
+Regarder cette vidéo et potentiellement changer les bras en première personne : https://youtu.be/CHSpBHhLdLs (reprendre les bras des modèles de mixamo ?)
+
 DA : 
 	- Sons bitcrushed
 	- Low-poly les modèles
