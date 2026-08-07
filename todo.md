@@ -24,7 +24,7 @@ Regarder les logs de chargement de texture :
 	Fichier de propriÚtÚs manquant pour menu: ./res/textures/menu\menu.json
 	Texture principale manquante: ./res/textures/menu\menu.png
 
-PlantUML depuis freebuff*
+PlantUML depuis freebuff
 
 Trouver une skybox libre de droit
 
