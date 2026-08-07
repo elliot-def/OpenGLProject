@@ -1,12 +1,11 @@
 ## Todo :
 Possibilité de modder pour la commu
 
-Implémentation futures :
-	- Skin model avec stuff sur eux
-	- Map Editor
-	- Texture avec du relief comme le mur dans le tuto learnopenGL
+Skin model avec stuff sur eux (gilet par balle, holster etc ...)
 
-Séparer les animations et modèles dans l'arborescence
+Map Editor
+
+Texture avec du relief comme le mur de briques dans le tuto learnopenGL
 
 Comment enlever le cmd ?
 
