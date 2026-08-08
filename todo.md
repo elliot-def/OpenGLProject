@@ -2,7 +2,7 @@
 
 Features : 
 - Skin model avec stuff sur eux (gilet par balle, holster etc ...)
-- Texture avec du relief comme le mur de briques dans le tuto learnopenGL
+- Texture avec du relief comme le mur de briques dans le tuto learnopenGL (https://learnopengl.com/Advanced-Lighting/Normal-Mapping)
 - Map Editor
 - Ajouter des bulles de dialogues ?
 - PlantUML depuis freebuff
