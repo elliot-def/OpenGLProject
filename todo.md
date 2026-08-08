@@ -3,6 +3,8 @@ Possibilité de modder pour la commu
 
 Skin model avec stuff sur eux (gilet par balle, holster etc ...)
 
+Easter Egg DVD derrière le texte (devrait être devant)
+
 Map Editor
 
 Texture avec du relief comme le mur de briques dans le tuto learnopenGL
