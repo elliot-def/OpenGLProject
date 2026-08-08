@@ -1,10 +1,10 @@
 ## Todo :
 
 Features : 
-- Skin model avec stuff sur eux (gilet par balle, holster etc ...)
+- Skin model avec stuff sur eux (torche, sac à dos, holter & pistolet ...)
 - Texture avec du relief comme le mur de briques dans le tuto learnopenGL (https://learnopengl.com/Advanced-Lighting/Normal-Mapping)
 - Map Editor
-- Ajouter des bulles de dialogues ?
+- Sous-titres en bas de l'écran / Ajouter des bulles de dialogues ?
 - PlantUML depuis freebuff
 
 Changements et Debug : 
