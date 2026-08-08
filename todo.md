@@ -15,7 +15,10 @@ Changements et Debug :
 - DA : 
 	- Sons bitcrushed
 	- Low-poly les modèles
-
+ - 
+Fix :
+- Position des yeux en première personne
+- Temps de chargement après lancement du jeu pour la première fois (quand steam se lance)
 Opti :
 - Regarder les logs de chargement de texture :
 	+ Fichier de propriÚtÚs manquant pour container: ./res/textures/container\container.json
