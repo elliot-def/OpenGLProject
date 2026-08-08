@@ -1,6 +1,6 @@
 #include "ReceiveBuffer.h"
 
-// Ajouter des données reçues
+// Ajouter des donnÃ©es reÃ§ues
 void ReceiveBuffer::append(const char* data, size_t size) {
     m_buffer.insert(m_buffer.end(), data, data + size);
 }
@@ -12,7 +12,7 @@ bool ReceiveBuffer::extractPacket(Packet& outPacket) {
         return false;
     }
 
-    // Lire le header pour connaître la taille totale
+    // Lire le header pour connaÃ®tre la taille totale
     PacketHeader header;
     memcpy(&header, m_buffer.data(), HEADER_SIZE);
 
@@ -21,9 +21,9 @@ bool ReceiveBuffer::extractPacket(Packet& outPacket) {
     header.type = ntohs(header.type);
     header.length = ntohl(header.length);
 
-    // Vérifier le magic
+    // VÃ©rifier le magic
     if (header.magic != Constants::Network::PACKET_MAGIC) {
-        // Données corrompues, vider le buffer
+        // DonnÃ©es corrompues, vider le buffer
         m_buffer.clear();
         throw std::runtime_error("Magic number invalide - buffer corrompu");
     }
@@ -31,9 +31,9 @@ bool ReceiveBuffer::extractPacket(Packet& outPacket) {
     // Calculer la taille totale du paquet
     size_t totalSize = HEADER_SIZE + header.length;
 
-    // Vérifier si on a le paquet complet
+    // VÃ©rifier si on a le paquet complet
     if (m_buffer.size() < totalSize) {
-        return false; // Attendre plus de données
+        return false; // Attendre plus de donnÃ©es
     }
 
     // Extraire le paquet

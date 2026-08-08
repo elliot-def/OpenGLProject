@@ -13,7 +13,7 @@ void ShapeRenderer::drawRectangle(float x = 0.0f, float y = 0.0f, float width = 
 	Rectangle(m_shaderManager->getShader("rectangle"), x, y, width, height).draw();
     m_shaderManager->getShader("rectangle")->use();
 
-    // Créer la matrice de transformation
+    // CrÃ©er la matrice de transformation
     glm::mat4 transform = glm::mat4(1.0f);
     transform = glm::translate(transform, position);
     transform = glm::rotate(transform, glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));

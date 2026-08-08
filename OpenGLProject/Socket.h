@@ -12,7 +12,7 @@
 
 #include "constants/network.h"
 
-class Packet; // Déclaration anticipée
+class Packet; // DÃ©claration anticipÃ©e
 
 struct ServerInfo {
     std::string ip = Constants::Network::SERVER_IP;
@@ -45,7 +45,7 @@ public:
     // Se connecte au serveur selon les ServerInfo fournis
     bool connectToServer(const ServerInfo& serverInfo);
 
-    // Arrête le client et ferme toutes les connexions
+    // ArrÃªte le client et ferme toutes les connexions
     void stop();
 
     // Envoie un paquet au server
@@ -53,10 +53,10 @@ public:
     // Envoie un paquet au serveur
     void sendPacket(const Packet& packet);
 
-    // Récupère le prochain événement (connexion, déconnexion, données)
+    // RÃ©cupÃ¨re le prochain Ã©vÃ©nement (connexion, dÃ©connexion, donnÃ©es)
     bool pollEvent(ClientEvent& event);
 
-    // Retourne la liste des clients connectés
+    // Retourne la liste des clients connectÃ©s
     ServerInfo getServer() const { return m_server; };
 	std::string getLocalIP() const { return m_localIP; }
 	int getLocalPort() const { return m_localPort; }

@@ -73,7 +73,7 @@ bool Window::init() {
             return false;
         }
 
-        // Fixer la r�solution, le taux de rafra�chissement et les bits couleur
+        // Fixer la résolution, le taux de rafraîchissement et les bits couleur
         glfwWindowHint(GLFW_RED_BITS, mode->redBits);
         glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
         glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
@@ -83,10 +83,10 @@ bool Window::init() {
         m_height = mode->height;
     }
 
-    // Cr�ation de la fen�tre
+    // Création de la fenêtre
     m_window = glfwCreateWindow(
         m_width, m_height, m_title,
-        monitor, // nullptr pour fen�tre normale, sinon fullscreen
+        monitor, // nullptr pour fenêtre normale, sinon fullscreen
         nullptr
     );
 
@@ -103,8 +103,14 @@ bool Window::init() {
         return false;
     }
 
-    // D�finition de la zone de rendu
+    // Définition de la zone de rendu
     glViewport(0, 0, m_width, m_height);
+
+    // Vsync : synchronise le swap sur le vblank du moniteur. Sans cela, le
+    // jeu tourne non-borné (DEFAULT_IS_FPS_CAPPING=false) et fait tourner
+    // le GPU/CPU à 100% inutilement. Le cap logiciel optionnel de Renderer
+    // reste disponible par-dessus si besoin.
+    glfwSwapInterval(1);
 
     //efface le bouton de la souris et permet de capturer la souris
     glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
@@ -114,7 +120,7 @@ bool Window::init() {
     return true;
 }
 
-// Fonction pour charger et d�finir l'ic�ne de la fen�tre
+// Fonction pour charger et définir l'icône de la fenêtre
 void Window::setWindowIcon(const char* iconPath) {
     // Charger l'image avec stb_image
     int width, height, channels;
@@ -125,19 +131,19 @@ void Window::setWindowIcon(const char* iconPath) {
         return;
     }
 
-    // Cr�er la structure GLFWimage
+    // Créer la structure GLFWimage
     GLFWimage icon;
     icon.width = width;
     icon.height = height;
     icon.pixels = pixels;
 
-    // D�finir l'ic�ne de la fen�tre
+    // Définir l'icône de la fenêtre
     glfwSetWindowIcon(m_window, 1, &icon);
 
-    // Lib�rer la m�moire de l'image
+    // Libérer la mémoire de l'image
     stbi_image_free(pixels);
 
-    printf("Ic�ne d�finie avec succ�s (%dx%d)\n", width, height);
+    printf("Icone definie avec succes (%dx%d)\n", width, height);
 }
 
 // ---------------------------------------------------------------------------
@@ -162,7 +168,7 @@ void Window::setCustomCursor(const char* cursorPath) {
     int cursor_width, cursor_height, cursor_channels;
     unsigned char* cursor_pixels = stbi_load(cursorPath, &cursor_width, &cursor_height, &cursor_channels, 4);
     if (cursor_pixels) {
-        // Construire une GLFWimage � partir des donn�es charg�es par stb_image
+        // Construire une GLFWimage à partir des données chargées par stb_image
         GLFWimage cursor_image{};
         cursor_image.width = cursor_width;
         cursor_image.height = cursor_height;
@@ -171,13 +177,13 @@ void Window::setCustomCursor(const char* cursorPath) {
         GLFWcursor* cursor = glfwCreateCursor(&cursor_image, 0, 0);
         if (cursor) {
             glfwSetCursor(m_window, cursor);
-            // Note: vous pouvez conserver le pointeur `cursor` si vous voulez le d�truire plus tard avec glfwDestroyCursor
+            // Note: vous pouvez conserver le pointeur `cursor` si vous voulez le détruire plus tard avec glfwDestroyCursor
         }
         else {
-            printf("Erreur: Impossible de cr�er le curseur GLFW\n");
+            printf("Erreur: Impossible de creer le curseur GLFW\n");
         }
 
-        // glfwCreateCursor copie les donn�es, on peut donc lib�rer l'image charg�e
+        // glfwCreateCursor copie les données, on peut donc libérer l'image chargée
         stbi_image_free(cursor_pixels);
     }
     else {

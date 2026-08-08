@@ -19,7 +19,7 @@ void Rectangle::draw() {
 
     m_shader->use();
 
-    // Creer la transformation compl�te avec votre classe
+    // Creer la transformation complète avec votre classe
     Transformation trans;
     trans.translate(m_position)                                  // 1. Position
         .rotate(glm::vec3(0.0f, 0.0f, 1.0f), m_rotation)         // 2. Rotation

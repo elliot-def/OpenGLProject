@@ -25,7 +25,7 @@ Shader::Shader(const std::string& vertexSource, const std::string& fragmentSourc
 
     m_view = m_camera->getViewMatrix();
 
-    // Projection en perspective : effet 3D avec champ de vision de 60�
+    // Projection en perspective : effet 3D avec champ de vision de 60°
     m_projection = glm::perspective(
         glm::radians(60.0f),
         (float)Constants::Window::WINDOW_WIDTH / (float)Constants::Window::WINDOW_HEIGHT,
@@ -49,7 +49,7 @@ Shader::Shader(const std::string& vertexSource, const std::string& fragmentSourc
     GLuint vertex = compile(GL_VERTEX_SHADER, vertexCode);
     GLuint fragment = compile(GL_FRAGMENT_SHADER, fragmentCode);
 
-    // Cr�ation et linkage du programme
+    // Création et linkage du programme
     m_id = glCreateProgram();
     glAttachShader(m_id, vertex);
     glAttachShader(m_id, fragment);
@@ -57,7 +57,7 @@ Shader::Shader(const std::string& vertexSource, const std::string& fragmentSourc
 
     checkCompileErrors(m_id, "PROGRAM");
 
-    // Shaders bruts supprim�s apr�s linkage
+    // Shaders bruts supprimés après linkage
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 }
@@ -149,77 +149,77 @@ void Shader::checkCompileErrors(unsigned int object, std::string type) {
 }
 
 void Shader::setBool(const std::string& name, bool value) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniform1i(getUniformLocation(name), (int)value);
+        glUniform1i(location, (int)value);
     }
 }
 
 void Shader::setInt(const std::string& name, int value) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniform1i(getUniformLocation(name), value);
+        glUniform1i(location, value);
     }
 }
 
 void Shader::setFloat(const std::string& name, float value) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniform1f(getUniformLocation(name), value);
+        glUniform1f(location, value);
     }
 }
 void Shader::setVec2(const std::string& name, const glm::vec2& value) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniform2fv(getUniformLocation(name), 1, &value[0]);
+        glUniform2fv(location, 1, &value[0]);
     }
 }
 void Shader::setVec2(const std::string& name, float x, float y) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniform2f(getUniformLocation(name), x, y);
+        glUniform2f(location, x, y);
     }
 }
 void Shader::setVec3(const std::string& name, const glm::vec3& value) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniform3fv(getUniformLocation(name), 1, &value[0]);
+        glUniform3fv(location, 1, &value[0]);
     }
 }
 void Shader::setVec3(const std::string& name, float x, float y, float z) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniform3f(getUniformLocation(name), x, y, z);
+        glUniform3f(location, x, y, z);
     }
 }
 void Shader::setVec4(const std::string& name, const glm::vec4& value) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniform4fv(getUniformLocation(name), 1, &value[0]);
+        glUniform4fv(location, 1, &value[0]);
     }
 }
 void Shader::setVec4(const std::string& name, float x, float y, float z, float w) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniform4f(getUniformLocation(name), x, y, z, w);
+        glUniform4f(location, x, y, z, w);
     }
 }
 void Shader::setMat2(const std::string& name, const glm::mat2& mat) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniformMatrix2fv(getUniformLocation(name), 1, GL_FALSE, &mat[0][0]);
+        glUniformMatrix2fv(location, 1, GL_FALSE, &mat[0][0]);
     }
 }
 void Shader::setMat3(const std::string& name, const glm::mat3& mat) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniformMatrix3fv(getUniformLocation(name), 1, GL_FALSE, &mat[0][0]);
+        glUniformMatrix3fv(location, 1, GL_FALSE, &mat[0][0]);
     }
 }
 void Shader::setMat4(const std::string& name, const glm::mat4& mat) {
-    GLint location = getUniformLocation(name);
+    const GLint location = getUniformLocation(name);
     if (location != -1) {
-        glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, &mat[0][0]);
+        glUniformMatrix4fv(location, 1, GL_FALSE, &mat[0][0]);
     }
 }
 
@@ -262,7 +262,7 @@ int Shader::getUniformLocation(const std::string& name) {
     }
 
     GLint location = glGetUniformLocation(m_id, name.c_str());
-    m_uniformLocations[name] = location; // On cache m�me le -1 pour �viter de re-interroger OpenGL
+    m_uniformLocations[name] = location; // On cache même le -1 pour éviter de re-interroger OpenGL
     return location;
 }
 

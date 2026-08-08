@@ -13,6 +13,7 @@
 #include "constants/color.h"
 
 #include "cstdio"
+#include <algorithm>
 
 void Menu::drawTextCentered(const std::string& text, float centerX, float centerY, int textRendererIndex, glm::vec3 color, float scale) {
     float textWidth = m_textRenderers->at(textRendererIndex)->getTextWidth(text, scale);
@@ -89,6 +90,10 @@ void Menu::draw() {
         }
     }
     for (const auto& shape : m_shapes) {
+        // Shapes de premier plan : dessinés après le texte (drawOverlays)
+        if (std::find(m_overlayShapes.begin(), m_overlayShapes.end(), shape.second->shape) != m_overlayShapes.end()) {
+            continue;
+        }
         shape.second->shape->draw();
     }
 
@@ -146,6 +151,14 @@ void Menu::draw() {
                 drawTextCentered(select->input->getOptionLabel(i), optPos.x, optPos.y, 0, Constants::Color::LINEN, 0.4f);
             }
         }
+    }
+}
+
+void Menu::drawOverlays() {
+    // Shapes de premier plan : à dessiner APRÈS le flush du texte pour passer
+    // devant lui (ex. Easter egg DVD du MainMenu).
+    for (auto* shape : m_overlayShapes) {
+        shape->draw();
     }
 }
 

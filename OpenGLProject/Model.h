@@ -21,7 +21,7 @@ class LightManager;
 
 #pragma comment(lib, "assimp-vc143-mtd.lib")
 
-// Structure pour repr�senter une bounding box
+// Structure pour représenter une bounding box
 struct BoundingBox {
     glm::vec3 min;
     glm::vec3 max;
@@ -44,11 +44,11 @@ struct BoundingBox {
     // Transforme la bounding box avec une matrice
     BoundingBox transform(const glm::mat4& matrix) const;
 
-    // V�rifie la collision avec une autre bounding box
+    // Vérifie la collision avec une autre bounding box
     bool intersects(const BoundingBox& other) const;
 };
 
-// Structure pour une hitbox sph�rique (plus simple pour certains objets)
+// Structure pour une hitbox sphérique (plus simple pour certains objets)
 struct BoundingSphere {
     glm::vec3 center;
     float radius;
@@ -56,10 +56,10 @@ struct BoundingSphere {
     BoundingSphere() : center(0.0f), radius(0.0f) {}
     BoundingSphere(const BoundingBox& box);
 
-    // Transforme la sph�re avec une matrice
+    // Transforme la sphère avec une matrice
     BoundingSphere transform(const glm::mat4& matrix) const;
 
-    // V�rifie la collision avec une autre sphere
+    // Vérifie la collision avec une autre sphere
     bool intersects(const BoundingSphere& other) const;
 };
 
@@ -69,7 +69,7 @@ public:
     Model(Camera* camera, LightManager* lightManager, const std::string& path, TextureManager* textureManager = nullptr);
     ~Model(); // Libere les Mesh* heap-allocated via new (processMesh + createDebugBoundingBoxMesh).
 
-    // Dessine le mod�le
+    // Dessine le modèle
     void draw(Shader& shader);
 
     // Dessine la bounding box (pour debug)
@@ -93,17 +93,23 @@ public:
     const BoundingBox& getBoundingBox() const { return m_boundingBox; }
     const BoundingSphere& getBoundingSphere() const { return m_boundingSphere; }
 
-    // Obtenir la bounding box transform�e
+    // Obtenir la bounding box transformée
     BoundingBox getTransformedBoundingBox(const glm::mat4& modelMatrix) const;
     BoundingSphere getTransformedBoundingSphere(const glm::mat4& modelMatrix) const;
 
-    // V�rifier collision avec un autre mod�le
+    // Vérifier collision avec un autre modèle
     bool checkCollision(const Model& other, const glm::mat4& thisMatrix,
         const glm::mat4& otherMatrix) const;
 
-    // Raycast - renvoie true si le rayon touche le mod�le
+    // Raycast - renvoie true si le rayon touche le modèle
     bool raycast(const glm::vec3& origin, const glm::vec3& direction,
         const glm::mat4& modelMatrix, float& distance) const;
+
+    // Construit pour chaque mesh un sous-ensemble d'indices ne gardant que
+    // les triangles dont TOUS les sommets sont principalement influencés par
+    // un bone dont le nom contient au moins un des patterns (sous-chaîne,
+    // robuste aux préfixes "mixamorig:"). Ex: bras+jambes en 1ère personne.
+    void buildCulledIndices(const std::unordered_set<std::string>& keepBonePatterns);
 
     // Animations externes (FBX/GLB separes du modele, ex: Mixamo)
     void loadExternalAnimations(const std::vector<std::string>& paths);
@@ -125,7 +131,7 @@ private:
     std::unordered_map<std::string, unsigned int> m_loadedTextures;
     std::vector<Mesh*> m_meshes;
 
-    // Hitbox du mod�le entier
+    // Hitbox du modèle entier
     BoundingBox m_boundingBox;
     BoundingSphere m_boundingSphere;
 
@@ -140,9 +146,9 @@ private:
     std::unordered_map<std::string, BoneInfo> m_boneInfoMap;
     int m_boneCounter = 0;
 
-    // D�duplication : certains exports GLB/GLTF r�f�rencent le m�me aiMesh
-    // depuis plusieurs nœuds (fr�quent avec Mixamo/Blender). Sans ce set,
-    // deux Mesh* identiques sont pouss�s dans m_meshes → z-fighting � l'�cran.
+    // Déduplication : certains exports GLB/GLTF référencent le même aiMesh
+    // depuis plusieurs nœuds (fréquent avec Mixamo/Blender). Sans ce set,
+    // deux Mesh* identiques sont poussés dans m_meshes → z-fighting à l'écran.
     std::unordered_set<unsigned int> m_processedMeshIndices;
 
     // ── Animations externes ───────────────────────────────────────────
@@ -179,7 +185,7 @@ private:
     void calculateBoundingBox();
     void calculateBoundingSphere();
 
-    // Cr�ation du mesh de debug
+    // Création du mesh de debug
     void createDebugBoundingBoxMesh();
 
     // Helpers pour les textures

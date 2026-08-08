@@ -3,14 +3,8 @@
 #include "Key.h"
 #include "configKeys.h"
 
-class FirstPersonArms;
-
+// Touche Grab (E) : plus d'action viewmodel (supprime).
 class Grab : public Key {
 public:
     Grab();
-
-    void setFirstPersonArms(FirstPersonArms* arms) { m_firstPersonArms = arms; }
-
-private:
-    FirstPersonArms* m_firstPersonArms = nullptr;
 };

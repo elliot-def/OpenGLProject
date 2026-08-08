@@ -9,7 +9,6 @@
 
 #include "LeftClick.h"
 #include "MenuManager.h"
-#include "FirstPersonArms.h"
 
 LeftClick::LeftClick(Player* player, MenuManager* menuManager) : Key(player, "LeftClick", ConfigKeys::MOUSE_LEFT_CLICK), m_menuManager(menuManager) {
 	// Tant que le bouton est maintenu dans le contexte MENU : permet le drag des sliders (RangeInput)
@@ -27,12 +26,6 @@ LeftClick::LeftClick(Player* player, MenuManager* menuManager) : Key(player, "Le
 		// Stoppe tout drag en cours (isDragging = false) une fois le bouton relache
 		m_menuManager->updateDrag(mouseX, mouseY, false);
 	});
-	// Clic gauche en jeu : joue l'animation de tir des bras (finger_gun_fire)
-	setOnPressAction(InputContext::GAME, [this]() {
-		if (m_firstPersonArms) {
-			m_firstPersonArms->triggerFire();
-		}
-	});
-	setOnReleaseAction(InputContext::GAME, [this]() {
-	});
+	// Clic gauche en jeu : plus d'animation de tir des bras (viewmodel supprime,
+	// le corps Mixamo 1P gere ses propres animations).
 }

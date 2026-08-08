@@ -9,24 +9,24 @@
 class CollisionManager;
 class Camera;
 
-// Classe Player : repr�sente le joueur dans le jeu
-// H�rite de Entity et g�re le d�placement, la vue et le rendu
+// Classe Player : représente le joueur dans le jeu
+// Hérite de Entity et gère le déplacement, la vue et le rendu
 class Player : public Entity {
 public:
     // Constructeur : prend un pointeur vers le moteur de rendu
     // Appelle le constructeur de la classe de base Entity
     Player(CollisionManager* collisionManager, Renderer* renderer) : Entity(renderer, collisionManager) {
-		setUseGravity(true); // Le joueur est affect� par la gravit�
+		setUseGravity(true); // Le joueur est affecté par la gravité
     };
 
-    // Destructeur par d�faut, aucune ressource suppl�mentaire � lib�rer
+    // Destructeur par défaut, aucune ressource supplémentaire à libérer
     ~Player() = default;
 
-    // Met � jour la logique du joueur chaque frame
-    // D�placement, animations, actions
+    // Met à jour la logique du joueur chaque frame
+    // Déplacement, animations, actions
     void update() override;
 
-    // Dessine le joueur � l'�cran
+    // Dessine le joueur à l'écran
     void draw(Shader* shader) override;
 
     // Traite les touches de direction
@@ -62,7 +62,7 @@ public:
     inline bool getFlashlightIsEnabled() { return m_isFlashlightEnabled; };
     inline bool getWantsToMove() { return m_wantsToMove; };
 
-    // Retourne la position des yeux du joueur (pour la cam�ra)
+    // Retourne la position des yeux du joueur (pour la caméra)
 
     glm::vec3 getEyePosition() const { return m_position + Constants::Player::PLAYER_EYE_HEIGHT; }
 private:

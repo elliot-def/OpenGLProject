@@ -122,6 +122,20 @@ void MenuManager::draw() {
     }
 }
 
+void MenuManager::drawOverlays() {
+    if (m_currentState == STATE_PLAYING) return;
+
+    // Même état GL que MenuManager::draw() : blend actif, depth test désactivé
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_DEPTH_TEST);
+
+    Menu* menu = getCurrentMenu();
+    if (menu) menu->drawOverlays();
+
+    glEnable(GL_DEPTH_TEST);
+}
+
 GameState MenuManager::getCurrentState() const {
     return m_currentState;
 }

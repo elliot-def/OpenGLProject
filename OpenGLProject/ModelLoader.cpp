@@ -2,8 +2,8 @@
 
 #include "ModelLoader.h"
 #include "ModelEntity.h"
-#include "FirstPersonArms.h"
 #include "CharacterAnimationController.h"
+#include "Log.h"
 #include "InputManager.h"
 #include "Animator.h"
 
@@ -37,24 +37,19 @@ void ModelLoader::load(GLFWwindow* loaderWindow) {
 }
 
 void ModelLoader::loadDecorModels() {
-    printf("[ModelLoader]   → Chargement du backpack...\n");
+    LOG_INFO("[ModelLoader]   -> Chargement du backpack...");
     m_modelEntity = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
                                                   "./res/models/backpack/backpack.obj", m_textureManager);
 
-    printf("[ModelLoader]   → Chargement de fropy (low poly)...\n");
+    LOG_INFO("[ModelLoader]   -> Chargement de fropy (low poly)...");
     m_fropyEntity = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
                                                   "./res/models/fropy/fropy_low_poly.obj", m_textureManager);
     m_fropyEntity->setPosition(glm::vec3(3.0f, 5.0f, 0.0f));
     m_fropyEntity->setSpin(20.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-
-    printf("[ModelLoader]   → Chargement des bras (rigges)...\n");
-    m_firstPersonArms = std::make_unique<FirstPersonArms>(m_camera, m_lightManager,
-                                                          "./res/rigging/arm/arms_rig.glb", m_textureManager);
-    m_inputManager->setFirstPersonArms(m_firstPersonArms.get());
 }
 
 void ModelLoader::loadHumanCharacter() {
-    printf("[ModelLoader]   → Chargement de Megan (rigge)...\n");
+    LOG_INFO("[ModelLoader]   -> Chargement de Megan (rigge)...");
     m_humanEntity = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
                                                   "./res/rigging/mixamo/models/Megan.fbx", m_textureManager);
 
@@ -63,20 +58,20 @@ void ModelLoader::loadHumanCharacter() {
 
     // ── Debug chargement : un echec ici = aucun personnage en 3P ────────
     if (!scene || model->getMeshes().empty()) {
-        printf("[ModelLoader]   !! ERREUR : le modele n'a pas pu etre charge "
-               "(scene=%p, meshes=%zu) -> rien ne sera affiche en 3P.\n",
-               (const void*)scene, model->getMeshes().size());
-        printf("[ModelLoader]   !! Verifier que le fichier est lisible par Assimp "
-               "(FBX 2011/2012/2013 ou GLB/GLTF) : un ancien FBX 6.x est refuse.\n");
+        LOG_ERROR("[ModelLoader]   !! ERREUR : le modele n'a pas pu etre charge "
+                  "(scene=%p, meshes=%zu) -> rien ne sera affiche en 3P.",
+                  (const void*)scene, model->getMeshes().size());
+        LOG_ERROR("[ModelLoader]   !! Verifier que le fichier est lisible par Assimp "
+                  "(FBX 2011/2012/2013 ou GLB/GLTF) : un ancien FBX 6.x est refuse.");
     } else {
-        printf("[ModelLoader]   Modele OK : %zu meshes, %u bones, %zu animations embarquees, "
-               "bbox size=(%.2f, %.2f, %.2f)\n",
-               model->getMeshes().size(),
-               static_cast<unsigned int>(model->getBoneInfoMap().size()),
-               model->getNumAnimations(),
-               model->getBoundingBox().getSize().x,
-               model->getBoundingBox().getSize().y,
-               model->getBoundingBox().getSize().z);
+        LOG_INFO("[ModelLoader]   Modele OK : %zu meshes, %u bones, %zu animations embarquees, "
+                 "bbox size=(%.2f, %.2f, %.2f)",
+                 model->getMeshes().size(),
+                 static_cast<unsigned int>(model->getBoneInfoMap().size()),
+                 model->getNumAnimations(),
+                 model->getBoundingBox().getSize().x,
+                 model->getBoundingBox().getSize().y,
+                 model->getBoundingBox().getSize().z);
     }
 
     // Auto-scale : hauteur cible ~1.8 unites (~1.80m) divisee par la hauteur
@@ -86,10 +81,10 @@ void ModelLoader::loadHumanCharacter() {
         constexpr float targetHeight = 1.8f;
         if (modelHeight > 0.001f) {
             m_humanEntity->setScale(targetHeight / modelHeight);
-            printf("[ModelLoader]   Megan auto-scale: %.4f (model=%.1f -> target=%.1f)\n",
-                   targetHeight / modelHeight, modelHeight, targetHeight);
+            LOG_INFO("[ModelLoader]   Megan auto-scale: %.4f (model=%.1f -> target=%.1f)",
+                     targetHeight / modelHeight, modelHeight, targetHeight);
         } else {
-            printf("[ModelLoader]   Pas d'auto-scale (hauteur modele=%.4f, < 0.001)\n", modelHeight);
+            LOG_INFO("[ModelLoader]   Pas d'auto-scale (hauteur modele=%.4f, < 0.001)", modelHeight);
         }
     }
 
@@ -137,25 +132,25 @@ void ModelLoader::loadHumanCharacter() {
         // rest  = -1 (pas d'anim de rest)
 
         // ── Debug : liste complete + validation du mapping ──────────────
-        printf("[ModelLoader]   %zu animations au total (%zu embarquees + %zu externes) :\n",
-               totalAnims, base, model->getNumExternalAnimations());
+        LOG_INFO("[ModelLoader]   %zu animations au total (%zu embarquees + %zu externes) :",
+                 totalAnims, base, model->getNumExternalAnimations());
         for (size_t i = 0; i < totalAnims; i++) {
             const aiAnimation* anim = model->getAnimation(i);
-            printf("[ModelLoader]     [%2zu] \"%s\"%s\n", i,
-                   anim ? anim->mName.C_Str() : "(null)",
-                   i < base ? "  (embarquee)" : "  (externe)");
+            LOG_INFO("[ModelLoader]     [%2zu] \"%s\"%s", i,
+                     anim ? anim->mName.C_Str() : "(null)",
+                     i < base ? "  (embarquee)" : "  (externe)");
         }
-        printf("[ModelLoader]   Mapping : idle=%d walk=%d run=%d jump=%d strafeL=%d strafeR=%d "
-               "strafeWL=%d strafeWR=%d turnL=%d turnR=%d runJump=%d walkBack=%d\n",
-               m_humanEntity->getIdleAnimIndex(), m_humanEntity->getWalkAnimIndex(),
-               m_humanEntity->getRunAnimIndex(), m_humanEntity->getJumpIdx(),
-               m_humanEntity->getStrafeLeftIdx(), m_humanEntity->getStrafeRightIdx(),
-               m_humanEntity->getStrafeWalkLeftIdx(), m_humanEntity->getStrafeWalkRightIdx(),
-               m_humanEntity->getTurnLeftIdx(), m_humanEntity->getTurnRightIdx(),
-               m_humanEntity->getRunJumpIdx(), m_humanEntity->getWalkBackIdx());
+        LOG_INFO("[ModelLoader]   Mapping : idle=%d walk=%d run=%d jump=%d strafeL=%d strafeR=%d "
+                 "strafeWL=%d strafeWR=%d turnL=%d turnR=%d runJump=%d walkBack=%d",
+                 m_humanEntity->getIdleAnimIndex(), m_humanEntity->getWalkAnimIndex(),
+                 m_humanEntity->getRunAnimIndex(), m_humanEntity->getJumpIdx(),
+                 m_humanEntity->getStrafeLeftIdx(), m_humanEntity->getStrafeRightIdx(),
+                 m_humanEntity->getStrafeWalkLeftIdx(), m_humanEntity->getStrafeWalkRightIdx(),
+                 m_humanEntity->getTurnLeftIdx(), m_humanEntity->getTurnRightIdx(),
+                 m_humanEntity->getRunJumpIdx(), m_humanEntity->getWalkBackIdx());
         if (base + 11 >= totalAnims) {
-            printf("[ModelLoader]   !! ATTENTION : dernier clip externe (index %zu) >= nombre "
-                   "d'animations (%zu) -> tous les clips n'existent pas.\n", base + 11, totalAnims);
+            LOG_WARN("[ModelLoader]   !! ATTENTION : dernier clip externe (index %zu) >= nombre "
+                     "d'animations (%zu) -> tous les clips n'existent pas.", base + 11, totalAnims);
         }
 
         // Jouer l'idle

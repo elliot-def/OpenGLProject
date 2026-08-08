@@ -39,7 +39,7 @@ Texture* TextureManager::getTexture(const std::string& path) {
     return current->texture;
 }
 
-// Fonction pour charger les propriétés depuis le JSON
+// Fonction pour charger les propriÃ©tÃ©s depuis le JSON
 float TextureManager::loadTextureProperties(const std::filesystem::path& jsonPath) {
     try {
         std::ifstream jsonFile(jsonPath);
@@ -56,7 +56,7 @@ float TextureManager::loadTextureProperties(const std::filesystem::path& jsonPat
     return Constants::Material::PLASTIC_GLOSSY;
 }
 
-// Fonction pour récupérer les informations d'une texture depuis un dossier
+// Fonction pour rÃ©cupÃ©rer les informations d'une texture depuis un dossier
 TextureInfo TextureManager::getTextureInfoFromFolder(const std::filesystem::path& folderPath) {
     TextureInfo info;
     std::string folderName = folderPath.filename().string();
@@ -71,14 +71,14 @@ TextureInfo TextureManager::getTextureInfoFromFolder(const std::filesystem::path
         info.shininess = loadTextureProperties(info.shininessPath);
     }
     else {
-        std::cerr << "Fichier de propriétés manquant pour " << folderName << ": " << info.shininessPath << std::endl;
+        std::cerr << "Fichier de proprietes manquant pour " << folderName << ": " << info.shininessPath << std::endl;
         info.shininess = Constants::Material::PLASTIC_GLOSSY;
 	}
 
     return info;
 }
 
-// Fonction pour créer un noeud dans l'arborescence
+// Fonction pour crÃ©er un noeud dans l'arborescence
 void TextureManager::createTextureNode(const std::string& relativePath, const TextureInfo& info, int& textureIDCounter) {
     TextureNode* current = &m_root;
     std::stringstream ss(relativePath);
@@ -87,7 +87,7 @@ void TextureManager::createTextureNode(const std::string& relativePath, const Te
 
     while (std::getline(ss, part, sep)) {
         if (ss.peek() == EOF) {
-            // Dernier segment : créer la texture
+            // Dernier segment : crÃ©er la texture
             current->children[part] = new TextureNode();
             current->children[part]->texture = new Texture(
                 info.texturePath,
@@ -100,7 +100,7 @@ void TextureManager::createTextureNode(const std::string& relativePath, const Te
             if (info.hasSpecular) textureIDCounter++;
         }
         else {
-            // Segment intermédiaire : créer un noeud
+            // Segment intermÃ©diaire : crÃ©er un noeud
             if (current->children.find(part) == current->children.end()) {
                 current->children[part] = new TextureNode();
             }
@@ -113,24 +113,24 @@ void TextureManager::createTextureNode(const std::string& relativePath, const Te
 bool TextureManager::loadTextureFromFolder(const std::filesystem::path& folderPath, const std::string& texturesFolderPath, int& textureIDCounter) {
     std::string folderName = folderPath.filename().string();
 
-    // Récupérer les informations de la texture
+    // RÃ©cupÃ©rer les informations de la texture
     TextureInfo info = getTextureInfoFromFolder(folderPath);
 
-    // Vérifier que la texture principale existe
+    // VÃ©rifier que la texture principale existe
     if (!std::filesystem::exists(info.texturePath)) {
         std::cerr << "Texture principale manquante: " << info.texturePath << std::endl;
         return false;
     }
 
-    // Créer le noeud dans l'arborescence
+    // CrÃ©er le noeud dans l'arborescence
     std::string relativePath = folderPath.lexically_relative(texturesFolderPath).string();
     createTextureNode(relativePath, info, textureIDCounter);
 
     // Log
-    std::cout << "Texture chargée: " << folderName
+    std::cout << "Texture chargee: " << folderName
         << " (shininess: " << info.shininess
         << ", specular: " << (info.hasSpecular ? "oui" : "non") << ")"
-		<< ", shininess file: " << (info.hasShininess ? info.shininessPath : "non trouvé")
+		<< ", shininess file: " << (info.hasShininess ? info.shininessPath : "non trouvÃ©")
         << std::endl;
 
     return true;
@@ -155,7 +155,7 @@ void TextureManager::loadTextures(std::span<const char* const> texturesFolderPat
             if (entry.is_directory()) {
                 std::string folderName = entry.path().filename().string();
 
-                // Ignorer les dossiers réservés aux modèles 3D
+                // Ignorer les dossiers rÃ©servÃ©s aux modÃ¨les 3D
                 if (folderName == "models") continue;
 
                 loadTextureFromFolder(entry.path(), path, textureIDCounter);
@@ -178,7 +178,7 @@ void TextureManager::deleteNode(TextureNode* node) {
 void TextureManager::printTextureTree() const {
     std::cout << "\n=== Arborescence des Textures ===" << std::endl;
     if (m_root.children.empty()) {
-        std::cout << "(Aucune texture chargée)" << std::endl;
+        std::cout << "(Aucune texture chargee)" << std::endl;
         return;
     }
 
@@ -244,7 +244,7 @@ void TextureManager::printNode(const TextureNode* node, const std::string& prefi
 }
 
 void TextureManager::createDefaultTextures() {
-    // Créer une texture grise pour specular par défaut
+    // CrÃ©er une texture grise pour specular par dÃ©faut
     glGenTextures(1, &m_defaultSpecularID);
     glBindTexture(GL_TEXTURE_2D, m_defaultSpecularID);
 

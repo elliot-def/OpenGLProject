@@ -1,10 +1,10 @@
 #include "Renderer.h"
 
 #include "constants/renderer.h"
+#include "Log.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <iostream>
 #include <thread>
 #include <chrono>
 
@@ -25,19 +25,18 @@ void Renderer::handleFrameTiming() {
     m_deltaTime = static_cast<float>(currentTime - m_lastTime);
 
     if (m_capFPS) {
-        double timeElapsed = glfwGetTime() - m_lastTime;
-
-        // 1. Sommeil safe : on dort si on a plus de 2 millisecondes d'avance.
-        // On garde une marge de 2ms (0.002s) car l'OS peut se réveiller en retard.
-        while (timeElapsed < (frameTime - 0.002)) {
-            // On dort par petites tranches de 1ms pour ne pas rater notre cible
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            timeElapsed = glfwGetTime() - m_lastTime;
+        // Throttling calme : un SEUL sommeil calibré jusqu'à ~2ms avant la
+        // cible, puis une courte micro-boucle de précision (≤2ms).
+        // L'ancienne boucle dormait par tranches de 1ms en réinterrogeant
+        // glfwGetTime à chaque réveil (plusieurs dizaines de wakeups/frame) ;
+        // avec le vsync actif (glfwSwapInterval), le swap bloque déjà sur le
+        // vblank, ce chemin ne sert que pour le cap logiciel optionnel.
+        const double targetTime = m_lastTime + frameTime;
+        const double remaining = targetTime - glfwGetTime();
+        if (remaining > 0.002) {
+            std::this_thread::sleep_for(std::chrono::duration<double>(remaining - 0.002));
         }
-
-        // 2. Micro-boucle active : précision maximale sur les dernières fractions de ms.
         while ((glfwGetTime() - m_lastTime) < frameTime) {
-            // On peut optionnellement ajouter un yield() pour être sympa avec l'OS
             std::this_thread::yield();
         }
 
@@ -52,7 +51,7 @@ void Renderer::handleFrameTiming() {
     m_fpsTimer += m_deltaTime;
 
     if (m_fpsTimer >= 1.0) {
-        std::cout << "FPS: " << m_frameCount << std::endl;
+        LOG_INFO("FPS: %d", m_frameCount);
         m_frameCount = 0;
         m_fpsTimer = 0.0;
     }

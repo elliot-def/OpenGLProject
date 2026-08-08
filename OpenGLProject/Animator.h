@@ -73,12 +73,6 @@ private:
     float m_ticksPerSecond = 30.0f;
     bool m_loop = true;
 
-    // État du diagnostic périodique : limité à un message par seconde.
-    float m_debugTimer = 0.0f;
-    float m_debugLastTime = 0.0f;
-    glm::quat m_debugLastRotation{ 1.0f, 0.0f, 0.0f, 0.0f };
-    bool m_debugHasLastRotation = false;
-
     std::vector<glm::mat4> m_finalBoneMatrices;
 
     // Offsets manuels optionnels appliqués par nom de bone (voir addBoneOffset)
@@ -158,12 +152,6 @@ private:
     // utilisée si le canal n'a pas de clé de rotation)
     glm::quat interpolateRotation(float animTime, const aiNodeAnim* channel,
                                   const glm::quat& defaultValue) const;
-
-    // Helper : interpolation de scale
-    glm::vec3 interpolateScale(float animTime, const aiNodeAnim* channel) const;
-
-    // Diagnostic de l'animation courante (aucun effet sur le rendu).
-    void printAnimationDebug() const;
 
     // Trouve l'index de la keyframe pour un temps donné
     unsigned int findKeyIndex(float animTime, const aiVectorKey* keys, unsigned int numKeys) const;

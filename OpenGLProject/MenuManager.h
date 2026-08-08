@@ -51,6 +51,10 @@ public:
     void update();
     void draw();
 
+    // Dessine les shapes de premier plan du menu courant (par-dessus le texte).
+    // À appeler APRÈS le flush des TextRenderers (voir Game::run).
+    void drawOverlays();
+
     void changeState(GameState newState);
     GameState getCurrentState() const;
 };

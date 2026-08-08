@@ -28,11 +28,11 @@ public:
     float getLinear();
     float getQuadratic();
 
-    // Accès au Cube (version smart pointer)
+    // AccÃ¨s au Cube (version smart pointer)
     std::unique_ptr<Cube>& getCube();
 
 private:
-    std::unique_ptr<Cube> m_cube;  // Propriété du cube
+    std::unique_ptr<Cube> m_cube;  // PropriÃ©tÃ© du cube
     glm::vec3 m_lightColor, m_ambient, m_diffuse, m_specular;
     float m_constant, m_linear, m_quadratic;
 };

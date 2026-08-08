@@ -52,7 +52,7 @@ public:
     * Constructeur de paquet
     *
     * @param type Type de paquet
-    * @param jsonPayload Payload JSON sous forme de chaîne
+    * @param jsonPayload Payload JSON sous forme de chaÃ®ne
     *
     * @return Nouveau paquet
     */
@@ -60,10 +60,10 @@ public:
         : m_type(type), m_payload(jsonPayload) {
     }
 
-    // Sérialiser le paquet pour l'envoi
+    // SÃ©rialiser le paquet pour l'envoi
     std::vector<char> serialize() const;
 
-    // Désérialiser depuis des données brutes
+    // DÃ©sÃ©rialiser depuis des donnÃ©es brutes
     static Packet deserialize(const char* data, size_t size);
 
     // Getters

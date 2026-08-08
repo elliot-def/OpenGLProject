@@ -6,15 +6,15 @@
 #include "SteamManager.h"
 #include "ModelLoader.h"
 #include "TextRenderer.h"
-#include "Skybox.h"
 #include "CharacterAnimationController.h"
+#include "Scene.h"
+#include "Log.h"
 #include "constants/file.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <cmath>
-#include <cstdio>
 #include <vector>
 
 
@@ -39,6 +39,10 @@ Game::~Game() {
     // TANT QUE le contexte GL principal est encore vivant : sinon elles
     // seraient libérées lors de la destruction des membres, APRÈS glfwTerminate().
     m_modelLoader.reset();
+
+    // La Scene possède les cubes et le skybox (ressources GPU) : même raison,
+    // on la détruit avant glfwTerminate().
+    m_scene.reset();
 
 	SharedQuad::destroy();
     if (m_socket) m_socket->stop();
@@ -71,9 +75,9 @@ void Game::initialize() {
     bool steamOk = m_steamManager->init();
 
     if (steamOk) {
-        printf("[Game] Steam initialise, creation de la fenetre...\n");
+        LOG_INFO("[Game] Steam initialise, creation de la fenetre...");
     } else {
-        printf("[Game] Steam non disponible, fonctionnement hors-ligne.\n");
+        LOG_INFO("[Game] Steam non disponible, fonctionnement hors-ligne.");
     }
 
     // Création de la fenêtre et du contexte OpenGL APRÈS SteamAPI_InitEx
@@ -123,6 +127,13 @@ void Game::loadResources() {
 
     m_menuManager->setInputManager(m_inputManager.get());
 
+    // Monde 3D : les objets du monde (cubes, lumières, skybox, entités)
+    // vivent dans Scene ; Game garde les services ci-dessus.
+    m_scene = std::make_unique<Scene>(m_camera.get(), m_player.get(),
+                                      m_collisionManager.get(), m_lightManager.get(),
+                                      m_renderer.get(), m_shaderManager.get(),
+                                      m_textureManager.get(), m_inputManager.get());
+
     m_textRenderers->emplace_back(std::make_unique<TextRenderer>(m_shaderManager.get()));
     m_textRenderers->emplace_back(std::make_unique<TextRenderer>(m_shaderManager.get()));
 
@@ -145,77 +156,57 @@ void Game::loadResources() {
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
     if (!loadingTick()) return;
 
-    Texture* containerTexture = m_textureManager->getTexture("container");
-    Shader* cubeShader = m_shaderManager->getShader("cube/severallights");
-    Shader* lightShader = m_shaderManager->getShader("cube/lightsource");
-    std::vector<Texture*> crateTextures = { containerTexture };
-
-    m_lightManager->addPointLight(new LightSource(
-        glm::vec3(1, 0.5, 2), lightShader, m_player.get(),
-        glm::vec3(0.2f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f),
-        glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
-        glm::vec3(5.0f, 0.0f, 0.0f)));
-
-    m_lightManager->addPointLight(new LightSource(
-        glm::vec3(3, 0.5, -2), lightShader, m_player.get(),
-        glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
-        glm::vec3(0.0f, 5.0f, 0.0f)));
+    m_scene->loadLights();
 
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
     if (!loadingTick()) return;
 
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0, 0),  1.0f, cubeShader, crateTextures, m_renderer.get(), m_lightManager.get(), m_player.get()));
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(0, 0, -2), 1.0f, cubeShader, crateTextures, m_renderer.get(), m_lightManager.get(), m_player.get()));
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0.5, 2), 1.0f, cubeShader, crateTextures, m_renderer.get(), m_lightManager.get(), m_player.get()));
-    m_cubes[2]->setSpin(10.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(0, -12, 0), 24.0f, cubeShader, crateTextures, m_renderer.get(), m_lightManager.get(), m_player.get()));
-
-    m_collisionManager->addStaticMesh(m_cubes[0]->getMesh(), m_cubes[0]->getTransformation()->getMatrix(), "cube1");
-    m_collisionManager->addStaticMesh(m_cubes[1]->getMesh(), m_cubes[1]->getTransformation()->getMatrix(), "cube2");
-    m_collisionManager->addStaticMesh(m_cubes[3]->getMesh(), m_cubes[3]->getTransformation()->getMatrix(), "cube4");
-    m_collisionManager->buildBVH();
+    m_scene->loadCubes();
 
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
     if (!loadingTick()) return;
 
     if (m_steamManager && m_steamManager->isInitialized()) {
         m_steamManager->setOnInviteReceived([this](CSteamID lobbyID) {
-            printf("[Game] Invitation recue, tentative de rejoindre le lobby %llu...\n",
-                   lobbyID.ConvertToUint64());
+            LOG_INFO("[Game] Invitation recue, tentative de rejoindre le lobby %llu...",
+                     lobbyID.ConvertToUint64());
             m_steamManager->joinLobby(lobbyID);
         });
 
         m_steamManager->setOnLobbyCreated([this](CSteamID lobbyID) {
-            printf("[Game] Lobby cree avec succes, ouverture de l'invitation...\n");
+            LOG_INFO("[Game] Lobby cree avec succes, ouverture de l'invitation...");
             m_steamManager->openInviteDialog();
         });
 
         m_steamManager->setOnLobbyEntered([this](CSteamID lobbyID) {
-            printf("[Game] Connecte au lobby %llu !\n", lobbyID.ConvertToUint64());
+            LOG_INFO("[Game] Connecte au lobby %llu !", lobbyID.ConvertToUint64());
             if (m_socket) {
                 // TODO: utiliser le lobby pour établir la connexion réseau
             }
         });
 
         m_steamManager->setOnLobbyLeft([this]() {
-            printf("[Game] Quitte le lobby.\n");
+            LOG_INFO("[Game] Quitte le lobby.");
         });
 
         if (m_argc > 0 && m_argv != nullptr) {
             m_steamManager->parseCommandLine(m_argc, m_argv);
         }
     } else {
-        printf("[Game] Steam non disponible, fonctionnement hors-ligne.\n");
+        LOG_INFO("[Game] Steam non disponible, fonctionnement hors-ligne.");
     }
 
-    glGetString(GL_VERSION) ? std::cout << "OpenGL version: " << glGetString(GL_VERSION) << std::endl
-        : throw std::runtime_error("Impossible de recuperer la version OpenGL");
+    const GLubyte* glVersion = glGetString(GL_VERSION);
+    if (glVersion) {
+        LOG_INFO("OpenGL version: %s", glVersion);
+    } else {
+        throw std::runtime_error("Impossible de recuperer la version OpenGL");
+    }
 
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
 
     // ── Skybox nocturne : cubemap chargé dans le contexte principal ──
-    m_skybox = std::make_unique<Skybox>(Constants::File::SKYBOX_NIGHT_PATH);
+    m_scene->createSkybox(Constants::File::SKYBOX_NIGHT_PATH);
 
     // ── Partie asynchrone : modèles 3D sur un thread separe ──
     m_modelLoader = std::make_unique<ModelLoader>(m_camera.get(), m_lightManager.get(), m_renderer.get(),
@@ -228,10 +219,10 @@ void Game::loadResources() {
             m_loadingDone = true;
         });
         m_initPhase = InitPhase::LOADING;
-        printf("[Game] Modeles en cours de chargement (thread separe)...\n");
+        LOG_INFO("[Game] Modeles en cours de chargement (thread separe)...");
     } else {
         // Fallback : chargement synchrone si le contexte partage échoue
-        printf("[Game] Contexte partage indisponible, chargement synchrone.\n");
+        LOG_INFO("[Game] Contexte partage indisponible, chargement synchrone.");
         m_modelLoader->load(nullptr);
         adoptLoadedEntities();
         m_loadingScreen.reset();
@@ -261,7 +252,6 @@ void Game::run() {
                     if (m_modelEntity)   reloadMeshes(m_modelEntity->getModel()->getMeshes());
                     if (m_fropyEntity)   reloadMeshes(m_fropyEntity->getModel()->getMeshes());
                     if (m_humanEntity)   reloadMeshes(m_humanEntity->getModel()->getMeshes());
-                    if (m_firstPersonArms) reloadMeshes(m_firstPersonArms->getMeshes());
 
                     if (m_loaderWindow) {
                         m_window->destroySharedContext(m_loaderWindow);
@@ -291,7 +281,7 @@ void Game::run() {
                     } else {
                         m_loadingScreen.reset();
                         m_initPhase = InitPhase::READY;
-                        printf("[Game] Chargement termine !\n");
+                        LOG_INFO("[Game] Chargement termine !");
                     }
                 }
             } else {
@@ -322,6 +312,8 @@ void Game::run() {
             beginTextFrame();
             m_menuManager->draw();
             flushTextFrame();
+            // Easter egg DVD : dessiné APRÈS le flush du texte pour passer devant lui
+            m_menuManager->drawOverlays();
 
             m_window->update();
             break;
@@ -341,118 +333,28 @@ void Game::run() {
 void Game::update() {
 	ClientEvent socketEvent;
     if (m_socket->pollEvent(socketEvent)) {
-        printf("%s\n", socketEvent.data.c_str());
+        LOG_INFO("%s", socketEvent.data.c_str());
     }
 
     m_inputManager->update();
-    m_camera->update(m_player.get());
 
-
-
-    for (auto& cube : m_cubes) {
-        cube->update();
-    }
-    for (auto& alphacube : m_alphacubes) {
-        alphacube->update();
-    }
-
-    m_collisionManager->updateDynamic("cube3", { m_cubes[2]->getMesh() }, m_cubes[2]->getTransformation()->getMatrix());
-
-    m_player->update();
-
-    m_lightManager->update();
+    // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
+    m_scene->update(m_renderer->getDeltaTime());
 
     m_soundManager->setListenerTransform(m_camera->getPosition(), m_camera->getFront(), m_camera->getUp());
     m_soundManager->update();
-
-    m_collisionManager->updateDynamic("backpack", m_modelEntity->getModel()->getMeshes(), m_modelEntity->getModelMatrix());
-    m_collisionManager->updateDynamic("fropy_low_poly", m_fropyEntity->getModel()->getMeshes(), m_fropyEntity->getModelMatrix());
-    m_fropyEntity->update();
-
-    // Humain 3eme personne : suit la position et la direction du joueur.
-    if (m_humanEntity) {
-        m_humanEntity->setPosition(m_player->getPosition());
-        m_humanEntity->setDirection(*m_player->getDirection());
-
-        // Animation du personnage 3P : deleguee au CharacterAnimationController
-        // Sauf en no-clip (gravite desactivee) → on force l'idle.
-        if (m_characterAnim) {
-            if (m_player->isGravityEnabled()) {
-                m_characterAnim->update(m_player->getPosition(),
-                                        m_renderer->getDeltaTime(),
-                                        m_player->getIsSprinting(),
-                                        m_collisionManager->getIsPlayerGrounded());
-            } else {
-                // No-clip : rester en idle
-                int idle = m_humanEntity->getIdleAnimIndex();
-                if (idle >= 0) m_humanEntity->playAnimation(idle, true);
-                m_humanEntity->updateAnimation(m_renderer->getDeltaTime());
-            }
-        }
-    }
-
-    // Mise a jour du bobbing des bras en premiere personne
-    if (m_firstPersonArms) {
-        m_firstPersonArms->update(m_renderer->getDeltaTime(), m_player->getPosition(), m_player->getIsSprinting());
-    }
 }
 
 void Game::draw() {
     beginTextFrame();  // vide le batch de glyphes de la frame
 
-    // 0. Ciel : rendu en premier (depth LEQUAL + mask off), la géométrie de
-    // la scène le recouvre ensuite naturellement grâce au depth test.
-    if (m_skybox) {
-        m_skybox->draw(m_shaderManager->getShader("skybox"), m_camera.get());
-    }
-
-    // 1. Opaques
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
-
-    for (auto& cube : m_cubes) {
-        cube->draw();
-    }
-    m_lightManager->draw();
-
-    m_modelEntity->draw(m_shaderManager->getShader("model"));
-    m_fropyEntity->draw(m_shaderManager->getShader("model"));
-
-    // Humain 3ème personne (visible uniquement en vue 3P)
-    if (m_humanEntity && m_player->isThirdPerson()) {
-        m_humanEntity->draw(m_shaderManager->getShader("skinned"));
-    }
-
-    // 2. Transparences
-    glEnable(GL_BLEND);
-    glDepthMask(GL_FALSE);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // Tri des cubes transparents du plus loin au plus proche
-    std::sort(m_alphacubes.begin(), m_alphacubes.end(),
-        [this](const std::unique_ptr<Cube>& a, const std::unique_ptr<Cube>& b) {
-            float da = glm::length(m_camera->getPosition() - a->getCenter());
-            float db = glm::length(m_camera->getPosition() - b->getCenter());
-            return da > db; // plus loin d'abord
-        }
-    );
-
-    for (auto& alphacube : m_alphacubes) {
-        alphacube->draw();
-    }
-
-    glDepthMask(GL_TRUE);
-    glDisable(GL_BLEND);
-
-    // Bras : uniquement en 1ère personne (overlay viewmodel).
-    if (m_firstPersonArms && !m_player->isThirdPerson()) {
-        m_firstPersonArms->draw(m_shaderManager->getShader("skinned"));
-    }
+    // Monde 3D : skybox, opaques, transparences, corps 1P Mixamo.
+    m_scene->draw();
 
     // ── HUD debug (personnage 3P) : liste des animations du modele ────────
-    // Actif pour verification (voir RUNNING JUMP). Couteux en FPS :
-    // re-commenter une fois le debug termine.
-    if (m_humanEntity && m_player->isThirdPerson() && m_textRenderers) {
+    // Désactivé par défaut ; bascule avec F3 (InputManager -> toggleDebugHUD).
+    // Coûteux en FPS (concats std::string + ~32 lignes de texte par frame).
+    if (m_debugHUD && m_humanEntity && m_player->isThirdPerson() && m_textRenderers) {
         CharacterAnimationController::drawDebugHUD(m_humanEntity, *m_textRenderers);
     }
 
@@ -469,6 +371,11 @@ void Game::beginTextFrame() {
 void Game::flushTextFrame() {
     if (!m_textRenderers) return;
     for (auto& tr : *m_textRenderers) tr->flush();
+}
+
+void Game::toggleDebugHUD() {
+    m_debugHUD = !m_debugHUD;
+    LOG_INFO("[Game] Debug HUD %s", m_debugHUD ? "ON" : "OFF");
 }
 
 void Game::changeState(GameState newState) {
@@ -507,8 +414,10 @@ void Game::adoptLoadedEntities() {
     m_modelEntity     = m_modelLoader->getModelEntity();
     m_fropyEntity     = m_modelLoader->getFropyEntity();
     m_humanEntity     = m_modelLoader->getHumanEntity();
-    m_firstPersonArms = m_modelLoader->getFirstPersonArms();
-    m_characterAnim   = m_modelLoader->getCharacterAnim();
+
+    // Transmet les vues à la Scene (qui les utilise pour update/draw).
+    m_scene->adoptEntities(m_modelEntity, m_fropyEntity, m_humanEntity,
+                           m_modelLoader->getCharacterAnim());
 }
 
 void Game::stop() {

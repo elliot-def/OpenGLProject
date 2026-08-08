@@ -61,17 +61,17 @@ void Spotlight::applyToShader(Shader* shader, bool isEnabled) {
     shader->setFloat(loc.outerCutOff, m_outerCutOff);
 
     if (isEnabled) {
-        // Mise � jour du timer et g�n�ration d'une nouvelle cible si n�cessaire
-        m_flickerTimer += m_renderer->getDeltaTime(); // Assurez-vous d'avoir acc�s au deltaTime
+        // Mise à jour du timer et génération d'une nouvelle cible si nécessaire
+        m_flickerTimer += m_renderer->getDeltaTime(); // Assurez-vous d'avoir accès au deltaTime
         if (m_flickerTimer >= m_flickerChangeInterval) {
             m_targetFlicker = 0.85f + (rand() % 30) / 100.0f; // Entre 0.85 et 1.15
             m_flickerTimer = 0.0f;
         }
 
-        // Interpolation lin�aire vers la valeur cible
+        // Interpolation linéaire vers la valeur cible
         m_currentFlicker += (m_targetFlicker - m_currentFlicker) * m_smoothingSpeed * m_renderer->getDeltaTime();
 
-        // Application de l'al�atoire liss� sur l'intensit�
+        // Application de l'aléatoire lissé sur l'intensité
         shader->setVec3(loc.ambient, m_ambient * m_currentFlicker);
         shader->setVec3(loc.diffuse, m_diffuse * m_currentFlicker);
         shader->setVec3(loc.specular, m_specular * m_currentFlicker);

@@ -1,7 +1,7 @@
 #include "Cube.h"
 
 #include <cmath>
-#include "Vertex.h"   // Structure d'un sommet (position, couleur, texture�)
+#include "Vertex.h"   // Structure d'un sommet (position, couleur, texture…)
 #include "Mesh.h"     // Classe pour gerer les buffers OpenGL et dessiner
 #include "Shader.h"   // Classe pour les shaders OpenGL
 #include "ShaderType.h" // Enum class pour identifier le rôle du shader sans string compare
@@ -25,20 +25,20 @@ Cube::Cube(glm::vec3 center, float edge, Shader* shader, LightSource* lightSourc
     : Cube(center, edge, shader, player) {
     m_lightSource = lightSource;
 
-    // Coordonn�es du centre du cube
+    // Coordonnées du centre du cube
     float x = center[0];
     float y = center[1];
     float z = center[2];
 
-    // Moiti� de la taille du cube (sert � placer les sommets autour du centre)
+    // Moitié de la taille du cube (sert à placer les sommets autour du centre)
     float halfEdge = m_edge / 2.0f;
 
-    // Cr�ation des composants n�cessaires
-    m_transformation = std::make_unique<Transformation>(); // Permet de d�placer/faire tourner/agrandir l�objet
+    // Création des composants nécessaires
+    m_transformation = std::make_unique<Transformation>(); // Permet de déplacer/faire tourner/agrandir l'objet
 
-    // D�finition des sommets du cube
+    // Définition des sommets du cube
     // Chaque face a 4 sommets, et comme un cube a 6 faces -> 24 sommets en tout
-    // Chaque sommet a : position (x,y,z), normale (ici mise � 0 pour l�instant), coordonn�es UV
+    // Chaque sommet a : position (x,y,z), normale (ici mise à 0 pour l'instant), coordonnées UV
     const std::vector<Vertex> vertices = {
         // Face avant (Z+)
         Vertex(x - halfEdge, y - halfEdge, z + halfEdge, 0.0f,  0.0f, 1.0f, 0.0f, 0.0f),
@@ -46,7 +46,7 @@ Cube::Cube(glm::vec3 center, float edge, Shader* shader, LightSource* lightSourc
         Vertex(x + halfEdge, y + halfEdge, z + halfEdge, 0.0f,  0.0f, 1.0f, 1.0f, 1.0f),
         Vertex(x - halfEdge, y + halfEdge, z + halfEdge, 0.0f,  0.0f, 1.0f, 0.0f, 1.0f),
 
-        // Face arri�re (Z-)
+        // Face arrière (Z-)
         Vertex(x - halfEdge, y - halfEdge, z - halfEdge, 0.0f,  0.0f, -1.0f, 1.0f, 0.0f),
         Vertex(x + halfEdge, y - halfEdge, z - halfEdge, 0.0f,  0.0f, -1.0f, 0.0f, 0.0f),
         Vertex(x + halfEdge, y + halfEdge, z - halfEdge, 0.0f,  0.0f, -1.0f, 0.0f, 1.0f),
@@ -81,7 +81,7 @@ Cube::Cube(glm::vec3 center, float edge, Shader* shader, LightSource* lightSourc
     // Chaque face du cube = 2 triangles = 6 indices
     const std::vector<unsigned int> indices = {
         0, 1, 2,   2, 3, 0,     // Face avant (Z+)
-        5, 4, 7,   7, 6, 5,     // Face arri�re (Z-)
+        5, 4, 7,   7, 6, 5,     // Face arrière (Z-)
         8, 9, 10,  10, 11, 8,   // Face gauche (X-)
         13, 12, 15, 15, 14, 13, // Face droite (X+)
         17, 16, 19, 19, 18, 17, // Face du bas (Y-)
@@ -99,20 +99,20 @@ Cube::Cube(glm::vec3 center, float edge, Shader* shader, std::vector<Texture*> t
     m_renderer = renderer;
     m_textures = textures;
 
-    // Coordonn�es du centre du cube
+    // Coordonnées du centre du cube
     float x = center[0];
     float y = center[1];
     float z = center[2];
 
-    // Moiti� de la taille du cube (sert � placer les sommets autour du centre)
+    // Moitié de la taille du cube (sert à placer les sommets autour du centre)
     float halfEdge = m_edge / 2.0f;
 
-    // Cr�ation des composants n�cessaires
-    m_transformation = std::make_unique<Transformation>(); // Permet de d�placer/faire tourner/agrandir l�objet
+    // Création des composants nécessaires
+    m_transformation = std::make_unique<Transformation>(); // Permet de déplacer/faire tourner/agrandir l'objet
 
-    // D�finition des sommets du cube
+    // Définition des sommets du cube
     // Chaque face a 4 sommets, et comme un cube a 6 faces -> 24 sommets en tout
-    // Chaque sommet a : position (x,y,z), normale (ici mise � 0 pour l�instant), coordonn�es UV
+    // Chaque sommet a : position (x,y,z), normale (ici mise à 0 pour l'instant), coordonnées UV
     const std::vector<Vertex> vertices = {
         // Face avant (Z+)
         Vertex(x - halfEdge, y - halfEdge, z + halfEdge, 0.0f,  0.0f, 1.0f, 0.0f, 0.0f),
@@ -120,7 +120,7 @@ Cube::Cube(glm::vec3 center, float edge, Shader* shader, std::vector<Texture*> t
         Vertex(x + halfEdge, y + halfEdge, z + halfEdge, 0.0f,  0.0f, 1.0f, 1.0f, 1.0f),
         Vertex(x - halfEdge, y + halfEdge, z + halfEdge, 0.0f,  0.0f, 1.0f, 0.0f, 1.0f),
 
-        // Face arri�re (Z-)
+        // Face arrière (Z-)
         Vertex(x - halfEdge, y - halfEdge, z - halfEdge, 0.0f,  0.0f, -1.0f, 1.0f, 0.0f),
         Vertex(x + halfEdge, y - halfEdge, z - halfEdge, 0.0f,  0.0f, -1.0f, 0.0f, 0.0f),
         Vertex(x + halfEdge, y + halfEdge, z - halfEdge, 0.0f,  0.0f, -1.0f, 0.0f, 1.0f),
@@ -155,7 +155,7 @@ Cube::Cube(glm::vec3 center, float edge, Shader* shader, std::vector<Texture*> t
     // Chaque face du cube = 2 triangles = 6 indices
     const std::vector<unsigned int> indices = {
         0, 1, 2,   2, 3, 0,     // Face avant (Z+)
-        5, 4, 7,   7, 6, 5,     // Face arri�re (Z-)
+        5, 4, 7,   7, 6, 5,     // Face arrière (Z-)
         8, 9, 10,  10, 11, 8,   // Face gauche (X-)
         13, 12, 15, 15, 14, 13, // Face droite (X+)
         17, 16, 19, 19, 18, 17, // Face du bas (Y-)

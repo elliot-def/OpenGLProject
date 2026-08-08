@@ -1,6 +1,6 @@
 #include "Packet.h"
 
-// Sérialiser le paquet pour l'envoi
+// SÃ©rialiser le paquet pour l'envoi
 std::vector<char> Packet::serialize() const {
     PacketHeader header;
 
@@ -22,12 +22,12 @@ std::vector<char> Packet::serialize() const {
 }
 
 /*
- * Désérialiser depuis des données brutes
+ * DÃ©sÃ©rialiser depuis des donnÃ©es brutes
  *
- * @param data Pointeur vers les données brutes
- * @param size Taille des données
+ * @param data Pointeur vers les donnÃ©es brutes
+ * @param size Taille des donnÃ©es
  *
- * @return Paquet désérialisé
+ * @return Paquet dÃ©sÃ©rialisÃ©
 */
 Packet Packet::deserialize(const char* data, size_t size) {
     if (size < HEADER_SIZE) {
@@ -35,7 +35,7 @@ Packet Packet::deserialize(const char* data, size_t size) {
     }
 
     PacketHeader header;
-    // Copie le header depuis les données
+    // Copie le header depuis les donnÃ©es
     memcpy(&header, data, HEADER_SIZE);
 
     // Conversion network -> host
@@ -43,12 +43,12 @@ Packet Packet::deserialize(const char* data, size_t size) {
     header.type = ntohs(header.type);
     header.length = ntohl(header.length);
 
-    // Vérifier le magic number
+    // VÃ©rifier le magic number
     if (header.magic != Constants::Network::PACKET_MAGIC) {
         throw std::runtime_error("Magic number invalide");
     }
 
-    // Vérifier la longueur
+    // VÃ©rifier la longueur
     if (size < HEADER_SIZE + header.length) {
         throw std::runtime_error("Paquet incomplet");
     }

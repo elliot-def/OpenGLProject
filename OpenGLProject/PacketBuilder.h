@@ -1,6 +1,6 @@
 #include "Packet.h"
 
-// Fonctions helpers pour créer des paquets JSON facilement
+// Fonctions helpers pour crÃ©er des paquets JSON facilement
 namespace PacketBuilder {
     inline std::string buildJSON(const std::vector<std::pair<std::string, std::string>>& fields) {
         std::string json = "{";

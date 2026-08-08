@@ -23,7 +23,7 @@ void Direction::addDelta(double deltaX, double deltaY) {
 	m_pitch += deltaY;
 	m_dirty = true;
 	++m_version;
-	// Limiter l'inclinaison pour �viter le retournement
+	// Limiter l'inclinaison pour éviter le retournement
 	if (m_pitch > 89.0)
 		m_pitch = 89.0;
 	if (m_pitch < -89.0)

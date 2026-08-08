@@ -1,10 +1,10 @@
-// Buffer de réception pour gérer la fragmentation
+// Buffer de rÃ©ception pour gÃ©rer la fragmentation
 
 #include "packet.h"
 
 class ReceiveBuffer {
 public:
-    // Ajouter des données reçues
+    // Ajouter des donnÃ©es reÃ§ues
     void append(const char* data, size_t size);
 
     // Essayer d'extraire un paquet complet

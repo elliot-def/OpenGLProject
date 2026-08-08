@@ -36,6 +36,8 @@ MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, s
     //m_clickSound = m_soundManager->load("menu_click_sound", "./res/sounds/menu/Pokemon (A Button) - Sound Effect (HD).wav", false, 6.0f, 1.0f);
 
     addShape(0, dvd);
+    // Easter egg DVD : dessiné PAR-DESSUS le texte du menu (après le flush)
+    addOverlayShape(dvd);
 }
 
 MainMenu::~MainMenu() {

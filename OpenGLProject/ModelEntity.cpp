@@ -1,5 +1,6 @@
 #include "ModelEntity.h"
 #include "Model.h"
+#include "Mesh.h"
 #include "Shader.h"
 #include "Camera.h"
 #include "LightManager.h"
@@ -151,6 +152,49 @@ void ModelEntity::draw(Shader* shader) {
     m_lightManager->applyToShader(shader);
 
     m_model->draw(*shader);
+}
+
+void ModelEntity::drawFirstPerson(Shader* shader) {
+    if (!m_model || m_model->getMeshes().empty()) return;
+
+    // Construire le sous-ensemble BRAS SEUL une seule fois (CPU only). Les
+    // patterns de sous-chaîne sont robustes aux préfixes Mixamo
+    // ("mixamorig:LeftArm", "mixamorig:LeftHand", ...). Les jambes ne sont
+    // PAS affichées en 1ère personne (voir Model::buildCulledIndices).
+    if (!m_firstPersonCullingBuilt) {
+        m_model->buildCulledIndices({ "Shoulder", "Arm", "Hand" });
+        m_firstPersonCullingBuilt = true;
+        // Diagnostic : % de triangles conservés (bras) pour la vue 1P
+        size_t total = 0, kept = 0;
+        for (const auto* mesh : m_model->getMeshes()) {
+            total += mesh->getIndices().size();
+            kept += mesh->getCulledIndexCount();
+        }
+        printf("[ModelEntity] Culling 1P : %zu/%zu triangles conserves (%u%%)\n",
+               kept / 3, total / 3, total ? static_cast<unsigned>(100 * kept / total) : 0u);
+    }
+
+    // Même setup que draw(), mais seuls les triangles bras+jambes sont rendus.
+    // Le modèle est en espace monde (position du joueur, caméra au niveau de
+    // la poitrine) : les bras sont visibles sur les bords de l'écran, les
+    // jambes en regardant vers le bas.
+    shader->use();
+    shader->setModel(getModelMatrix());
+    shader->setupMatrices();
+
+    if (m_hasAnimations && m_animator && shader->getType() == ShaderType::SkinnedModel) {
+        const auto& boneMats = m_animator->getFinalBoneMatrices();
+        size_t count = boneMats.size() < SHADER_MAX_BONES
+                       ? boneMats.size() : SHADER_MAX_BONES;
+        shader->setMat4Array("uBoneMatrices[0]", boneMats.data(), static_cast<int>(count));
+    }
+
+    shader->setVec3("viewPos", m_camera->getPosition());
+    m_lightManager->applyToShader(shader);
+
+    for (auto* mesh : m_model->getMeshes()) {
+        mesh->drawCulled();
+    }
 }
 
 void ModelEntity::drawDebug(Shader* shader) {

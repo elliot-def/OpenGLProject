@@ -108,10 +108,9 @@ bool TextRenderer::loadFont(const std::string& fontPath, float fontSize) {
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
     // Construire la table des caracteres (UV + metriques depuis stbtt_packedchar)
-    m_characters.clear();
     for (unsigned char c = 0; c < 128; c++) {
         const stbtt_packedchar& pc = chardata[c];
-        Character character;
+        Character& character = m_characters[c];
         // Inset d'un demi-texel : evite le bleeding du filtre LINEAIRE
         // entre deux glyphes voisins de l'atlas.
         character.u0 = (pc.x0 + 0.5f) / ATLAS_WIDTH;
@@ -123,7 +122,6 @@ bool TextRenderer::loadFont(const std::string& fontPath, float fontSize) {
         character.bearingX = static_cast<int>(pc.xoff);
         character.bearingY = static_cast<int>(pc.yoff);
         character.advance = static_cast<unsigned int>(pc.xadvance);
-        m_characters[c] = character;
     }
 
     std::cout << "Police chargee: " << fontPath
@@ -134,10 +132,11 @@ bool TextRenderer::loadFont(const std::string& fontPath, float fontSize) {
 float TextRenderer::getTextWidth(const std::string& text, float scale) {
     float width = 0.0f;
     for (char c : text) {
-        if (m_characters.find(c) != m_characters.end()) {
-            Character ch = m_characters[c];
-            width += ch.advance * scale;
-        }
+        // L'atlas ne couvre que l'ASCII 0-127 : les octets >= 128 (accents
+        // UTF-8) sont ignores, comme avec l'ancien find() + skip.
+        const unsigned char uc = static_cast<unsigned char>(c);
+        if (uc >= m_characters.size()) continue;
+        width += m_characters[uc].advance * scale;
     }
     return width;
 }
@@ -149,17 +148,17 @@ float TextRenderer::getTextHeight(const std::string& text, float scale) {
     float minY = 0.0f;          // Point le plus bas
 
     for (char c : text) {
-        if (m_characters.find(c) != m_characters.end()) {
-            Character ch = m_characters[c];
+        const unsigned char uc = static_cast<unsigned char>(c);
+        if (uc >= m_characters.size()) continue;
+        const Character& ch = m_characters[uc];
 
-            // Point le plus haut du caractere
-            float top = ch.bearingY * scale;
-            maxBearingY = std::max(maxBearingY, top);
+        // Point le plus haut du caractere
+        float top = ch.bearingY * scale;
+        maxBearingY = std::max(maxBearingY, top);
 
-            // Point le plus bas du caractere
-            float bottom = (ch.bearingY - ch.sizeY) * scale;
-            minY = std::min(minY, bottom);
-        }
+        // Point le plus bas du caractere
+        float bottom = (ch.bearingY - ch.sizeY) * scale;
+        minY = std::min(minY, bottom);
     }
 
     // Hauteur totale = distance entre le point le plus haut et le plus bas
@@ -228,9 +227,9 @@ void TextRenderer::renderText(const std::string& text, float x, float y,
 
     float currentX = x;
     for (char c : text) {
-        auto it = m_characters.find(c);
-        if (it == m_characters.end()) continue;
-        const Character& ch = it->second;
+        const unsigned char uc = static_cast<unsigned char>(c);
+        if (uc >= m_characters.size()) continue;
+        const Character& ch = m_characters[uc];
 
         // Position correcte avec stb_truetype (meme convention que l'ancien code)
         float xpos = currentX + ch.bearingX * scale;

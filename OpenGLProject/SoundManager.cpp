@@ -133,7 +133,7 @@ Sound* SoundManager::load(const std::string& name,
     Sound* ptr = sound.get();
     m_sounds.emplace(name, std::move(sound));
 
-    std::cout << "[SoundManager] Son charge : \"" << name << "\" ← " << filePath << std::endl;
+    std::cout << "[SoundManager] Son charge : \"" << name << "\" <- " << filePath << std::endl;
     return ptr;
 }
 

@@ -16,7 +16,6 @@ class MenuManager;
 class Window;
 class Player;
 class Mouse;
-class FirstPersonArms;
 
 // Classe InputManager : gere toutes les touches du jeu et leur etat
 class InputManager {
@@ -36,9 +35,6 @@ public:
     InputContext getContext() { return m_context; };
 
     void setContext(InputContext context) { m_context = context; };
-
-    // Transmet les bras au Mouse/LeftClick (tir), Push (R) et Grab (E)
-    void setFirstPersonArms(FirstPersonArms* arms);
 
     // Methode appelee chaque frame pour mettre a jour l'etat de toutes les touches
     void update();

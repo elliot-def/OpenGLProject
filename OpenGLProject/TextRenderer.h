@@ -1,7 +1,7 @@
 #pragma once
 #include <glad/glad.h>
 #include <string>
-#include <map>
+#include <array>
 #include <vector>
 
 class ShaderManager; // forward declaration
@@ -16,7 +16,10 @@ struct Character {
 class TextRenderer {
 private:
     ShaderManager* m_shaderManager;
-    std::map<char, Character> m_characters;
+    // Table fixe des 128 premiers caracteres ASCII (0-127), indexee par
+    // (unsigned char) : acces O(1) par caractere dans le hot path du texte
+    // (l'ancien std::map faisait O(log n) + pointer-chase par glyphe).
+    std::array<Character, 128> m_characters{};
     unsigned int m_VAO, m_VBO;
     unsigned int m_shaderProgram;
     unsigned int m_atlasTexture = 0; // une seule texture pour toute la police

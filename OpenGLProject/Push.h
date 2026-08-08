@@ -3,14 +3,10 @@
 #include "Key.h"
 #include "configKeys.h"
 
-class FirstPersonArms;
-
+// Touche Push (R) : l'animation de coup de poing du personnage 3P/1P est
+// declenchee par CharacterAnimationController via getKey("Push") ; rien a
+// faire ici cote viewmodel (supprime).
 class Push : public Key {
 public:
     Push();
-
-    void setFirstPersonArms(FirstPersonArms* arms) { m_firstPersonArms = arms; }
-
-private:
-    FirstPersonArms* m_firstPersonArms = nullptr;
 };

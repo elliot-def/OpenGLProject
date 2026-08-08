@@ -93,6 +93,9 @@ protected:
     Game* m_game;
     std::vector<MenuText> m_items;
     std::map<int, std::unique_ptr<MenuShape>> m_shapes;
+    // Shapes de premier plan (déjà possédés par m_shapes) : dessinés APRÈS
+    // le flush du texte pour passer devant lui.
+    std::vector<Shape*> m_overlayShapes;
     std::vector<std::unique_ptr<MenuRange>> m_ranges;
     std::vector<std::unique_ptr<MenuCheckbox>> m_checkboxes;
     std::vector<std::unique_ptr<MenuSelect>> m_selects;
@@ -125,6 +128,13 @@ public:
         m_shapes.emplace(id, std::make_unique<MenuShape>(shape, callback));
     }
 
+    // Enregistre un shape possédé par m_shapes comme shape de PREMIER PLAN :
+    // il sera dessiné APRÈS le flush du texte (cf. drawOverlays), donc devant
+    // lui. Ex. : Easter egg DVD du MainMenu.
+    void addOverlayShape(Shape* shape) {
+        m_overlayShapes.push_back(shape);
+    }
+
     // label         : texte affiche a gauche du slider (rendu par Menu::draw)
     // x, y          : centre du slider
     // width, height : dimensions de la piste
@@ -149,6 +159,7 @@ public:
     void clear() {
         m_items.clear();
         m_shapes.clear();
+        m_overlayShapes.clear(); // pointeurs obsolètes : les shapes viennent d'être détruits
         m_ranges.clear();
         m_checkboxes.clear();
         m_selects.clear();
@@ -189,6 +200,10 @@ public:
     virtual void update() {};
 
     void draw();
+
+    // Dessine les shapes de premier plan (par-dessus le texte). À appeler
+    // APRÈS le flush des TextRenderers (cf. Game::run / MenuManager::drawOverlays).
+    void drawOverlays();
 
     // Lazy-init du Rectangle de fond (évite recréation par frame)
     void ensureBackground();

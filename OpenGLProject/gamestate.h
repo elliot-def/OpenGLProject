@@ -1,6 +1,6 @@
 #pragma once
 
-// Énumération des états du jeu
+// Ã‰numÃ©ration des Ã©tats du jeu
 enum GameState {
     STATE_MENU,
     STATE_PLAYING,

@@ -31,22 +31,22 @@ class Entity : public Outlineable
 {
 public:
     // Constructeur
-    // renderer : pointeur vers le renderer, utile pour dessiner l'entit�
+    // renderer : pointeur vers le renderer, utile pour dessiner l'entité
     Entity(Renderer* renderer, CollisionManager* collisionManager);
 
     // Destructeur virtuel pour que les classes derives liberent correctement leur memoire
     ~Entity();
 
-    // Methode virtuelle : mise a jour de l'entit� (mouvement, physique, logique)
+    // Methode virtuelle : mise a jour de l'entité (mouvement, physique, logique)
     virtual void update();
     void updatePositionFromEnvironment(float deltaTime);
 
-    // Methode virtuelle : rendu de l'entit� (envoie les donnees a OpenGL)
-    // Correction : la m�thode draw doit prendre un Shader* en param�tre pour permettre l'override
+    // Methode virtuelle : rendu de l'entité (envoie les donnees a OpenGL)
+    // Correction : la méthode draw doit prendre un Shader* en paramètre pour permettre l'override
     virtual void draw(Shader* shader);
 
     // Getters
-    glm::vec3 getPosition() const { return m_position; }           // Position de l'entit�
+    glm::vec3 getPosition() const { return m_position; }           // Position de l'entité
     Direction* getDirection() const { return m_direction; } // Direction regardee
     glm::vec3 getDirectionVector() const; // Direction regardee
     bool isGravityEnabled() const { return m_useGravity; }

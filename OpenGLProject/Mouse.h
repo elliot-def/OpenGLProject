@@ -12,7 +12,6 @@
 #include "LeftClick.h"
 
 class Player;
-class FirstPersonArms;
 
 // Classe Mouse : gere les mouvements de la souris pour le joueur
 class Mouse {
@@ -24,9 +23,6 @@ public:
     // Methode pour gerer le mouvement de la souris
     // xpos, ypos : position actuelle de la souris
     bool update(InputContext context, double xpos, double ypos);
-
-    // Transmet les bras au LeftClick (animation de tir au clic gauche)
-    void setFirstPersonArms(FirstPersonArms* arms);
 
 private:
 	std::map<std::string, Key*> m_keys; // Contient toutes les touches accessibles par leur nom

@@ -11,7 +11,7 @@
 #include "gamestate.h"
 #include "SoundManager.h"
 
-// D�clarations anticip�es
+// Déclarations anticipées
 class Window;
 class Renderer;
 class CollisionManager;
@@ -21,19 +21,15 @@ class ShaderManager;
 class InputManager;
 class Player;
 class Camera;
-class Cube;
-class LightSource;
 class LightManager;
 class Socket;
 class MenuManager;
 class TextRenderer;
 class ModelEntity;
-class FirstPersonArms;
 class SteamManager;
 class LoadingScreen;
-class Skybox;
-class CharacterAnimationController;
 class ModelLoader;
+class Scene;
 
 class Game {
 public:
@@ -44,11 +40,10 @@ public:
     void run();
     void stop();
     void changeState(GameState state);
-private:
-    std::vector<std::unique_ptr<Cube>> m_cubes;
-    std::vector<std::unique_ptr<Cube>> m_alphacubes;
-    std::vector<std::unique_ptr<LightSource>> m_lights;
 
+    // Bascule le HUD debug du personnage 3P (touche F3, voir InputManager)
+    void toggleDebugHUD();
+private:
     std::unique_ptr<CursorManager> m_cursorManager;
     std::unique_ptr<Window> m_window;
     std::unique_ptr<Renderer> m_renderer;
@@ -64,21 +59,26 @@ private:
     std::unique_ptr<MenuManager> m_menuManager;
     std::unique_ptr<std::vector<std::unique_ptr<TextRenderer>>> m_textRenderers;
 
+    // Monde 3D : tout ce qui est gameplay/rendu (cubes, lumières, entités,
+    // skybox) vit dans Scene. Game ne garde que l'orchestration.
+    std::unique_ptr<Scene> m_scene;
+
     // Vues non-propriétaires : le ModelLoader possède les entités et les
     // détruit ; Game ne garde que des pointeurs (remplis via adoptLoadedEntities()).
     ModelEntity* m_modelEntity = nullptr;
     ModelEntity* m_fropyEntity = nullptr;
     ModelEntity* m_humanEntity = nullptr;
-    FirstPersonArms* m_firstPersonArms = nullptr;
     std::unique_ptr<SteamManager> m_steamManager;
-    std::unique_ptr<Skybox> m_skybox;
-    CharacterAnimationController* m_characterAnim = nullptr;
     std::unique_ptr<ModelLoader> m_modelLoader;  // possède les entités 3D chargées
 
     bool m_isRunning = true;
     
     int m_argc;
     char** m_argv;
+
+    // HUD debug des animations du personnage 3P (touche F3).
+    // Off par défaut : coûteux en FPS (concats std::string + texte par frame).
+    bool m_debugHUD = false;
 
     // Phases de chargement (modèles 3D en thread séparé)
     enum class InitPhase { LOADING, READY };
@@ -88,8 +88,9 @@ private:
     std::atomic<bool> m_loadingDone{false};
     std::thread       m_loadingThread;
     GLFWwindow*       m_loaderWindow = nullptr;
-    // Copie dans Game les pointeurs vers les entités possédées par m_modelLoader.
-    // À appeler dès que le chargement est terminé (thread joint ou fallback synchrone).
+    // Copie dans Game les pointeurs vers les entités possédées par m_modelLoader
+    // puis les transmet à Scene. À appeler dès que le chargement est terminé
+    // (thread joint ou fallback synchrone).
     void adoptLoadedEntities();
 
     static constexpr float LOADING_EXTRA_DELAY   = 0.5f;   // délai après 100%

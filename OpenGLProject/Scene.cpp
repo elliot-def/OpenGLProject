@@ -1,0 +1,206 @@
+#include "Scene.h"
+
+#include "Mesh.h"
+#include "Cube.h"
+#include "Shader.h"
+#include "ShaderManager.h"
+#include "Texture.h"
+#include "TextureManager.h"
+#include "LightSource.h"
+#include "LightManager.h"
+#include "Player.h"
+#include "Camera.h"
+#include "CollisionManager.h"
+#include "ModelEntity.h"
+#include "Skybox.h"
+#include "CharacterAnimationController.h"
+#include "Renderer.h"
+#include "Log.h"
+
+#include <glad/glad.h>
+#include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
+
+Scene::Scene(Camera* camera, Player* player, CollisionManager* collisionManager,
+             LightManager* lightManager, Renderer* renderer, ShaderManager* shaderManager,
+             TextureManager* textureManager, InputManager* inputManager)
+    : m_camera(camera), m_player(player), m_collisionManager(collisionManager),
+      m_lightManager(lightManager), m_renderer(renderer), m_shaderManager(shaderManager),
+      m_textureManager(textureManager), m_inputManager(inputManager) {
+    // Shaders cachés UNE SEULE FOIS ici (pas de getShader() par frame dans le
+    // rendu). Le ShaderManager est déjà construit quand Scene est créée.
+    m_skyboxShader  = m_shaderManager->getShader("skybox");
+    m_modelShader   = m_shaderManager->getShader("model");
+    m_skinnedShader = m_shaderManager->getShader("skinned");
+}
+
+Scene::~Scene() = default;
+
+// ── Construction du monde ────────────────────────────────────────────────────
+
+void Scene::loadLights() {
+    Shader* lightShader = m_shaderManager->getShader("cube/lightsource");
+
+    m_lightManager->addPointLight(new LightSource(
+        glm::vec3(1, 0.5, 2), lightShader, m_player,
+        glm::vec3(0.2f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
+        glm::vec3(5.0f, 0.0f, 0.0f)));
+
+    m_lightManager->addPointLight(new LightSource(
+        glm::vec3(3, 0.5, -2), lightShader, m_player,
+        glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
+        glm::vec3(0.0f, 5.0f, 0.0f)));
+}
+
+void Scene::loadCubes() {
+    Texture* containerTexture = m_textureManager->getTexture("container");
+    Shader*  cubeShader       = m_shaderManager->getShader("cube/severallights");
+    std::vector<Texture*> crateTextures = { containerTexture };
+
+    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0, 0),  1.0f, cubeShader, crateTextures, m_renderer, m_lightManager, m_player));
+    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(0, 0, -2), 1.0f, cubeShader, crateTextures, m_renderer, m_lightManager, m_player));
+    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0.5, 2), 1.0f, cubeShader, crateTextures, m_renderer, m_lightManager, m_player));
+    m_cubes[2]->setSpin(10.0f, glm::vec3(1.0f, 0.0f, 0.0f));
+    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(0, -12, 0), 24.0f, cubeShader, crateTextures, m_renderer, m_lightManager, m_player));
+
+    m_collisionManager->addStaticMesh(m_cubes[0]->getMesh(), m_cubes[0]->getTransformation()->getMatrix(), "cube1");
+    m_collisionManager->addStaticMesh(m_cubes[1]->getMesh(), m_cubes[1]->getTransformation()->getMatrix(), "cube2");
+    m_collisionManager->addStaticMesh(m_cubes[3]->getMesh(), m_cubes[3]->getTransformation()->getMatrix(), "cube4");
+    m_collisionManager->buildBVH();
+}
+
+void Scene::createSkybox(const char* path) {
+    m_skybox = std::make_unique<Skybox>(path);
+}
+
+void Scene::adoptEntities(ModelEntity* modelEntity, ModelEntity* fropyEntity,
+                          ModelEntity* humanEntity, CharacterAnimationController* characterAnim) {
+    m_modelEntity    = modelEntity;
+    m_fropyEntity    = fropyEntity;
+    m_humanEntity    = humanEntity;
+    m_characterAnim  = characterAnim;
+}
+
+// ── Mise à jour du monde ────────────────────────────────────────────────────
+
+void Scene::update(float deltaTime) {
+    for (auto& cube : m_cubes) {
+        cube->update();
+    }
+    for (auto& alphacube : m_alphacubes) {
+        alphacube->update();
+    }
+
+    // Collision dynamique du cube tournant (cube3)
+    if (m_cubes.size() > 2) {
+        m_collisionManager->updateDynamic("cube3",
+            { m_cubes[2]->getMesh() },
+            m_cubes[2]->getTransformation()->getMatrix());
+    }
+
+    m_player->update();
+    m_camera->update(m_player);
+    m_lightManager->update();
+
+    // Collisions dynamiques : AABB world recalculée uniquement si la matrice
+    // modèle de l'entité a changé (dirty-flag).
+    if (m_modelEntity) {
+        const glm::mat4 mat = m_modelEntity->getModelMatrix();
+        if (m_backpackDirty || mat != m_lastBackpackMatrix) {
+            m_collisionManager->updateDynamic("backpack", m_modelEntity->getMeshes(), mat);
+            m_lastBackpackMatrix = mat;
+            m_backpackDirty = false;
+        }
+    }
+    if (m_fropyEntity) {
+        const glm::mat4 mat = m_fropyEntity->getModelMatrix();
+        if (m_fropyDirty || mat != m_lastFropyMatrix) {
+            m_collisionManager->updateDynamic("fropy_low_poly", m_fropyEntity->getMeshes(), mat);
+            m_lastFropyMatrix = mat;
+            m_fropyDirty = false;
+        }
+    }
+    if (m_fropyEntity) {
+        m_fropyEntity->update();
+    }
+
+    // Humain 3ème personne : suit la position et la direction du joueur.
+    if (m_humanEntity) {
+        m_humanEntity->setPosition(m_player->getPosition());
+        m_humanEntity->setDirection(*m_player->getDirection());
+
+        // Animation du personnage 3P : deleguee au CharacterAnimationController
+        // Sauf en no-clip (gravite desactivee) → on force l'idle.
+        if (m_characterAnim) {
+            if (m_player->isGravityEnabled()) {
+                m_characterAnim->update(m_player->getPosition(), deltaTime,
+                                        m_player->getIsSprinting(),
+                                        m_collisionManager->getIsPlayerGrounded());
+            } else {
+                const int idle = m_humanEntity->getIdleAnimIndex();
+                if (idle >= 0) m_humanEntity->playAnimation(idle, true);
+                m_humanEntity->updateAnimation(deltaTime);
+            }
+        }
+    }
+}
+
+// ── Rendu du monde ──────────────────────────────────────────────────────────
+
+void Scene::draw() {
+    // 0. Ciel : rendu en premier (depth LEQUAL + mask off), la géométrie de
+    // la scène le recouvre ensuite naturellement grâce au depth test.
+    if (m_skybox && m_skyboxShader) {
+        m_skybox->draw(m_skyboxShader, m_camera);
+    }
+
+    // 1. Opaques
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    for (auto& cube : m_cubes) {
+        cube->draw();
+    }
+    m_lightManager->draw();
+
+    if (m_modelShader) {
+        if (m_modelEntity) m_modelEntity->draw(m_modelShader);
+        if (m_fropyEntity) m_fropyEntity->draw(m_modelShader);
+    }
+
+    // Humain 3ème personne (visible uniquement en vue 3P)
+    if (m_humanEntity && m_skinnedShader && m_player->isThirdPerson()) {
+        m_humanEntity->draw(m_skinnedShader);
+    }
+
+    // 2. Transparences
+    glEnable(GL_BLEND);
+    glDepthMask(GL_FALSE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Tri des cubes transparents du plus loin au plus proche
+    std::sort(m_alphacubes.begin(), m_alphacubes.end(),
+        [this](const std::unique_ptr<Cube>& a, const std::unique_ptr<Cube>& b) {
+            const float da = glm::length(m_camera->getPosition() - a->getCenter());
+            const float db = glm::length(m_camera->getPosition() - b->getCenter());
+            return da > db; // plus loin d'abord
+        });
+
+    for (auto& alphacube : m_alphacubes) {
+        alphacube->draw();
+    }
+
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+
+    // Vue 1ère personne : corps Mixamo (BRAS uniquement, le torse et les
+    // jambes sont masqués pour ne pas interférer avec la caméra). L'ancien
+    // viewmodel d'armes (FirstPersonArms) a été supprimé : le corps Mixamo
+    // est désormais la seule option en 1P.
+    if (!m_player->isThirdPerson() && m_humanEntity && m_skinnedShader &&
+        !m_humanEntity->getMeshes().empty()) {
+        m_humanEntity->drawFirstPerson(m_skinnedShader);
+    }
+}

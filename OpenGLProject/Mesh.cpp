@@ -20,9 +20,67 @@ Mesh::~Mesh() {
     if (m_ebo) glDeleteBuffers(1, &m_ebo);
     if (m_vbo) glDeleteBuffers(1, &m_vbo);
     if (m_vao) glDeleteVertexArrays(1, &m_vao);
+    if (m_culledEbo) glDeleteBuffers(1, &m_culledEbo);
 
-    m_vao = m_vbo = m_ebo = 0;
+    m_vao = m_vbo = m_ebo = m_culledEbo = 0;
     m_indexCount = 0;
+    m_culledIndexCount = 0;
+}
+
+void Mesh::setCulledIndices(const std::vector<unsigned int>& culledIndices) {
+    m_culledIndices = culledIndices;
+    m_culledIndicesSet = true; // même vide : drawCulled() ne doit RIEN dessiner
+    // L'EBO dédié sera (ré)créé au prochain drawCulled() dans le contexte courant.
+    if (m_culledEbo) {
+        glDeleteBuffers(1, &m_culledEbo);
+        m_culledEbo = 0;
+    }
+    m_culledIndexCount = 0;
+}
+
+void Mesh::drawCulled() const {
+    if (!m_culledIndicesSet) {
+        // Jamais de sous-ensemble défini : comportement identique à draw()
+        draw();
+        return;
+    }
+    if (m_culledIndices.empty()) {
+        // Sous-ensemble défini mais vide : mesh entièrement masqué (ex: torse/
+        // tête en vue 1P). Ne rien dessiner — NE PAS retomber sur draw().
+        return;
+    }
+
+    if (!m_culledEbo) {
+        // Création paresseuse de l'EBO filtré (contexte GL courant)
+        glGenBuffers(1, &m_culledEbo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_culledEbo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                     m_culledIndices.size() * sizeof(unsigned int),
+                     m_culledIndices.data(), GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        m_culledIndexCount = static_cast<int>(m_culledIndices.size());
+    }
+
+    if (m_textureIDs.size() >= 2) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_textureIDs[0]);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, m_textureIDs[1]);
+    }
+    else if (!m_textureIDs.empty()) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_textureIDs[0]);
+    }
+
+    glBindVertexArray(m_vao);
+    // L'EBO fait partie de l'état du VAO : on bind le sous-ensemble, on dessine,
+    // puis on remet l'EBO principal pour ne pas perturber les draw() ultérieurs.
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_culledEbo);
+    glDrawElements(GL_TRIANGLES, m_culledIndexCount, GL_UNSIGNED_INT, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+
+    glBindVertexArray(0);
 }
 
 // ---------------------------------------------------------------------------

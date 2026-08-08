@@ -36,7 +36,7 @@ public:
         m_isPressed = true; // Change l'etat pour indiquer que la touche est appuyee
         auto it = m_contextOnPress.find(context);
         if (it != m_contextOnPress.end() && it->second) {
-            it->second(); // ExÈcuter l'action
+            it->second(); // Ex√©cuter l'action
         }
     }
 
@@ -59,7 +59,7 @@ public:
         }
     }
 
-    // MÈthodes pour configurer les actions par contexte
+    // M√©thodes pour configurer les actions par contexte
     void setOnPressAction(InputContext context, std::function<void()> action) {
         m_contextOnPress[context] = action;
     }

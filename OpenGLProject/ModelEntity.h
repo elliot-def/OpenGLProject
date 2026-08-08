@@ -25,6 +25,12 @@ public:
 
     void draw(Shader* shader) override;
 
+    // Vue 1ère personne : dessine uniquement les triangles des BRAS du modèle
+    // (torse, tête et jambes sont filtrés une fois via Model::buildCulledIndices).
+    // À appeler en espace monde, à la place du viewmodel d'armes, quand le
+    // joueur est en 1ère personne (voir Game::draw).
+    void drawFirstPerson(Shader* shader);
+
     void drawDebug(Shader* shader);
 
     // Animation du modèle riggé (à appeler chaque frame)
@@ -142,6 +148,7 @@ private:
     int m_walkBackIdx = -1;
     float m_scale = 1.0f;       // echelle uniforme du modele
     float m_yawOffsetDeg = 0.0f; // offset de cap (degres) ajoute a la rotation du modele
+    bool m_firstPersonCullingBuilt = false; // sous-ensemble bras+jambes construit ?
 
     void detectAnimations();
 };

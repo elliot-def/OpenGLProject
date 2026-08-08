@@ -44,7 +44,7 @@ bool Socket::connectToServer(const ServerInfo& serverInfo) {
             break;
         case WSAEHOSTUNREACH:
             printf("[Socket]   -> Hote injoignable\n");
-            printf("[Socket]   -> Vérifier l'adresse IP\n");
+            printf("[Socket]   -> Verifier l'adresse IP\n");
             break;
         default:
             printf("[Socket]   -> Erreur inconnue\n");
@@ -60,7 +60,7 @@ bool Socket::connectToServer(const ServerInfo& serverInfo) {
     u_long mode = 1;
     ioctlsocket(m_socket, FIONBIO, &mode);
 
-    // Récupérer les informations locales (IP et port client)
+    // RÃ©cupÃ©rer les informations locales (IP et port client)
     sockaddr_in localAddr;
     int addrLen = sizeof(localAddr);
     if (getsockname(m_socket, (sockaddr*)&localAddr, &addrLen) == 0) {
@@ -120,11 +120,11 @@ void Socket::networkLoop() {
     char buffer[Constants::Network::MAX_PACKET_SIZE];
 
     while (m_running.load()) {
-        // Recevoir les données du serveur
+        // Recevoir les donnÃ©es du serveur
         int n = recv(m_socket, buffer, sizeof(buffer), 0);
 
         if (n > 0) {
-            // Données reçues
+            // DonnÃ©es reÃ§ues
             std::lock_guard<std::mutex> lock(m_inMutex);
             ClientEvent evt;
             evt.type = EventType::DataReceived;
@@ -132,7 +132,7 @@ void Socket::networkLoop() {
             m_incoming.push(evt);
         }
         else if (n == 0 || (n == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)) {
-            // Déconnecté du serveur
+            // DÃ©connectÃ© du serveur
             printf("[Socket] Deconnecte du serveur\n");
 
             std::lock_guard<std::mutex> lock(m_inMutex);
@@ -144,7 +144,7 @@ void Socket::networkLoop() {
             break;
         }
 
-        // Envoyer les données en attente
+        // Envoyer les donnÃ©es en attente
         {
             std::lock_guard<std::mutex> lock(m_outMutex);
             while (!m_outgoing.empty()) {

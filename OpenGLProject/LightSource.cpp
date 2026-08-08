@@ -1,6 +1,6 @@
 #include "LightSource.h"
 
-#include "Vertex.h"   // Structure d'un sommet (position, couleur, texture…)
+#include "Vertex.h"   // Structure d'un sommet (position, couleur, textureâ€¦)
 #include "Mesh.h"     // Classe pour gerer les buffers OpenGL et dessiner
 #include "Shader.h"   // Classe pour les shaders OpenGL
 #include "Texture.h"  // Classe pour les textures
@@ -29,7 +29,7 @@ void LightSource::draw() {
 }
 
 void LightSource::update() {
-	// Pour l'instant, la source de lumière ne fait rien de spécial
+	// Pour l'instant, la source de lumiÃ¨re ne fait rien de spÃ©cial
 }
 
 std::unique_ptr<Cube>& LightSource::getCube() { return m_cube; }

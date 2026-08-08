@@ -22,17 +22,17 @@ class Cube : public Outlineable {
 public:
     // Constructeur
     // center : position du centre du cube
-    // edge : taille d'une ar�te du cube
-    // shader : shader utilis� pour le rendu
-    // texture : texture appliqu�e au cube
+    // edge : taille d'une arête du cube
+    // shader : shader utilisé pour le rendu
+    // texture : texture appliquée au cube
     
     Cube(glm::vec3 center, float edge, Shader* shader, LightSource* lightSource, Player* player);
     Cube(glm::vec3 center, float edge, Shader* shader, std::vector<Texture*> textures, Renderer* renderer, LightManager* lightManager, Player* player);
 
-    // Destructeur : libere la memoire (mesh, transformation�)
+    // Destructeur : libere la memoire (mesh, transformation…)
     ~Cube() = default;
 
-    // Mise � jour du cube (transformations, animations, effets�)
+    // Mise à jour du cube (transformations, animations, effets…)
     void update();
 
     // Dessine le cube a l'ecran (appelle Mesh + Shader)
@@ -60,12 +60,12 @@ protected:
     Shader* m_shader;                 // Shader pour le rendu
     Shader* m_outlineShader = nullptr;  // Outline (silhouette)
     std::unique_ptr<Transformation> m_transformation; // Transformations : position, rotation, scale
-	LightManager* m_lightManager;     // Pointeur vers le LightBlock associ� (si applicable)
-	LightSource* m_lightSource;       // Pointeur vers le LightSource associ� (si applicable)
+	LightManager* m_lightManager;     // Pointeur vers le LightBlock associé (si applicable)
+	LightSource* m_lightSource;       // Pointeur vers le LightSource associé (si applicable)
     Player* m_player;
     Renderer* m_renderer;
 
-    float m_edge;                      // Taille d'une ar�te du cube
+    float m_edge;                      // Taille d'une arête du cube
 
     // Spin sur place (rotation autour de son propre centre)
     float    m_spinSpeedDeg = 0.0f;            // °/s, 0 = pas de rotation

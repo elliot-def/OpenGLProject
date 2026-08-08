@@ -211,7 +211,7 @@ bool patchGlbAnimationRotations(const aiScene* scene, const std::string& path) {
 
             aiNodeAnim* targetChannel = channelIt->second;
             if (!targetChannel) {
-                std::cerr << "[Model] Canal d'animation null pour le noeud \"" << nodeName << "\" — ignore" << std::endl;
+                std::cerr << "[Model] Canal d'animation null pour le noeud \"" << nodeName << "\" - ignore" << std::endl;
                 continue;
             }
             // In-place overwrite : on ne delete[] JAMAIS la memoire allouee

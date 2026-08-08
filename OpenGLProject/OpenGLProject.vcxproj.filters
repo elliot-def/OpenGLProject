@@ -55,7 +55,6 @@
     <ClCompile Include="TextureManager.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="ImageLoader.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="Animator.cpp"><Filter>Graphics\Animation</Filter></ClCompile>
-    <ClCompile Include="FirstPersonArms.cpp"><Filter>Graphics\Animation</Filter></ClCompile>
     <ClCompile Include="Shape.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
     <ClCompile Include="Rectangle.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
     <ClCompile Include="Triangle.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
@@ -80,6 +79,7 @@
     <ClCompile Include="Sound.cpp"><Filter>Sound</Filter></ClCompile>
     <ClCompile Include="SoundManager.cpp"><Filter>Sound</Filter></ClCompile>
     <ClCompile Include="CollisionManager.cpp"><Filter>Collision</Filter></ClCompile>
+    <ClCompile Include="Scene.cpp"><Filter>Core</Filter></ClCompile>
     <ClCompile Include="AABB.h"><Filter>Collision</Filter></ClCompile>
     <ClCompile Include="Outlineable.h"><Filter>Collision</Filter></ClCompile>
     <ClCompile Include="Socket.cpp"><Filter>Network</Filter></ClCompile>
@@ -93,6 +93,7 @@
     <ClInclude Include="Window.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="Renderer.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="Game.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="Scene.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="Camera.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="gamestate.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="win_compat.h"><Filter>Core</Filter></ClInclude>
@@ -119,7 +120,6 @@
     <ClInclude Include="TextureManager.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="ImageLoader.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="Animator.h"><Filter>Graphics\Animation</Filter></ClInclude>
-    <ClInclude Include="FirstPersonArms.h"><Filter>Graphics\Animation</Filter></ClInclude>
     <ClInclude Include="SkinningData.h"><Filter>Graphics\Animation</Filter></ClInclude>
     <ClInclude Include="Shape.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
     <ClInclude Include="Rectangle.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
@@ -155,7 +155,6 @@
     <ClInclude Include="constants\camera.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\color.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\file.h"><Filter>Constants</Filter></ClInclude>
-    <ClInclude Include="constants\firstPersonArms.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\material.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\menu.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\network.h"><Filter>Constants</Filter></ClInclude>
@@ -187,7 +186,6 @@
     <None Include="res\shaders\image\image.vert"><Filter>Resources\Shaders\Image</Filter></None>
     <None Include="res\shaders\image\masque\mask.frag"><Filter>Resources\Shaders\Image</Filter></None>
     <None Include="res\shaders\image\masque\mask.vert"><Filter>Resources\Shaders\Image</Filter></None>
-    <None Include="res\armBones.json"><Filter>Resources</Filter></None>
     <None Include="res\options.json"><Filter>Resources</Filter></None>
     <None Include="res\textures\crate\details.json"><Filter>Resources\Textures</Filter></None>
   </ItemGroup>

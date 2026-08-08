@@ -1,4 +1,5 @@
 #include "InputManager.h"
+#include "Game.h"
 #include "Entity.h"
 #include "PlayerKey.h"
 #include "Escape.h"
@@ -6,7 +7,6 @@
 #include "Push.h"
 #include "Grab.h"
 #include "Window.h"
-#include "FirstPersonArms.h"
 
 InputManager::InputManager(Game* game, MenuManager* menuManager, Window* window, Player* player)
     : m_game(game), m_menuManager(menuManager), m_window(window), m_player(player) {
@@ -21,20 +21,6 @@ Key* InputManager::getKey(const std::string& name) {
 		return it->second.get();
 	}
 	throw std::out_of_range("Key not found: " + name);
-}
-
-void InputManager::setFirstPersonArms(FirstPersonArms* arms) {
-	if (m_mouse) {
-		m_mouse->setFirstPersonArms(arms);
-	}
-	auto pushIt = m_keys.find("Push");
-	if (pushIt != m_keys.end()) {
-		static_cast<Push*>(pushIt->second.get())->setFirstPersonArms(arms);
-	}
-	auto grabIt = m_keys.find("Grab");
-	if (grabIt != m_keys.end()) {
-		static_cast<Grab*>(grabIt->second.get())->setFirstPersonArms(arms);
-	}
 }
 
 void InputManager::loadKeys() {
@@ -56,6 +42,11 @@ void InputManager::loadKeys() {
 	m_keys["Escape"] = std::make_unique<Escape>(m_game);
 	m_keys["Push"]   = std::make_unique<Push>();
 	m_keys["Grab"]   = std::make_unique<Grab>();
+
+	// Touche de debug : HUD des animations du personnage 3P (off par defaut)
+	auto debugHudKey = std::make_unique<Key>(nullptr, "DebugHUD", ConfigKeys::KEY_DEBUG_HUD);
+	debugHudKey->setOnPressAction(InputContext::GAME, [this]() { m_game->toggleDebugHUD(); });
+	m_keys["DebugHUD"] = std::move(debugHudKey);
 
 	m_keys["Noclip"] = std::make_unique<PlayerKey>(m_player, "Noclip", ConfigKeys::KEY_NOCLIP,
 	    [this]() { m_player->setUseGravity(!m_player->isGravityEnabled()); });

@@ -59,6 +59,20 @@ public:
      */
     void draw() const;
 
+    // Définit un sous-ensemble d'indices (triangles) à dessiner via
+    // drawCulled() — ex: ne garder que les bras+jambes d'un personnage en
+    // 1ère personne. Uniquement CPU ici : l'EBO dédié est créé paresseusement
+    // au premier drawCulled() dans le contexte GL courant.
+    void setCulledIndices(const std::vector<unsigned int>& culledIndices);
+
+    // Dessine uniquement le sous-ensemble d'indices défini par
+    // setCulledIndices(). Sans sous-ensemble, se comporte comme draw().
+    // Restaure l'EBO principal après le dessin pour ne pas perturber draw().
+    void drawCulled() const;
+
+    // Nombre d'indices du sous-ensemble (0 si aucun).
+    size_t getCulledIndexCount() const { return m_culledIndices.size(); }
+
     // Recrée les objets GPU (VAO, VBO, EBO) dans le contexte GL courant.
     // Nécessaire après un chargement sur un contexte partagé (thread) :
     // les VAO ne sont pas partagés entre contextes OpenGL.
@@ -82,6 +96,16 @@ private:
     std::vector<Vertex> m_vertices;
     std::vector<unsigned int> m_indices;
     std::vector<unsigned int> m_textureIDs;
+
+    // Sous-ensemble d'indices (voir setCulledIndices/drawCulled). L'EBO dédié
+    // est créé paresseusement au premier drawCulled() (contexte GL courant).
+    // m_culledIndicesSet distingue "jamais défini" (drawCulled = draw()) de
+    // "défini mais vide" (drawCulled = ne rien dessiner : mesh entièrement
+    // masqué, ex: torse/tête d'un personnage en vue 1P).
+    std::vector<unsigned int> m_culledIndices;
+    bool m_culledIndicesSet = false;
+    mutable unsigned int m_culledEbo = 0;
+    mutable int m_culledIndexCount = 0;
 
     void setupMesh(unsigned int attributesMask);
 

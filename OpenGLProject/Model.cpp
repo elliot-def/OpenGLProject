@@ -63,7 +63,7 @@ BoundingSphere BoundingSphere::transform(const glm::mat4& matrix) const {
     glm::vec4 transformedCenter = matrix * glm::vec4(center, 1.0f);
     result.center = glm::vec3(transformedCenter);
 
-    // Pour le rayon, on prend l'�chelle maximale
+    // Pour le rayon, on prend l'échelle maximale
     glm::vec3 scale;
     scale.x = glm::length(glm::vec3(matrix[0]));
     scale.y = glm::length(glm::vec3(matrix[1]));
@@ -142,7 +142,7 @@ BoundingSphere Model::getTransformedBoundingSphere(const glm::mat4& modelMatrix)
 
 bool Model::checkCollision(const Model& other, const glm::mat4& thisMatrix,
     const glm::mat4& otherMatrix) const {
-    // Test rapide avec les sph�res
+    // Test rapide avec les sphères
     BoundingSphere thisSphere = getTransformedBoundingSphere(thisMatrix);
     BoundingSphere otherSphere = other.getTransformedBoundingSphere(otherMatrix);
 
@@ -150,7 +150,7 @@ bool Model::checkCollision(const Model& other, const glm::mat4& thisMatrix,
         return false; // Pas de collision
     }
 
-    // Test pr�cis avec les boxes
+    // Test précis avec les boxes
     BoundingBox thisBox = getTransformedBoundingBox(thisMatrix);
     BoundingBox otherBox = other.getTransformedBoundingBox(otherMatrix);
 
@@ -159,7 +159,7 @@ bool Model::checkCollision(const Model& other, const glm::mat4& thisMatrix,
 
 bool Model::raycast(const glm::vec3& origin, const glm::vec3& direction,
     const glm::mat4& modelMatrix, float& distance) const {
-    // Transformer le rayon dans l'espace du mod�le
+    // Transformer le rayon dans l'espace du modèle
     glm::mat4 invMatrix = glm::inverse(modelMatrix);
     glm::vec3 localOrigin = glm::vec3(invMatrix * glm::vec4(origin, 1.0f));
     glm::vec3 localDir = glm::normalize(glm::vec3(invMatrix * glm::vec4(direction, 0.0f)));
@@ -291,11 +291,11 @@ void Model::processNode(aiNode* node, const aiScene* scene) {
     // Traiter tous les meshes du noeud
     for (unsigned int i = 0; i < node->mNumMeshes; i++) {
         unsigned int meshIndex = node->mMeshes[i];
-        // D�duplication : certains exports GLB/GLTF r�f�rencent le m�me mesh
-        // depuis plusieurs nœuds (fr�quent avec Mixamo/Blender). Sans ce skip,
-        // deux Mesh* identiques sont dessin�s � la m�me position → z-fighting.
+        // Déduplication : certains exports GLB/GLTF référencent le même mesh
+        // depuis plusieurs nœuds (fréquent avec Mixamo/Blender). Sans ce skip,
+        // deux Mesh* identiques sont dessinés à la même position → z-fighting.
         if (m_processedMeshIndices.count(meshIndex)) {
-            std::cout << "[Model] Mesh duplicate ignor� (index=" << meshIndex
+            std::cout << "[Model] Mesh duplicate ignore (index=" << meshIndex
                       << ", node=\"" << node->mName.C_Str() << "\")" << std::endl;
             continue;
         }
@@ -309,7 +309,7 @@ void Model::processNode(aiNode* node, const aiScene* scene) {
         }
     }
 
-    // Traiter r�cursivement les enfants
+    // Traiter récursivement les enfants
     for (unsigned int i = 0; i < node->mNumChildren; i++) {
         processNode(node->mChildren[i], scene);
     }
@@ -375,7 +375,7 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
             );
         }
 
-        // Coordonn�es de texture
+        // Coordonnées de texture
         if (mesh->mTextureCoords[0]) {
             texCoords = glm::vec2(
                 mesh->mTextureCoords[0][i].x,
@@ -433,12 +433,12 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
             textureIDs.push_back(whiteTextureID);
         }
 
-        // 2. CORRECTION : Si aucune sp�culaire n'est trouv�e, on g�n�re/affecte un ID de texture noire
+        // 2. CORRECTION : Si aucune spéculaire n'est trouvée, on génère/affecte un ID de texture noire
         if (specular.empty()) {
             unsigned int blackTextureID;
             glGenTextures(1, &blackTextureID);
             glBindTexture(GL_TEXTURE_2D, blackTextureID);
-            unsigned char blackPixel[] = { 10, 10, 10, 255 }; // Gris tr�s sombre (faible sp�cularit� par d�faut)
+            unsigned char blackPixel[] = { 10, 10, 10, 255 }; // Gris très sombre (faible spécularité par défaut)
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, blackPixel);
 
             textureIDs.push_back(blackTextureID);
@@ -448,7 +448,7 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         }
     }
 
-    // Binder la texture diffuse avant de cr�er le mesh (si ton Mesh::draw() utilise l'unit� 0)
+    // Binder la texture diffuse avant de créer le mesh (si ton Mesh::draw() utilise l'unité 0)
     if (!textureIDs.empty()) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, textureIDs[0]);
@@ -498,6 +498,71 @@ void Model::extractBoneDataFromMesh(aiMesh* mesh, std::vector<Vertex>& vertices)
                 }
             }
         }
+    }
+}
+
+void Model::buildCulledIndices(const std::unordered_set<std::string>& keepBonePatterns) {
+    if (keepBonePatterns.empty()) return;
+
+    // boneId -> nom du bone (pour résoudre le bone principal de chaque sommet)
+    std::vector<std::string> boneNames(static_cast<size_t>(m_boneCounter));
+    for (const auto& [name, info] : m_boneInfoMap) {
+        if (info.id >= 0 && info.id < static_cast<int>(boneNames.size())) {
+            boneNames[static_cast<size_t>(info.id)] = name;
+        }
+    }
+
+    for (Mesh* mesh : m_meshes) {
+        const std::vector<Vertex>& vertices = mesh->getVertices();
+        const std::vector<unsigned int>& indices = mesh->getIndices();
+        if (vertices.empty() || indices.empty()) continue;
+
+        // Bone principal de chaque sommet (poids max), -1 si aucun poids
+        std::vector<int> primaryBone(vertices.size(), -1);
+        for (size_t i = 0; i < vertices.size(); i++) {
+            const Vertex& v = vertices[i];
+            int best = -1;
+            float bestW = 0.0f;
+            for (int j = 0; j < MAX_BONE_INFLUENCE; j++) {
+                if (v.m_weights[j] > bestW) {
+                    bestW = v.m_weights[j];
+                    best = v.m_boneIDs[j];
+                }
+            }
+            if (bestW > 0.0f && best >= 0 && best < static_cast<int>(boneNames.size())) {
+                primaryBone[i] = best;
+            }
+        }
+
+        // Sommet gardé si le nom de son bone principal matche un pattern
+        std::vector<bool> vertexKept(vertices.size(), false);
+        for (size_t i = 0; i < vertices.size(); i++) {
+            if (primaryBone[i] < 0) continue;
+            const std::string& name = boneNames[static_cast<size_t>(primaryBone[i])];
+            for (const auto& pat : keepBonePatterns) {
+                if (name.find(pat) != std::string::npos) {
+                    vertexKept[i] = true;
+                    break;
+                }
+            }
+        }
+
+        // Triangle gardé si ses 3 sommets sont gardés (les indices sont des
+        // triangles : aiProcess_Triangulate est actif au chargement)
+        std::vector<unsigned int> culled;
+        culled.reserve(indices.size() / 2);
+        for (size_t i = 0; i + 2 < indices.size(); i += 3) {
+            const unsigned int a = indices[i];
+            const unsigned int b = indices[i + 1];
+            const unsigned int c = indices[i + 2];
+            if (a < vertexKept.size() && b < vertexKept.size() && c < vertexKept.size()
+                && vertexKept[a] && vertexKept[b] && vertexKept[c]) {
+                culled.push_back(a);
+                culled.push_back(b);
+                culled.push_back(c);
+            }
+        }
+        mesh->setCulledIndices(culled);
     }
 }
 
@@ -708,7 +773,7 @@ void Model::createDebugBoundingBoxMesh() {
     std::vector<unsigned int> indices = {
         // Face avant
         0, 1, 1, 2, 2, 3, 3, 0,
-        // Face arri�re
+        // Face arrière
         4, 5, 5, 6, 6, 7, 7, 4,
         // Connexions
         0, 4, 1, 5, 2, 6, 3, 7
@@ -718,7 +783,7 @@ void Model::createDebugBoundingBoxMesh() {
 }
 
 unsigned int Model::loadTextureFromFile(const std::string& path) {
-    // Cache : ne pas recharger la m�me texture
+    // Cache : ne pas recharger la même texture
     auto it = m_loadedTextures.find(path);
     if (it != m_loadedTextures.end()) return it->second;
 
@@ -726,7 +791,7 @@ unsigned int Model::loadTextureFromFile(const std::string& path) {
     glGenTextures(1, &textureID);
 
     int width, height, nrChannels;
-    stbi_set_flip_vertically_on_load(false); // Assimp le fait d�j� via aiProcess_FlipUVs
+    stbi_set_flip_vertically_on_load(false); // Assimp le fait déjà via aiProcess_FlipUVs
     unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
 
     if (data) {
@@ -744,10 +809,10 @@ unsigned int Model::loadTextureFromFile(const std::string& path) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        std::cout << "Texture charg�e: " << path << std::endl;
+        std::cout << "Texture chargee: " << path << std::endl;
     }
     else {
-        std::cerr << "�chec chargement: " << path << std::endl;
+        std::cerr << "Echec chargement: " << path << std::endl;
         // Texture magenta de debug
         unsigned char pink[] = { 255, 0, 255, 255 };
         glBindTexture(GL_TEXTURE_2D, textureID);
