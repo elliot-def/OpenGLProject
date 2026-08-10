@@ -3,7 +3,9 @@
 #include "Game.h"
 #include "config.h"
 #include "LoadingScreen.h"
+#ifndef STEAM_OFFLINE
 #include "SteamManager.h"
+#endif
 #include "ModelLoader.h"
 #include "TextRenderer.h"
 #include "FirstPersonArms.h"
@@ -52,9 +54,11 @@ Game::~Game() {
 
 	SharedQuad::destroy();
     if (m_socket) m_socket->stop();
+#ifndef STEAM_OFFLINE
     if (m_steamManager) {
         m_steamManager->shutdown();
     }
+#endif
     if (m_loaderWindow && m_window) m_window->destroySharedContext(m_loaderWindow);
 
     // Détruire le SoundManager AVANT glfwTerminate() : ce dernier peut
@@ -77,8 +81,11 @@ Game::~Game() {
 void Game::initialize() {
     // Steam d'abord (bloquant) : lance Steam si absent, retente 10× 1s.
     // La fenêtre n'est créée qu'après → l'overlay pourra hooker le contexte.
+#ifndef STEAM_OFFLINE
     m_steamManager = std::make_unique<SteamManager>();
-    bool steamOk = m_steamManager->init();
+#endif
+    auto& steam = getSteam();
+    bool steamOk = steam.init();
 
     if (steamOk) {
         LOG_INFO("[Game] Steam initialise, creation de la fenetre...");
@@ -172,31 +179,31 @@ void Game::loadResources() {
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
     if (!loadingTick()) return;
 
-    if (m_steamManager && m_steamManager->isInitialized()) {
-        m_steamManager->setOnInviteReceived([this](CSteamID lobbyID) {
+    if (getSteam().isInitialized()) {
+        getSteam().setOnInviteReceived([this](CSteamID lobbyID) {
             LOG_INFO("[Game] Invitation recue, tentative de rejoindre le lobby %llu...",
                      lobbyID.ConvertToUint64());
-            m_steamManager->joinLobby(lobbyID);
+            getSteam().joinLobby(lobbyID);
         });
 
-        m_steamManager->setOnLobbyCreated([this](CSteamID lobbyID) {
+        getSteam().setOnLobbyCreated([this](CSteamID lobbyID) {
             LOG_INFO("[Game] Lobby cree avec succes, ouverture de l'invitation...");
-            m_steamManager->openInviteDialog();
+            getSteam().openInviteDialog();
         });
 
-        m_steamManager->setOnLobbyEntered([this](CSteamID lobbyID) {
+        getSteam().setOnLobbyEntered([this](CSteamID lobbyID) {
             LOG_INFO("[Game] Connecte au lobby %llu !", lobbyID.ConvertToUint64());
             if (m_socket) {
                 // TODO: utiliser le lobby pour établir la connexion réseau
             }
         });
 
-        m_steamManager->setOnLobbyLeft([this]() {
+        getSteam().setOnLobbyLeft([this]() {
             LOG_INFO("[Game] Quitte le lobby.");
         });
 
         if (m_argc > 0 && m_argv != nullptr) {
-            m_steamManager->parseCommandLine(m_argc, m_argv);
+            getSteam().parseCommandLine(m_argc, m_argv);
         }
     } else {
         LOG_INFO("[Game] Steam non disponible, fonctionnement hors-ligne.");
@@ -303,8 +310,8 @@ void Game::run() {
         }
 
         // Traiter les callbacks Steam à chaque frame
-        if (m_steamManager && m_steamManager->isInitialized()) {
-            m_steamManager->runCallbacks();
+        if (getSteam().isInitialized()) {
+            getSteam().runCallbacks();
         }
 
         switch (m_menuManager->getCurrentState()) {

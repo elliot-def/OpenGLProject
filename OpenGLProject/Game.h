@@ -27,7 +27,11 @@ class MenuManager;
 class TextRenderer;
 class ModelEntity;
 class FirstPersonArms;
+#ifdef STEAM_OFFLINE
+#include "SteamStub.h"
+#else
 class SteamManager;
+#endif
 class LoadingScreen;
 class ModelLoader;
 class Scene;
@@ -79,7 +83,18 @@ private:
     ModelEntity* m_humanEntity = nullptr;
     ModelEntity* m_npcEntity = nullptr;     // PNJ (possédé par ModelLoader)
     FirstPersonArms* m_firstPersonArms = nullptr;
+#ifdef STEAM_OFFLINE
+    SteamManager m_steamManager;
+#else
     std::unique_ptr<SteamManager> m_steamManager;
+#endif
+    SteamManager& getSteam() {
+#ifdef STEAM_OFFLINE
+        return m_steamManager;
+#else
+        return *m_steamManager;
+#endif
+    }
     std::unique_ptr<ModelLoader> m_modelLoader;  // possède les entités 3D chargées
 
     bool m_isRunning = true;
