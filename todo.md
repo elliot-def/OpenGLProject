@@ -5,7 +5,7 @@ Features :
 - Texture avec du relief comme le mur de briques dans le tuto learnopenGL (https://learnopengl.com/Advanced-Lighting/Normal-Mapping)
 - Map Editor
 - NPC avec dialogue
-- Sous-titres en bas de l'écran / Ajouter des bulles de dialogues ?
+	- Sous-titres en bas de l'écran / Ajouter des bulles de dialogues ?
 - PlantUML depuis freebuff
 - Multijoueur
 	- Playermodèle et déplacement en direct
