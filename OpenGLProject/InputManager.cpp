@@ -58,6 +58,13 @@ void InputManager::loadKeys() {
 	m_keys["Push"]   = std::make_unique<Push>();
 	m_keys["Grab"]   = std::make_unique<Grab>();
 
+	// Touche d'interaction avec les PNJ (F)
+	auto interactKey = std::make_unique<Key>(nullptr, "Interact", ConfigKeys::KEY_INTERACT);
+	interactKey->setOnPressAction(InputContext::GAME, [this]() {
+		m_game->tryInteractWithNPC();
+	});
+	m_keys["Interact"] = std::move(interactKey);
+
 	// Touche de debug : HUD des animations du personnage 3P (off par defaut)
 	auto debugHudKey = std::make_unique<Key>(nullptr, "DebugHUD", ConfigKeys::KEY_DEBUG_HUD);
 	debugHudKey->setOnPressAction(InputContext::GAME, [this]() { m_game->toggleDebugHUD(); });

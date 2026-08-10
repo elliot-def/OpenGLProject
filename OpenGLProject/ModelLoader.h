@@ -38,12 +38,14 @@ public:
     ModelEntity* getModelEntity() const { return m_modelEntity.get(); }
     ModelEntity* getFropyEntity() const { return m_fropyEntity.get(); }
     ModelEntity* getHumanEntity() const { return m_humanEntity.get(); }
+    ModelEntity* getNPCEntity()     const { return m_npcEntity.get(); }
     FirstPersonArms* getFirstPersonArms() const { return m_firstPersonArms.get(); }
     CharacterAnimationController* getCharacterAnim() const { return m_characterAnim.get(); }
 
 private:
     void loadDecorModels();    // backpack + fropy + avant-bras 1P
-    void loadHumanCharacter(); // Y Bot + animations Mixamo + contrôleur 3P
+    void loadHumanCharacter(); // Megan + animations Mixamo + contrôleur 3P
+    void loadNPC();            // PNJ (deuxième instance de Megan avec dialog)
 
     Camera* m_camera;
     LightManager* m_lightManager;
@@ -54,6 +56,7 @@ private:
     std::unique_ptr<ModelEntity> m_modelEntity;
     std::unique_ptr<ModelEntity> m_fropyEntity;
     std::unique_ptr<ModelEntity> m_humanEntity;
+    std::unique_ptr<ModelEntity> m_npcEntity;
     std::unique_ptr<FirstPersonArms> m_firstPersonArms;
     std::unique_ptr<CharacterAnimationController> m_characterAnim;
 };

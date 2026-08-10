@@ -2,6 +2,7 @@
 
 #include "ModelLoader.h"
 #include "ModelEntity.h"
+#include "NPC.h"
 #include "FirstPersonArms.h"
 #include "CharacterAnimationController.h"
 #include "Log.h"
@@ -32,6 +33,7 @@ void ModelLoader::load(GLFWwindow* loaderWindow) {
 
     loadDecorModels();
     loadHumanCharacter();
+    loadNPC();
 
     if (loaderWindow)
         glfwMakeContextCurrent(nullptr);
@@ -169,4 +171,73 @@ void ModelLoader::loadHumanCharacter() {
 
     // Controleur d'animation du personnage 3P (extrait de Game::update)
     m_characterAnim = std::make_unique<CharacterAnimationController>(m_humanEntity.get(), m_inputManager);
+}
+
+void ModelLoader::loadNPC() {
+    // TODO: partager les données de mesh entre le joueur et le PNJ pour
+    // éviter de charger Megan.fbx + 12 animations deux fois (CPU + GPU).
+    // Idéalement : Model::createInstance() qui partage VAO/VBO/textures.
+    LOG_INFO("[ModelLoader]   -> Chargement du PNJ (Megan)...");
+    m_npcEntity = std::make_unique<NPC>(m_camera, m_lightManager, m_renderer,
+                                        "./res/rigging/mixamo/models/Megan.fbx", m_textureManager);
+
+    // Positionner le PNJ à un endroit fixe dans la scène (face au joueur)
+    m_npcEntity->setPosition(glm::vec3(5.0f, 0.0f, 0.0f));
+
+    Model* npcModel = m_npcEntity->getModel();
+
+    // Auto-scale (même logique que Megan joueur)
+    {
+        const float modelHeight = npcModel->getBoundingBox().getSize().y;
+        constexpr float targetHeight = 1.8f;
+        if (modelHeight > 0.001f) {
+            m_npcEntity->setScale(targetHeight / modelHeight);
+            LOG_INFO("[ModelLoader]   PNJ auto-scale: %.4f", targetHeight / modelHeight);
+        }
+    }
+
+    // Charger les mêmes animations externes que le personnage joueur
+    {
+        const std::string animDir = "./res/rigging/mixamo/animation/";
+        std::vector<std::string> animPaths = {
+            animDir + "idle.fbx",
+            animDir + "walking.fbx",
+            animDir + "standard run.fbx",
+            animDir + "jump.fbx",
+            animDir + "left strafe.fbx",
+            animDir + "right strafe.fbx",
+            animDir + "left strafe walking.fbx",
+            animDir + "right strafe walking.fbx",
+            animDir + "left turn 90.fbx",
+            animDir + "right turn 90.fbx",
+            animDir + "Running Jump.fbx",
+            animDir + "Walking Backwards.fbx",
+        };
+        npcModel->loadExternalAnimations(animPaths);
+
+        const size_t totalAnims = npcModel->getNumAnimations();
+        const size_t base = totalAnims - npcModel->getNumExternalAnimations();
+
+        m_npcEntity->setIdleAnimIndex(static_cast<int>(base + 0));
+        m_npcEntity->setWalkAnimIndex(static_cast<int>(base + 1));
+        m_npcEntity->setRunAnimIndex(static_cast<int>(base + 2));
+        m_npcEntity->setJumpIdx(static_cast<int>(base + 3));
+        m_npcEntity->setStrafeLeftIdx(static_cast<int>(base + 4));
+        m_npcEntity->setStrafeRightIdx(static_cast<int>(base + 5));
+        m_npcEntity->setStrafeWalkLeftIdx(static_cast<int>(base + 6));
+        m_npcEntity->setStrafeWalkRightIdx(static_cast<int>(base + 7));
+        m_npcEntity->setTurnLeftIdx(static_cast<int>(base + 8));
+        m_npcEntity->setTurnRightIdx(static_cast<int>(base + 9));
+        m_npcEntity->setRunJumpIdx(static_cast<int>(base + 10));
+        m_npcEntity->setWalkBackIdx(static_cast<int>(base + 11));
+
+        // Jouer l'idle en boucle
+        const int idleIdx = m_npcEntity->getIdleAnimIndex();
+        if (idleIdx >= 0 && idleIdx < static_cast<int>(totalAnims)) {
+            m_npcEntity->getAnimator()->playAnimation(static_cast<unsigned int>(idleIdx), true);
+            m_npcEntity->getAnimator()->update(0.0f);
+        }
+    }
+
+    LOG_INFO("[ModelLoader]   PNJ charge avec succes a la position (5, 0, 0)");
 }

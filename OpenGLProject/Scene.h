@@ -4,6 +4,8 @@
 #include <memory>
 #include <glm/glm.hpp>
 
+#include "DialogManager.h"
+
 // Déclarations anticipées (services détenus par Game)
 class Camera;
 class Player;
@@ -18,6 +20,7 @@ class Cube;
 class ModelEntity;
 class Skybox;
 class CharacterAnimationController;
+class TextRenderer;
 
 // ---------------------------------------------------------------------------
 // Scene : monde 3D du jeu (cubes, lumières, entités riggées, skybox).
@@ -49,14 +52,27 @@ public:
     void adoptEntities(ModelEntity* modelEntity, ModelEntity* fropyEntity,
                        ModelEntity* humanEntity, CharacterAnimationController* characterAnim);
 
+    // Adopte le PNJ chargé par ModelLoader
+    void adoptNPC(ModelEntity* npcEntity);
+
     // ── Boucle du monde (STATE_PLAYING) ───────────────────────────────────
     void update(float deltaTime);
     void draw();
+
+    // ── Interaction PNJ / Dialog ──────────────────────────────────────────
+    void tryInteract();                       // tente de dialoguer avec le PNJ le plus proche
+    void handleDialogChoice(int index);       // sélectionne un choix de dialog (1-4 → 0-3)
+    void advanceDialog();                     // avance le dialog (F/Entrée quand pas de choix)
+    void cancelDialog();                      // annule le dialog en cours (Escape)
+    bool isDialogActive() const;              // dialog en cours ?
+    bool isNPCInSight() const;                // le joueur regarde-t-il un PNJ sans dialog ?
+    void renderDialog(TextRenderer* renderer, int screenW, int screenH) const;
 
     // ── Accesseurs pour Game (HUD, reload GPU post-loading) ──────────────
     ModelEntity* getModelEntity() const { return m_modelEntity; }
     ModelEntity* getFropyEntity() const { return m_fropyEntity; }
     ModelEntity* getHumanEntity() const { return m_humanEntity; }
+    ModelEntity* getNPCEntity()   const { return m_npcEntity; }
 
 private:
     // Services (vues non-propriétaires, possédés par Game)
@@ -83,7 +99,11 @@ private:
     ModelEntity*                m_modelEntity = nullptr;
     ModelEntity*                m_fropyEntity = nullptr;
     ModelEntity*                m_humanEntity = nullptr;
+    ModelEntity*                m_npcEntity = nullptr;
     CharacterAnimationController* m_characterAnim = nullptr;
+
+    // Dialog PNJ (géré par la scène)
+    DialogManager m_dialogManager;
 
     // ── Dirty-flags collisions dynamiques ─────────────────────────────────
     // L'AABB world n'est recalculée que si la matrice modèle de l'entité a
@@ -93,4 +113,6 @@ private:
     bool      m_backpackDirty = true;
     glm::mat4 m_lastFropyMatrix{ 1.0f };
     bool      m_fropyDirty = true;
+    glm::mat4 m_lastNPCMatrix{ 1.0f };
+    bool      m_npcDirty = true;
 };

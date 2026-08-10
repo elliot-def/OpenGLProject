@@ -10,6 +10,8 @@
 #include "Animator.h"
 #include "CharacterAnimationController.h"
 #include "Scene.h"
+#include "NPC.h"
+#include "DialogManager.h"
 #include "Log.h"
 #include "ShaderManager.h"
 #include "constants/file.h"
@@ -256,6 +258,7 @@ void Game::run() {
                     if (m_modelEntity)   reloadMeshes(m_modelEntity->getModel()->getMeshes());
                     if (m_fropyEntity)   reloadMeshes(m_fropyEntity->getModel()->getMeshes());
                     if (m_humanEntity)   reloadMeshes(m_humanEntity->getModel()->getMeshes());
+                    if (m_npcEntity)     reloadMeshes(m_npcEntity->getModel()->getMeshes());
                     if (m_firstPersonArms) reloadMeshes(m_firstPersonArms->getMeshes());
 
                     if (m_loaderWindow) {
@@ -343,6 +346,26 @@ void Game::update() {
 
     m_inputManager->update();
 
+    // ── Gestion des choix de dialog (touches 1-4) + annulation (Escape) ───
+    if (m_scene->isDialogActive()) {
+        GLFWwindow* win = m_window->getGLFWwindow();
+        for (int k = GLFW_KEY_1; k <= GLFW_KEY_4; k++) {
+            int idx = k - GLFW_KEY_1;
+            bool pressed = (glfwGetKey(win, k) == GLFW_PRESS);
+            if (pressed && !m_dialogKeysPressed[idx]) {
+                m_dialogKeysPressed[idx] = true;
+                m_scene->handleDialogChoice(idx);
+            }
+            if (!pressed) {
+                m_dialogKeysPressed[idx] = false;
+            }
+        }
+        // Escape annule le dialog
+        if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            m_scene->cancelDialog();
+        }
+    }
+
     // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
     m_scene->update(m_renderer->getDeltaTime());
 
@@ -404,6 +427,25 @@ void Game::draw() {
         CharacterAnimationController::drawDebugHUD(m_humanEntity, *m_textRenderers);
     }
 
+    // ── Prompt d'interaction PNJ ─────────────────────────────────────────
+    if (m_scene->isNPCInSight() && m_textRenderers && !m_textRenderers->empty()) {
+        TextRenderer* tr = (*m_textRenderers)[0].get();
+        int w = m_window->getWidth();
+        int h = m_window->getHeight();
+        float promptW = tr->getTextWidth("Appuyez sur F pour parler", 0.35f);
+        tr->renderText("Appuyez sur F pour parler",
+                       (w - promptW) / 2.0f, h * 0.35f,
+                       0.35f, 1.0f, 0.85f, 0.2f);
+    }
+
+    // ── Rendu du dialog PNJ (au-dessus de la scène 3D) ────────────────────
+    if (m_scene->isDialogActive() && m_textRenderers && !m_textRenderers->empty()) {
+        TextRenderer* tr = (*m_textRenderers)[0].get();
+        int w = m_window->getWidth();
+        int h = m_window->getHeight();
+        m_scene->renderDialog(tr, w, h);
+    }
+
     // Tout le texte de la frame (HUD, menus...) est dessiné en UN SEUL draw
     // call batche, au-dessus du reste de la scène.
     flushTextFrame();
@@ -460,13 +502,35 @@ void Game::adoptLoadedEntities() {
     m_modelEntity     = m_modelLoader->getModelEntity();
     m_fropyEntity     = m_modelLoader->getFropyEntity();
     m_humanEntity     = m_modelLoader->getHumanEntity();
+    m_npcEntity       = m_modelLoader->getNPCEntity();
     m_firstPersonArms = m_modelLoader->getFirstPersonArms();
 
     // Transmet les vues à la Scene (qui les utilise pour update/draw).
     m_scene->adoptEntities(m_modelEntity, m_fropyEntity, m_humanEntity,
                            m_modelLoader->getCharacterAnim());
+    m_scene->adoptNPC(m_npcEntity);
 }
 
 void Game::stop() {
     glfwSetWindowShouldClose(m_window->getGLFWwindow(), GLFW_TRUE);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Interaction PNJ et Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+void Game::tryInteractWithNPC() {
+    m_scene->tryInteract();
+}
+
+void Game::handleDialogChoice(int index) {
+    m_scene->handleDialogChoice(index);
+}
+
+void Game::advanceDialog() {
+    m_scene->advanceDialog();
+}
+
+bool Game::isDialogActive() const {
+    return m_scene->isDialogActive();
 }

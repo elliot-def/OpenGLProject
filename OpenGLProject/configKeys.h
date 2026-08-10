@@ -20,6 +20,7 @@ namespace ConfigKeys {
     inline const int KEY_THIRD_PERSON = GLFW_KEY_C;
     inline const int KEY_PUSH = GLFW_KEY_R;
     inline const int KEY_GRAB = GLFW_KEY_E;
+    inline const int KEY_INTERACT = GLFW_KEY_F;        // Interagir avec les PNJ
     inline const int KEY_NOCLIP = GLFW_KEY_N;
     inline const int KEY_DEBUG_HUD = GLFW_KEY_F3;      // HUD debug des animations (3P)
 

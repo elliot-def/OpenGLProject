@@ -14,6 +14,8 @@
 #include "ModelEntity.h"
 #include "Skybox.h"
 #include "CharacterAnimationController.h"
+#include "NPC.h"
+#include "DialogManager.h"
 #include "Renderer.h"
 #include "Log.h"
 
@@ -83,6 +85,19 @@ void Scene::adoptEntities(ModelEntity* modelEntity, ModelEntity* fropyEntity,
     m_characterAnim  = characterAnim;
 }
 
+void Scene::adoptNPC(ModelEntity* npcEntity) {
+    m_npcEntity = npcEntity;
+    m_npcDirty = true;
+
+    // Configurer le dialog du PNJ (si c'est bien un NPC)
+    NPC* npc = dynamic_cast<NPC*>(npcEntity);
+    if (npc) {
+        npc->setDialog(DialogTree::createExample());
+        LOG_INFO("[Scene] Dialog du PNJ configure (%zu noeuds)",
+                 npc->getDialog().getRoot() ? 1 : 0);
+    }
+}
+
 // ── Mise à jour du monde ────────────────────────────────────────────────────
 
 void Scene::update(float deltaTime) {
@@ -145,6 +160,34 @@ void Scene::update(float deltaTime) {
             }
         }
     }
+
+    // ── PNJ ───────────────────────────────────────────────────────────────
+    if (m_npcEntity) {
+        // Animation idle en continu
+        m_npcEntity->updateAnimation(deltaTime);
+        m_npcEntity->update();
+
+        // Si dialog actif, faire regarder le PNJ vers le joueur
+        if (m_dialogManager.isActive()) {
+            NPC* npc = dynamic_cast<NPC*>(m_npcEntity);
+            if (npc) {
+                npc->lookAt(m_player->getPosition());
+            }
+        }
+
+        // Collision dynamique du PNJ
+        const glm::mat4 mat = m_npcEntity->getModelMatrix();
+        if (m_npcDirty || mat != m_lastNPCMatrix) {
+            m_collisionManager->updateDynamic("npc", m_npcEntity->getMeshes(), mat);
+            m_lastNPCMatrix = mat;
+            m_npcDirty = false;
+        }
+    }
+
+    // Mise à jour du dialog manager (effet machine à écrire)
+    if (m_dialogManager.isActive()) {
+        m_dialogManager.update(deltaTime);
+    }
 }
 
 // ── Rendu du monde ──────────────────────────────────────────────────────────
@@ -175,6 +218,11 @@ void Scene::draw() {
         m_humanEntity->draw(m_skinnedShader);
     }
 
+    // PNJ (toujours visible, skinned si riggé)
+    if (m_npcEntity && m_skinnedShader) {
+        m_npcEntity->draw(m_skinnedShader);
+    }
+
     // 2. Transparences
     glEnable(GL_BLEND);
     glDepthMask(GL_FALSE);
@@ -201,4 +249,65 @@ void Scene::draw() {
         !m_humanEntity->getMeshes().empty()) {
         m_humanEntity->drawFirstPerson(m_skinnedShader);
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Interaction PNJ / Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+void Scene::tryInteract() {
+    // Si déjà en dialog, avancer ou fermer
+    if (m_dialogManager.isActive()) {
+        m_dialogManager.advance();
+        return;
+    }
+
+    // Chercher un PNJ à proximité que le joueur regarde
+    if (!m_npcEntity || !m_camera) return;
+
+    NPC* npc = dynamic_cast<NPC*>(m_npcEntity);
+    if (!npc || !npc->hasDialog()) return;
+
+    float distance = npc->isPlayerLookingAt(m_camera);
+    if (distance > 0.0f) {
+        m_dialogManager.startDialog(npc);
+        LOG_INFO("[Scene] Dialog commence avec le PNJ (distance=%.1f)", distance);
+    }
+}
+
+void Scene::handleDialogChoice(int index) {
+    if (m_dialogManager.isActive()) {
+        m_dialogManager.handleChoice(index);
+    }
+}
+
+void Scene::advanceDialog() {
+    if (m_dialogManager.isActive()) {
+        m_dialogManager.advance();
+    }
+}
+
+void Scene::cancelDialog() {
+    if (m_dialogManager.isActive()) {
+        m_dialogManager.cancelDialog();
+        LOG_INFO("[Scene] Dialog annule");
+    }
+}
+
+bool Scene::isDialogActive() const {
+    return m_dialogManager.isActive();
+}
+
+bool Scene::isNPCInSight() const {
+    if (m_dialogManager.isActive()) return false;
+    if (!m_npcEntity || !m_camera) return false;
+
+    NPC* npc = dynamic_cast<NPC*>(m_npcEntity);
+    if (!npc) return false;
+
+    return npc->isPlayerLookingAt(m_camera) > 0.0f;
+}
+
+void Scene::renderDialog(TextRenderer* renderer, int screenW, int screenH) const {
+    m_dialogManager.render(renderer, screenW, screenH);
 }

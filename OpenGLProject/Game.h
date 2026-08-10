@@ -44,6 +44,14 @@ public:
 
     // Bascule le HUD debug du personnage 3P (touche F3, voir InputManager)
     void toggleDebugHUD();
+
+    // Interaction PNJ (touche F) : déclenche le dialog avec le PNJ le plus proche
+    void tryInteractWithNPC();
+
+    // Dialog : choix (touches 1-4) et avancement (F/Entrée)
+    void handleDialogChoice(int index);
+    void advanceDialog();
+    bool isDialogActive() const;
 private:
     std::unique_ptr<CursorManager> m_cursorManager;
     std::unique_ptr<Window> m_window;
@@ -69,6 +77,7 @@ private:
     ModelEntity* m_modelEntity = nullptr;
     ModelEntity* m_fropyEntity = nullptr;
     ModelEntity* m_humanEntity = nullptr;
+    ModelEntity* m_npcEntity = nullptr;     // PNJ (possédé par ModelLoader)
     FirstPersonArms* m_firstPersonArms = nullptr;
     std::unique_ptr<SteamManager> m_steamManager;
     std::unique_ptr<ModelLoader> m_modelLoader;  // possède les entités 3D chargées
@@ -81,6 +90,9 @@ private:
     // HUD debug des animations du personnage 3P (touche F3).
     // Off par défaut : coûteux en FPS (concats std::string + texte par frame).
     bool m_debugHUD = false;
+
+    // Anti-répétition pour les touches de choix de dialog (1-4)
+    bool m_dialogKeysPressed[4] = {false, false, false, false};
 
     // Phases de chargement (modèles 3D en thread séparé)
     enum class InitPhase { LOADING, READY };
