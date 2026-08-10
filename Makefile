@@ -34,7 +34,7 @@ CPPFILES := $(filter-out $(SRCDIR)/SteamManager.cpp, $(wildcard $(SRCDIR)/*.cpp)
 CFILES   := $(SRCDIR)/glad.c
 OBJFILES := $(CPPFILES:.cpp=.o) $(CFILES:.c=.o)
 
-TARGET   := game
+TARGET   := $(SRCDIR)/game
 
 # ── Règles ────────────────────────────────────────────────────────────────
 
@@ -44,7 +44,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJFILES)
 	$(CXX) $(CXXFLAGS) $^ $(LIBS) -o $@
-	@echo "✅ Compilation terminée : ./$(TARGET)"
+	@echo "✅ Compilation terminée : $(TARGET)"
 
 $(SRCDIR)/%.o: $(SRCDIR)/%.cpp
 	$(CXX) $(CXXFLAGS) $(DEFINES) $(INC) -c $< -o $@
@@ -55,7 +55,7 @@ $(SRCDIR)/glad.o: $(SRCDIR)/glad.c
 
 run: $(TARGET)
 	@echo "🚀 Lancement..."
-	./$(TARGET)
+	cd $(SRCDIR) && ./game
 
 clean:
 	rm -f $(OBJFILES) $(TARGET)

@@ -364,4 +364,4 @@ FodyWeavers.xsd
 
 # ── macOS / cross-platform build artifacts ───────────────────────────────
 *.o
-game
+OpenGLProject/game
