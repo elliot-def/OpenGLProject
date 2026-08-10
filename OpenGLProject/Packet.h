@@ -3,7 +3,11 @@
 #include <vector>
 #include <cstdint>
 #include <cstring>
+#ifdef _WIN32
 #include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
 #include <stdexcept>
 
 #include "constants/network.h"

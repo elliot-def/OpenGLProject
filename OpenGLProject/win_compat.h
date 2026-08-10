@@ -1,16 +1,18 @@
 #pragma once
 
-// Prelude Windows obligatoire pour les TU qui touchent au rendu.
-// Sans WIN32_LEAN_AND_MEAN, Windows SDK pull winsock.h / rpc.h / etc. - collision
-// avec glad.h (APIENTRY redefini) + compile-time bloat.
+// ─────────────────────────────────────────────────────────────────────────────
+// win_compat.h — Pont de compatibilité Windows ↔ macOS / Linux
 //
-// Ordre critique : glad.h definit APIENTRY (ligne 32) sous #ifndef, mais
-// minwindef.h:130 (Win SDK 10.0.26100) le REDEFINIT sans garde -> C4005 si
-// glad.h est traite en premier. win_compat.h force <windows.h> en PREMIERE
-// inclusion -> le guard de glad.h kick in et le warning disparait.
+// Sur Windows : force WIN32_LEAN_AND_MEAN avant <windows.h> pour éviter la
+// collision APIENTRY avec glad.h (minwindef.h redéfinit APIENTRY sans garde).
+//
+// Sur macOS/Linux : ne fait rien. Les APIs Win32 (ShellExecute, Sleep, etc.)
+// sont déjà protégées par des #ifdef _WIN32 dans les fichiers qui les utilisent.
+// ─────────────────────────────────────────────────────────────────────────────
 
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
+#ifdef _WIN32
+    #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
 #endif
-
-#include <windows.h>
