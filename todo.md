@@ -7,6 +7,9 @@ Features :
 - NPC avec dialogue
 - Sous-titres en bas de l'écran / Ajouter des bulles de dialogues ?
 - PlantUML depuis freebuff
+- Multijoueur
+	- Playermodèle et déplacement en direct
+ 	- Chat ?
 
 Changements et Debug : 
 - Easter Egg DVD derrière le texte (devrait être devant)
