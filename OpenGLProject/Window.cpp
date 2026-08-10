@@ -59,21 +59,21 @@ void Window::setCursorCaptured(bool shouldCapture) {
 bool Window::init() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    // Détecter la résolution de l'écran principal
+    GLFWmonitor* primary = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(primary);
+    if (!mode) {
+        std::cerr << "Failed to get video mode\n";
+        return false;
+    }
+
     GLFWmonitor* monitor = nullptr;
-    const GLFWvidmode* mode = nullptr;
 
     if (Constants::Window::IS_WINDOW_FULLSCREEN) {
-        monitor = glfwGetPrimaryMonitor();
-        mode = glfwGetVideoMode(monitor);
-        if (!mode) {
-            std::cerr << "Failed to get video mode for fullscreen\n";
-            return false;
-        }
+        monitor = primary;
 
-        // Fixer la résolution, le taux de rafraîchissement et les bits couleur
         glfwWindowHint(GLFW_RED_BITS, mode->redBits);
         glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
         glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
@@ -81,7 +81,14 @@ bool Window::init() {
 
         m_width = mode->width;
         m_height = mode->height;
+    } else {
+        // Mode fenêtré : 85% de la résolution native, centré
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+        m_width  = static_cast<int>(mode->width  * 0.85f);
+        m_height = static_cast<int>(mode->height * 0.85f);
     }
+
+    printf("[Window] Resolution : %dx%d (ecran: %dx%d)\n", m_width, m_height, mode->width, mode->height);
 
     // Création de la fenêtre
     m_window = glfwCreateWindow(
@@ -97,6 +104,17 @@ bool Window::init() {
     }
 
     glfwMakeContextCurrent(m_window);
+
+    // Callback de redimensionnement : met à jour le viewport et les dimensions
+    glfwSetWindowUserPointer(m_window, this);
+    glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
+        Window* self = static_cast<Window*>(glfwGetWindowUserPointer(win));
+        if (self) {
+            self->m_width = w;
+            self->m_height = h;
+            glViewport(0, 0, w, h);
+        }
+    });
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         std::cerr << "Failed to initialize GLAD\n";
