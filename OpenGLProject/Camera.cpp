@@ -73,8 +73,23 @@ void Camera::update(Entity* entity) {
         }
     } else {
         m_wasFirstPerson = true;
-        // Premiere personne : camera a hauteur des yeux
-        m_position = entity->getPosition() + Constants::Player::PLAYER_EYE_HEIGHT;
+
+        // Offset cible dans la direction de deplacement (CAMERA_FP_MOVEMENT_OFFSET)
+        glm::vec3 targetOffset = entity->getMovementDirection()
+            * Constants::Camera::CAMERA_FP_MOVEMENT_OFFSET;
+
+        // Lerp vers la cible pour une transition douce au demarrage/arret
+        float dt = m_renderer ? m_renderer->getDeltaTime() : 0.016f;
+        float t = glm::clamp(Constants::Camera::CAMERA_FP_MOVEMENT_LERP_SPEED * dt, 0.0f, 1.0f);
+        m_smoothedMovementOffset = glm::mix(m_smoothedMovementOffset, targetOffset, t);
+
+        // Premiere personne : camera a hauteur des yeux + offset configurable
+        // + decalage lisse dans la direction de deplacement.
+        m_position = entity->getPosition() + Constants::Player::PLAYER_EYE_HEIGHT
+            + glm::vec3(Constants::Camera::CAMERA_FP_OFFSET_X,
+                        Constants::Camera::CAMERA_FP_OFFSET_Y,
+                        Constants::Camera::CAMERA_FP_OFFSET_Z)
+            + m_smoothedMovementOffset;
     }
 }
 

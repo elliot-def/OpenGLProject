@@ -64,6 +64,13 @@ public:
     // Supprime tous les offsets manuels
     void clearBoneOffsets() { m_boneOffsets.clear(); }
 
+    // Retourne la transformation globale (model-space) d'un nœud par son nom.
+    // Mis à jour chaque frame dans computeBoneTransform().
+    glm::mat4 getGlobalNodeTransform(const std::string& nodeName) const {
+        auto it = m_globalNodeTransforms.find(nodeName);
+        return it != m_globalNodeTransforms.end() ? it->second : glm::mat4(1.0f);
+    }
+
 private:
     Model* m_model = nullptr;
     const aiScene* m_scene = nullptr;
@@ -77,6 +84,10 @@ private:
 
     // Offsets manuels optionnels appliqués par nom de bone (voir addBoneOffset)
     std::unordered_map<std::string, glm::mat4> m_boneOffsets;
+
+    // Cache des transforms globales (model-space) par nom de nœud.
+    // Rempli dans computeBoneTransform() pour O(1) lookup externe.
+    std::unordered_map<std::string, glm::mat4> m_globalNodeTransforms;
 
     // Cache des canaux d'animation par nom de nœud (reconstruit à chaque
     // playAnimation) : évite la recherche linéaire dans mNumChannels à chaque

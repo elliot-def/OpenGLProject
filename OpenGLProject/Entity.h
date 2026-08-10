@@ -49,6 +49,9 @@ public:
     glm::vec3 getPosition() const { return m_position; }           // Position de l'entité
     Direction* getDirection() const { return m_direction; } // Direction regardee
     glm::vec3 getDirectionVector() const; // Direction regardee
+    // Direction de deplacement de la frame precedente (normalisee, zero si immobile).
+    // Mise a jour dans updatePositionFromEnvironment() avant le reset de m_frameMovement.
+    glm::vec3 getMovementDirection() const { return m_lastMovementDirection; }
     bool isGravityEnabled() const { return m_useGravity; }
 
     void setUseGravity(bool enable) { m_useGravity = enable; }
@@ -87,6 +90,7 @@ protected:
     glm::vec3 m_position;     // Position dans l'espace 3D    
     bool m_useGravity = true;       // Ton nouvel attribut
     glm::vec3 m_frameMovement{ 0.f }; // Accumulateur de mouvement
+    glm::vec3 m_lastMovementDirection{ 0.f }; // Direction de deplacement de la frame (normalisee)
 
     Shader* m_outlineShader = nullptr;  // Optionnel
 

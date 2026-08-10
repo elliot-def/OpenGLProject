@@ -7,6 +7,7 @@
 #include "Push.h"
 #include "Grab.h"
 #include "Window.h"
+#include "FirstPersonArms.h"
 
 InputManager::InputManager(Game* game, MenuManager* menuManager, Window* window, Player* player)
     : m_game(game), m_menuManager(menuManager), m_window(window), m_player(player) {
@@ -21,6 +22,20 @@ Key* InputManager::getKey(const std::string& name) {
 		return it->second.get();
 	}
 	throw std::out_of_range("Key not found: " + name);
+}
+
+void InputManager::setFirstPersonArms(FirstPersonArms* arms) {
+	if (m_mouse) {
+		m_mouse->setFirstPersonArms(arms);
+	}
+	auto pushIt = m_keys.find("Push");
+	if (pushIt != m_keys.end()) {
+		static_cast<Push*>(pushIt->second.get())->setFirstPersonArms(arms);
+	}
+	auto grabIt = m_keys.find("Grab");
+	if (grabIt != m_keys.end()) {
+		static_cast<Grab*>(grabIt->second.get())->setFirstPersonArms(arms);
+	}
 }
 
 void InputManager::loadKeys() {

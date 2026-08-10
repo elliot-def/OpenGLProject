@@ -177,6 +177,7 @@
     <ClCompile Include="MenuManager.cpp" />
     <ClCompile Include="OutlinePass.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="FirstPersonArms.cpp" />
     <ClCompile Include="Entity.cpp" />
     <ClCompile Include="Model.cpp" />
     <ClCompile Include="ModelEntity.cpp" />
@@ -221,6 +222,7 @@
     <ClInclude Include="constants\camera.h" />
     <ClInclude Include="constants\color.h" />
     <ClInclude Include="constants\file.h" />
+    <ClInclude Include="constants\firstPersonArms.h" />
     <ClInclude Include="constants\material.h" />
     <ClInclude Include="constants\menu.h" />
     <ClInclude Include="constants\network.h" />
@@ -234,6 +236,7 @@
     <ClInclude Include="Direction.h" />
     <ClInclude Include="DVDShape.h" />
     <ClInclude Include="Escape.h" />
+    <ClInclude Include="FirstPersonArms.h" />
     <ClInclude Include="File.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Scene.h" />

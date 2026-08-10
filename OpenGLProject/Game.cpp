@@ -6,14 +6,18 @@
 #include "SteamManager.h"
 #include "ModelLoader.h"
 #include "TextRenderer.h"
+#include "FirstPersonArms.h"
+#include "Animator.h"
 #include "CharacterAnimationController.h"
 #include "Scene.h"
 #include "Log.h"
+#include "ShaderManager.h"
 #include "constants/file.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <cctype>
 #include <cmath>
 #include <vector>
 
@@ -252,6 +256,7 @@ void Game::run() {
                     if (m_modelEntity)   reloadMeshes(m_modelEntity->getModel()->getMeshes());
                     if (m_fropyEntity)   reloadMeshes(m_fropyEntity->getModel()->getMeshes());
                     if (m_humanEntity)   reloadMeshes(m_humanEntity->getModel()->getMeshes());
+                    if (m_firstPersonArms) reloadMeshes(m_firstPersonArms->getMeshes());
 
                     if (m_loaderWindow) {
                         m_window->destroySharedContext(m_loaderWindow);
@@ -341,6 +346,47 @@ void Game::update() {
     // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
     m_scene->update(m_renderer->getDeltaTime());
 
+    // En 1P, recentrer la camera entre les deux epaules du modele anime.
+    if (!m_player->isThirdPerson() && m_humanEntity && m_humanEntity->hasAnimations()) {
+        Animator* anim = m_humanEntity->getAnimator();
+        if (anim) {
+            // Chercher les bones d'epaule dans la boneMap (noms exacts du modele)
+            std::string rightBone, leftBone;
+            for (const auto& [name, info] : m_humanEntity->getModel()->getBoneInfoMap()) {
+                std::string lower = name;
+                for (auto& c : lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                // Chercher les bones contenant "shoulder" ou "arm" (upper arm)
+                // mais PAS "forearm" (avant-bras)
+                const bool isShoulder = lower.find("shoulder") != std::string::npos;
+                const bool isUpperArm = lower.find("arm") != std::string::npos
+                                     && lower.find("forearm") == std::string::npos;
+                if (!isShoulder && !isUpperArm) continue;
+                // Identifier gauche/droite
+                const bool isRight = lower.find("right") != std::string::npos
+                                  || lower.find("_r") != std::string::npos;
+                const bool isLeft  = lower.find("left") != std::string::npos
+                                  || lower.find("_l") != std::string::npos;
+                // Priorite : shoulder > arm
+                if (isRight && (rightBone.empty() || (isShoulder && rightBone.find("shoulder") == std::string::npos)))
+                    rightBone = name;
+                if (isLeft  && (leftBone.empty()  || (isShoulder && leftBone.find("shoulder") == std::string::npos)))
+                    leftBone = name;
+            }
+            if (!rightBone.empty() && !leftBone.empty()) {
+                glm::mat4 rMat = anim->getGlobalNodeTransform(rightBone);
+                glm::mat4 lMat = anim->getGlobalNodeTransform(leftBone);
+                glm::vec3 shoulderMid = (
+                    glm::vec3(rMat[3]) + glm::vec3(lMat[3])) * 0.5f;
+                // Convertir en espace monde via la modelMatrix de l'entite
+                glm::vec3 worldShoulder = glm::vec3(
+                    m_humanEntity->getModelMatrix() * glm::vec4(shoulderMid, 1.0f));
+                // Ne suivre que X et Z (le Y reste gere par PLAYER_EYE_HEIGHT)
+                glm::vec3 camPos = m_camera->getPosition();
+                m_camera->setPosition(glm::vec3(worldShoulder.x, camPos.y, worldShoulder.z));
+            }
+        }
+    }
+
     m_soundManager->setListenerTransform(m_camera->getPosition(), m_camera->getFront(), m_camera->getUp());
     m_soundManager->update();
 }
@@ -348,7 +394,7 @@ void Game::update() {
 void Game::draw() {
     beginTextFrame();  // vide le batch de glyphes de la frame
 
-    // Monde 3D : skybox, opaques, transparences, corps 1P Mixamo.
+    // Monde 3D : skybox, opaques, transparences.
     m_scene->draw();
 
     // ── HUD debug (personnage 3P) : liste des animations du modele ────────
@@ -414,6 +460,7 @@ void Game::adoptLoadedEntities() {
     m_modelEntity     = m_modelLoader->getModelEntity();
     m_fropyEntity     = m_modelLoader->getFropyEntity();
     m_humanEntity     = m_modelLoader->getHumanEntity();
+    m_firstPersonArms = m_modelLoader->getFirstPersonArms();
 
     // Transmet les vues à la Scene (qui les utilise pour update/draw).
     m_scene->adoptEntities(m_modelEntity, m_fropyEntity, m_humanEntity,

@@ -34,6 +34,7 @@
     <ClCompile Include="Renderer.cpp"><Filter>Core</Filter></ClCompile>
     <ClCompile Include="Game.cpp"><Filter>Core</Filter></ClCompile>
     <ClCompile Include="Camera.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="FirstPersonArms.cpp"><Filter>Core</Filter></ClCompile>
     <ClCompile Include="Entity.cpp"><Filter>Core\Entity</Filter></ClCompile>
     <ClCompile Include="Player.cpp"><Filter>Core\Entity</Filter></ClCompile>
     <ClCompile Include="Direction.cpp"><Filter>Core\Entity</Filter></ClCompile>
@@ -155,6 +156,7 @@
     <ClInclude Include="constants\camera.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\color.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\file.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\firstPersonArms.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\material.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\menu.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\network.h"><Filter>Constants</Filter></ClInclude>
@@ -163,6 +165,7 @@
     <ClInclude Include="constants\renderer.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\shader.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\window.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="FirstPersonArms.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="File.h"><Filter>Utils</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -355,6 +355,9 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
 
     glm::mat4 globalTransform = parentTransform * nodeTransform;
 
+    // Cache pour lookups externes (ex: position des epaules pour la camera 1P)
+    m_globalNodeTransforms[nodeName] = globalTransform;
+
     // Transformation transmise aux enfants. Si ce bone a un offset manuel, il
     // est PROPAGE aux descendants (FK réel) : sans ça, un offset sur
     // upper_arm déplaçait le segment du bras mais PAS l'avant-bras ni la main

@@ -196,9 +196,7 @@ void Scene::draw() {
     glDisable(GL_BLEND);
 
     // Vue 1ère personne : corps Mixamo (BRAS uniquement, le torse et les
-    // jambes sont masqués pour ne pas interférer avec la caméra). L'ancien
-    // viewmodel d'armes (FirstPersonArms) a été supprimé : le corps Mixamo
-    // est désormais la seule option en 1P.
+    // jambes sont masqués pour ne pas interférer avec la caméra).
     if (!m_player->isThirdPerson() && m_humanEntity && m_skinnedShader &&
         !m_humanEntity->getMeshes().empty()) {
         m_humanEntity->drawFirstPerson(m_skinnedShader);

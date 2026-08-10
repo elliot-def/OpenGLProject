@@ -10,6 +10,7 @@
 #include "Mouse.h"
 #include "Player.h"
 #include "MenuManager.h"
+#include "FirstPersonArms.h"
 
 
 Mouse::Mouse(Player* player, MenuManager* menuManager) : m_player(player), m_menuManager(menuManager), m_xpos(0.0), m_ypos(0.0),
@@ -70,4 +71,11 @@ bool Mouse::update(InputContext context, double xpos, double ypos) {
         }
     }
     return actionPerformed;
+}
+
+void Mouse::setFirstPersonArms(FirstPersonArms* arms) {
+    auto it = m_keys.find("LeftClick");
+    if (it != m_keys.end()) {
+        static_cast<LeftClick*>(it->second)->setFirstPersonArms(arms);
+    }
 }

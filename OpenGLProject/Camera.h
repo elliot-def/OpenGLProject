@@ -37,6 +37,10 @@ public:
     void setCollisionManager(CollisionManager* cm) { m_collisionManager = cm; }
     void setRenderer(Renderer* r) { m_renderer = r; }
 
+    // Positionne la camera a une position exacte (utilise pour suivre les
+    // epaules du modele anime en 1P).
+    void setPosition(const glm::vec3& pos) { m_position = pos; }
+
 private:
     Renderer* m_renderer;     // Pointeur vers le renderer pour accéder au rendu (non utilisé ici)
     Direction* m_direction;   // Contient yaw et pitch pour orienter la caméra
@@ -49,4 +53,6 @@ private:
 
     bool m_isThirdPerson = false; // false = première personne, true = troisième personne
     bool m_wasFirstPerson = true; // Pour snap au moment du toggle
+
+    glm::vec3 m_smoothedMovementOffset{ 0.f }; // Offset de mouvement lisse (lerp) pour la 1P
 };

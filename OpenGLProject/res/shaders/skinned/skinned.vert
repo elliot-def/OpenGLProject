@@ -20,7 +20,7 @@ uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
-const int MAX_BONES = 52;
+const int MAX_BONES = 100;
 uniform mat4 uBoneMatrices[MAX_BONES];
 
 void main()

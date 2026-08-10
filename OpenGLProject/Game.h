@@ -26,6 +26,7 @@ class Socket;
 class MenuManager;
 class TextRenderer;
 class ModelEntity;
+class FirstPersonArms;
 class SteamManager;
 class LoadingScreen;
 class ModelLoader;
@@ -68,6 +69,7 @@ private:
     ModelEntity* m_modelEntity = nullptr;
     ModelEntity* m_fropyEntity = nullptr;
     ModelEntity* m_humanEntity = nullptr;
+    FirstPersonArms* m_firstPersonArms = nullptr;
     std::unique_ptr<SteamManager> m_steamManager;
     std::unique_ptr<ModelLoader> m_modelLoader;  // possède les entités 3D chargées
 

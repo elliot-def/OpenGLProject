@@ -8,11 +8,12 @@ inline constexpr int MAX_BONE_INFLUENCE = 4;
 inline constexpr int MAX_BONES = 128; // marge confortable, le vrai compte vient du fichier GLB au runtime
 
 // Taille du tableau uniform `uBoneMatrices` cote GPU
-// (res/shaders/skinned/skinned.vert : `const int MAX_BONES = 52;`).
+// (res/shaders/skinned/skinned.vert : `const int MAX_BONES = 100;`).
 // Le count passe a setMat4Array() ne doit JAMAIS le depasser, sinon on
 // ecrit hors du tableau uniform (comportement indefini selon le driver).
-// Si la taille du tableau shader change, mettez ce define a jour.
-inline constexpr int SHADER_MAX_BONES = 52;
+// Un modele Mixamo complet (Megan) a ~65-70 bones : 52 etait insuffisant
+// et causait la disparition des doigts (bones d'ID > 51 non skinnees).
+inline constexpr int SHADER_MAX_BONES = 100;
 
 struct BoneInfo {
     int      id = -1;

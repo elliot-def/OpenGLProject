@@ -2,6 +2,7 @@
 
 #include "ModelLoader.h"
 #include "ModelEntity.h"
+#include "FirstPersonArms.h"
 #include "CharacterAnimationController.h"
 #include "Log.h"
 #include "InputManager.h"
@@ -46,6 +47,11 @@ void ModelLoader::loadDecorModels() {
                                                   "./res/models/fropy/fropy_low_poly.obj", m_textureManager);
     m_fropyEntity->setPosition(glm::vec3(3.0f, 5.0f, 0.0f));
     m_fropyEntity->setSpin(20.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+
+    LOG_INFO("[ModelLoader]   -> Chargement des bras (rigges)...");
+    m_firstPersonArms = std::make_unique<FirstPersonArms>(m_camera, m_lightManager,
+                                                          "./res/rigging/arm/arms_rig.glb", m_textureManager);
+    m_inputManager->setFirstPersonArms(m_firstPersonArms.get());
 }
 
 void ModelLoader::loadHumanCharacter() {

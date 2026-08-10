@@ -37,6 +37,15 @@ void Entity::update()
 void Entity::draw(Shader* shader) {}
 
 void Entity::updatePositionFromEnvironment(float deltaTime) {
+    // Sauvegarde la direction de deplacement (normalisee, horizontale seulement
+    // pour ne pas influencer la hauteur de la camera) avant de reset m_frameMovement.
+    // Utilise par Camera pour decaler la vue 1P dans la direction de marche.
+    if (glm::length(m_frameMovement) > 0.0001f) {
+        m_lastMovementDirection = glm::normalize(glm::vec3(m_frameMovement.x, 0.0f, m_frameMovement.z));
+    } else {
+        m_lastMovementDirection = glm::vec3(0.0f);
+    }
+
     // 1. On résout tout le mouvement de la frame d'un coup (Clavier + Gravité éventuelle)
     m_position = m_collisionManager->resolvePlayerMovement(
         m_position,
