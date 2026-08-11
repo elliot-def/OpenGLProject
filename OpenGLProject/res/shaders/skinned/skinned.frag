@@ -53,6 +53,11 @@ uniform SpotLight spotLight;
 uniform int numberLightSources;
 uniform PointLight lightSources[MAX_LIGHTS];
 
+// Alpha fade 1P : fragments trop proches de la camera deviennent transparents.
+// smoothstep(start, end, distance) — voir constants/camera.h.
+uniform float uNearFadeStart = 0.08;
+uniform float uNearFadeEnd   = 0.35;
+
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 diffTex, vec3 specTex);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 diffTex, vec3 specTex);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, vec3 diffTex, vec3 specTex);
@@ -72,7 +77,12 @@ void main()
     }
     result += CalcSpotLight(spotLight, norm, FragPos, viewDir, diffTex, specTex);
 
-    FragColor = vec4(result, 1.0);
+    // Alpha fade progressif base sur la distance a la camera.
+    // Les fragments proches (epaules qui traversent la camera en strafe)
+    // deviennent transparents au lieu d'etre brutalement tronques.
+    float distToCamera = length(viewPos - FragPos);
+    float alpha = smoothstep(uNearFadeStart, uNearFadeEnd, distToCamera);
+    FragColor = vec4(result, alpha);
 }
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 diffTex, vec3 specTex)

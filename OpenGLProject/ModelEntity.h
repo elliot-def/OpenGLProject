@@ -57,9 +57,11 @@ public:
     int getStrafeWalkRightIdx() const { return m_strafeWalkRightIdx; }
     int getTurnLeftIdx()  const { return m_turnLeftIdx; }
     int getTurnRightIdx() const { return m_turnRightIdx; }
-    int getJumpIdx()     const { return m_jumpIdx; }
-    int getRunJumpIdx()  const { return m_runJumpIdx; }
-    int getWalkBackIdx() const { return m_walkBackIdx; }
+    int getJumpIdx()            const { return m_jumpIdx; }
+    int getRunJumpIdx()         const { return m_runJumpIdx; }
+    int getWalkBackIdx()        const { return m_walkBackIdx; }
+    int getFallingIdleIdx()     const { return m_fallingIdleIdx; }
+    int getFallingToLandingIdx() const { return m_fallingToLandingIdx; }
 
     // Setters manuels (quand les noms d'anim sont tous "mixamo.com")
     void setIdleAnimIndex(int i) { m_idleAnimIndex = i; m_hasAnimations = true; }
@@ -73,9 +75,11 @@ public:
     void setStrafeWalkRightIdx(int i){ m_strafeWalkRightIdx = i; m_hasAnimations = true; }
     void setTurnLeftIdx(int i)       { m_turnLeftIdx = i;       m_hasAnimations = true; }
     void setTurnRightIdx(int i)      { m_turnRightIdx = i;      m_hasAnimations = true; }
-    void setJumpIdx(int i)           { m_jumpIdx = i;           m_hasAnimations = true; }
-    void setRunJumpIdx(int i)        { m_runJumpIdx = i;        m_hasAnimations = true; }
-    void setWalkBackIdx(int i)       { m_walkBackIdx = i;       m_hasAnimations = true; }
+    void setJumpIdx(int i)              { m_jumpIdx = i;              m_hasAnimations = true; }
+    void setRunJumpIdx(int i)           { m_runJumpIdx = i;           m_hasAnimations = true; }
+    void setWalkBackIdx(int i)          { m_walkBackIdx = i;          m_hasAnimations = true; }
+    void setFallingIdleIdx(int i)       { m_fallingIdleIdx = i;       m_hasAnimations = true; }
+    void setFallingToLandingIdx(int i)  { m_fallingToLandingIdx = i;  m_hasAnimations = true; }
 
     // Echelle uniforme du modele (appliquee dans getModelMatrix)
     void setScale(float scale) { m_scale = scale; m_modelMatrixValid = false; }
@@ -144,8 +148,9 @@ private:
     int m_strafeLeftIdx = -1;     int m_strafeRightIdx = -1;
     int m_strafeWalkLeftIdx = -1; int m_strafeWalkRightIdx = -1;
     int m_turnLeftIdx = -1;       int m_turnRightIdx = -1;
-    int m_jumpIdx = -1;           int m_runJumpIdx = -1;
+    int m_jumpIdx = -1;              int m_runJumpIdx = -1;
     int m_walkBackIdx = -1;
+    int m_fallingIdleIdx = -1;        int m_fallingToLandingIdx = -1;
     float m_scale = 1.0f;       // echelle uniforme du modele
     float m_yawOffsetDeg = 0.0f; // offset de cap (degres) ajoute a la rotation du modele
     bool m_firstPersonCullingBuilt = false; // sous-ensemble bras+jambes construit ?

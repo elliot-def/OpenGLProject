@@ -27,7 +27,10 @@ bool Player::getIsSprinting() const {
 void Player::processDirectionKey(int direction) {
     // getIsSprinting() intègre déjà le filtre grounded/no-clip : en l'air,
     // on retombe sur la vitesse de marche même si la touche est tenue.
+    // Le facteur post-atterrissage ralenti le joueur brievement apres une
+    // chute ou un saut (CharacterAnimationController::getPostLandSpeedFactor).
     float velocity = getIsSprinting() ? Constants::Player::PLAYER_SPRINTING_SPEED : Constants::Player::PLAYER_WALKING_SPEED;
+    velocity *= m_postLandSpeedFactor;
     float deltaTime = m_renderer->getDeltaTime();
     float distance = velocity * deltaTime;
 

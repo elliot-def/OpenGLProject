@@ -12,6 +12,7 @@
 #include "Scene.h"
 #include "Log.h"
 #include "ShaderManager.h"
+#include "constants/camera.h"
 #include "constants/file.h"
 
 #include <glad/glad.h>
@@ -346,43 +347,37 @@ void Game::update() {
     // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
     m_scene->update(m_renderer->getDeltaTime());
 
-    // En 1P, recentrer la camera entre les deux epaules du modele anime.
+    // En 1P, placer la camera sur la position de la tete du modele anime.
     if (!m_player->isThirdPerson() && m_humanEntity && m_humanEntity->hasAnimations()) {
         Animator* anim = m_humanEntity->getAnimator();
         if (anim) {
-            // Chercher les bones d'epaule dans la boneMap (noms exacts du modele)
-            std::string rightBone, leftBone;
+            // Chercher le bone de tete dans la boneMap (insensible a la casse)
+            std::string headBone;
             for (const auto& [name, info] : m_humanEntity->getModel()->getBoneInfoMap()) {
                 std::string lower = name;
                 for (auto& c : lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                // Chercher les bones contenant "shoulder" ou "arm" (upper arm)
-                // mais PAS "forearm" (avant-bras)
-                const bool isShoulder = lower.find("shoulder") != std::string::npos;
-                const bool isUpperArm = lower.find("arm") != std::string::npos
-                                     && lower.find("forearm") == std::string::npos;
-                if (!isShoulder && !isUpperArm) continue;
-                // Identifier gauche/droite
-                const bool isRight = lower.find("right") != std::string::npos
-                                  || lower.find("_r") != std::string::npos;
-                const bool isLeft  = lower.find("left") != std::string::npos
-                                  || lower.find("_l") != std::string::npos;
-                // Priorite : shoulder > arm
-                if (isRight && (rightBone.empty() || (isShoulder && rightBone.find("shoulder") == std::string::npos)))
-                    rightBone = name;
-                if (isLeft  && (leftBone.empty()  || (isShoulder && leftBone.find("shoulder") == std::string::npos)))
-                    leftBone = name;
+                if (lower.find("head") != std::string::npos
+                    && lower.find("end") == std::string::npos) {
+                    headBone = name;
+                    break;
+                }
             }
-            if (!rightBone.empty() && !leftBone.empty()) {
-                glm::mat4 rMat = anim->getGlobalNodeTransform(rightBone);
-                glm::mat4 lMat = anim->getGlobalNodeTransform(leftBone);
-                glm::vec3 shoulderMid = (
-                    glm::vec3(rMat[3]) + glm::vec3(lMat[3])) * 0.5f;
-                // Convertir en espace monde via la modelMatrix de l'entite
-                glm::vec3 worldShoulder = glm::vec3(
-                    m_humanEntity->getModelMatrix() * glm::vec4(shoulderMid, 1.0f));
-                // Ne suivre que X et Z (le Y reste gere par PLAYER_EYE_HEIGHT)
+            if (!headBone.empty()) {
+                // Position de la tete en espace modele, convertie en monde
+                glm::mat4 headMat = anim->getGlobalNodeTransform(headBone);
+                glm::vec3 worldHead = glm::vec3(
+                    m_humanEntity->getModelMatrix() * glm::vec4(glm::vec3(headMat[3]), 1.0f));
+                // Ne suivre que X et Z (le Y reste gere par Camera::update()).
+                // Reapplique les offsets ecrases par le setPosition :
+                //  - mouvement lisse (direction de marche × lerp)
+                //  - regard statique (direction du regard, permanent)
                 glm::vec3 camPos = m_camera->getPosition();
-                m_camera->setPosition(glm::vec3(worldShoulder.x, camPos.y, worldShoulder.z));
+                glm::vec3 frontFlat = glm::normalize(glm::vec3(
+                    m_camera->getFront().x, 0.0f, m_camera->getFront().z));
+                glm::vec3 lookOffset = frontFlat * Constants::Camera::CAMERA_FP_LOOK_OFFSET;
+                m_camera->setPosition(glm::vec3(worldHead.x, camPos.y, worldHead.z)
+                    + m_camera->getSmoothedMovementOffset()
+                    + lookOffset);
             }
         }
     }

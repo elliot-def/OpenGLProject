@@ -106,11 +106,10 @@ bool Window::init() {
     // Définition de la zone de rendu
     glViewport(0, 0, m_width, m_height);
 
-    // Vsync : synchronise le swap sur le vblank du moniteur. Sans cela, le
-    // jeu tourne non-borné (DEFAULT_IS_FPS_CAPPING=false) et fait tourner
-    // le GPU/CPU à 100% inutilement. Le cap logiciel optionnel de Renderer
-    // reste disponible par-dessus si besoin.
-    glfwSwapInterval(1);
+    // Vsync desactive : pas de cap FPS lie au taux de rafraichissement.
+    // Pour limiter les FPS, utiliser le cap logiciel de Renderer
+    // (DEFAULT_IS_FPS_CAPPING / DEFAULT_FPS_CAPPING dans constants/renderer.h).
+    glfwSwapInterval(0);
 
     //efface le bouton de la souris et permet de capturer la souris
     glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);

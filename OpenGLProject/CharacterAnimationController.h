@@ -4,6 +4,8 @@
 #include <vector>
 #include <memory>
 
+#include "constants/player.h"
+
 class ModelEntity;
 class InputManager;
 class TextRenderer;
@@ -28,11 +30,21 @@ public:
     // isGrounded : true si le joueur touche le sol (pour arreter le saut).
     void update(const glm::vec3& playerPos, float dt, bool isSprinting, bool isGrounded);
 
+    // Retourne le facteur de vitesse post-atterrissage (0..1).
+    // 1.0 = vitesse normale, <1.0 = ralenti apres chute/saut.
+    float getPostLandSpeedFactor() const { return m_postLandSpeedFactor; }
+
     // Dessine le HUD de debug listant les animations du modele (3P seulement).
     static void drawDebugHUD(ModelEntity* entity,
                              const std::vector<std::unique_ptr<TextRenderer>>& renderers);
 
 private:
+    // Declenche le ralenti post-atterrissage (apres saut ou chute).
+    // speedFactor : facteur de vitesse cible (0..1). 1.0 = pas de ralenti.
+    // duration : duree du ralenti en secondes.
+    void startPostLandSlowdown(float speedFactor = Constants::Player::POST_LAND_SPEED_FACTOR,
+                               float duration = Constants::Player::POST_LAND_SLOWDOWN_DURATION);
+
     ModelEntity* m_entity;
     InputManager* m_input;
 
@@ -47,8 +59,23 @@ private:
     bool m_punching = false;
     bool m_jumping = false;
     bool m_turning = false;
+    bool m_falling = false;        // en chute libre (descente)
+    bool m_landing = false;        // animation "falling to landing" en cours
 
     bool m_prevRDown = false;
+
+    // Position Y au début de la chute (pour calculer la hauteur de chute)
+    float m_fallStartY = 0.0f;
+
+    // Post-atterrissage : facteur de vitesse progressif (1.0 -> targetFactor -> 1.0)
+    float m_postLandSpeedFactor = 1.0f;  // 1.0 = pas de ralenti
+    float m_postLandTargetFactor = Constants::Player::POST_LAND_SPEED_FACTOR; // facteur cible
+    float m_postLandTimer = 0.0f;        // temps ecoule depuis l'atterrissage
+    float m_postLandDuration = Constants::Player::POST_LAND_SLOWDOWN_DURATION; // duree totale
+
+    // Landing : timer minimum pour que l'animation "Falling To Landing"
+    // joue complètement avant de revenir aux animations normales.
+    float m_landingAnimTimer = 0.0f;     // temps restant de l'anim de landing
 
     // Sprint memorise au sol : Player::getIsSprinting() coupe le sprint en
     // l'air, donc au moment du saut (1er frame decolle) isSprinting vaut deja
