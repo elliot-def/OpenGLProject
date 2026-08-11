@@ -138,6 +138,8 @@ void Scene::update(float deltaTime) {
                 m_characterAnim->update(m_player->getPosition(), deltaTime,
                                         m_player->getIsSprinting(),
                                         m_collisionManager->getIsPlayerGrounded());
+                // Transmettre le facteur de vitesse post-atterrissage au joueur
+                m_player->setPostLandSpeedFactor(m_characterAnim->getPostLandSpeedFactor());
             } else {
                 const int idle = m_humanEntity->getIdleAnimIndex();
                 if (idle >= 0) m_humanEntity->playAnimation(idle, true);
@@ -197,8 +199,16 @@ void Scene::draw() {
 
     // Vue 1ère personne : corps Mixamo (BRAS uniquement, le torse et les
     // jambes sont masqués pour ne pas interférer avec la caméra).
+    // Alpha blending actif : le shader applique un fade progressif base sur
+    // la distance a la camera (smoothstep dans skinned.frag, uniform
+    // uNearFadeStart/End). Depth write reste actif (contrairement aux
+    // transparences standards) pour que les bras occultent correctement
+    // le monde et soient occultes par les murs.
     if (!m_player->isThirdPerson() && m_humanEntity && m_skinnedShader &&
         !m_humanEntity->getMeshes().empty()) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         m_humanEntity->drawFirstPerson(m_skinnedShader);
+        glDisable(GL_BLEND);
     }
 }

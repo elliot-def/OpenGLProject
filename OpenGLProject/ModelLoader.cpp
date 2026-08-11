@@ -110,6 +110,8 @@ void ModelLoader::loadHumanCharacter() {
             animDir + "right turn 90.fbx",
             animDir + "Running Jump.fbx",
             animDir + "Walking Backwards.fbx",
+            animDir + "Falling Idle.fbx",
+            animDir + "Falling To Landing.fbx",
         };
         model->loadExternalAnimations(animPaths);
 
@@ -134,6 +136,8 @@ void ModelLoader::loadHumanCharacter() {
         m_humanEntity->setTurnRightIdx(static_cast<int>(base + 9));        // right turn 90.fbx
         m_humanEntity->setRunJumpIdx(static_cast<int>(base + 10));         // Running Jump.fbx
         m_humanEntity->setWalkBackIdx(static_cast<int>(base + 11));        // Walking Backwards.fbx
+        m_humanEntity->setFallingIdleIdx(static_cast<int>(base + 12));     // Falling Idle.fbx
+        m_humanEntity->setFallingToLandingIdx(static_cast<int>(base + 13)); // Falling To Landing.fbx
         // punch = -1 (pas d'anim de punch)
         // rest  = -1 (pas d'anim de rest)
 
@@ -147,16 +151,18 @@ void ModelLoader::loadHumanCharacter() {
                      i < base ? "  (embarquee)" : "  (externe)");
         }
         LOG_INFO("[ModelLoader]   Mapping : idle=%d walk=%d run=%d jump=%d strafeL=%d strafeR=%d "
-                 "strafeWL=%d strafeWR=%d turnL=%d turnR=%d runJump=%d walkBack=%d",
+                 "strafeWL=%d strafeWR=%d turnL=%d turnR=%d runJump=%d walkBack=%d "
+                 "fallingIdle=%d fallingToLanding=%d",
                  m_humanEntity->getIdleAnimIndex(), m_humanEntity->getWalkAnimIndex(),
                  m_humanEntity->getRunAnimIndex(), m_humanEntity->getJumpIdx(),
                  m_humanEntity->getStrafeLeftIdx(), m_humanEntity->getStrafeRightIdx(),
                  m_humanEntity->getStrafeWalkLeftIdx(), m_humanEntity->getStrafeWalkRightIdx(),
                  m_humanEntity->getTurnLeftIdx(), m_humanEntity->getTurnRightIdx(),
-                 m_humanEntity->getRunJumpIdx(), m_humanEntity->getWalkBackIdx());
-        if (base + 11 >= totalAnims) {
+                 m_humanEntity->getRunJumpIdx(), m_humanEntity->getWalkBackIdx(),
+                 m_humanEntity->getFallingIdleIdx(), m_humanEntity->getFallingToLandingIdx());
+        if (base + 13 >= totalAnims) {
             LOG_WARN("[ModelLoader]   !! ATTENTION : dernier clip externe (index %zu) >= nombre "
-                     "d'animations (%zu) -> tous les clips n'existent pas.", base + 11, totalAnims);
+                     "d'animations (%zu) -> tous les clips n'existent pas.", base + 13, totalAnims);
         }
 
         // Jouer l'idle

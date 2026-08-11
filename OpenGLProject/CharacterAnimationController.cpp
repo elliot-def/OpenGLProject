@@ -13,6 +13,13 @@ CharacterAnimationController::CharacterAnimationController(ModelEntity* entity, 
     // m_lastYaw sera initialise au premier update (evite un faux turn)
 }
 
+void CharacterAnimationController::startPostLandSlowdown(float speedFactor, float duration) {
+    m_postLandSpeedFactor = 1.0f;  // debut du fondu a partir de 1.0
+    m_postLandTargetFactor = speedFactor;  // facteur cible (ex: 0.35 pour chute)
+    m_postLandDuration = duration;         // duree totale du ralenti
+    m_postLandTimer = duration;            // timer decomptant
+}
+
 void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, bool isSprinting, bool isGrounded) {
     if (!m_entity || !m_entity->hasAnimations()) return;
 
@@ -84,7 +91,8 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
 
     // ── One-shot: punch (R) ────────────────────────────────────────────
     const bool rDown = m_input->getKey("Push")->getStatus();
-    if (rDown && !m_prevRDown && !m_punching && !m_jumping && !m_turning && punchIdx >= 0) {
+    if (rDown && !m_prevRDown && !m_punching && !m_jumping && !m_turning
+        && !m_falling && !m_landing && punchIdx >= 0) {
         m_entity->playAnimation(punchIdx, false);
         m_punching = true;
         m_lastAnimIdx = punchIdx;
@@ -94,6 +102,15 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
         m_punching = false;
     }
 
+    // ── Detection de la chute (descente libre) ──────────────────────────
+    // Le joueur est en chute quand il descend suffisamment vite (vitesse
+    // verticale < FALL_VELOCITY_THRESHOLD) ET qu'il n'est pas au sol ET
+    // qu'il n'est pas deja en train de sauter (m_jumping couvre la phase
+    // montante). On divise delta.y par dt pour obtenir la vitesse reelle.
+    const float verticalVelocity = (dt > 1e-5f) ? (delta.y / dt) : 0.0f;
+    const bool isFallingDown = verticalVelocity < Constants::Player::FALL_VELOCITY_THRESHOLD
+                             && !isGrounded && !m_jumping;
+
     // Memo du sprint au sol : utilise pour choisir running jump / jump (le
     // sprint est coupe en l'air par Player::getIsSprinting).
     if (isGrounded) m_wasSprintingWhenGrounded = isSprinting;
@@ -101,32 +118,109 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
     // ── One-shot: jump ─────────────────────────────────────────────────
     // Running jump uniquement si on sprintait ET qu'on se deplacait reellement
     // (m_isMoving) : debout + Shift tenu + saut → jump simple.
-    if (isJumpingUp && !m_jumping && !m_punching && !m_turning) {
+    // PAS de jump si en cours de landing (l'animation doit se terminer).
+    if (isJumpingUp && !m_jumping && !m_punching && !m_turning && !m_landing && !m_falling) {
         const int jmp = (m_wasSprintingWhenGrounded && m_isMoving && runJumpIdx >= 0) ? runJumpIdx : jumpIdx;
         if (jmp >= 0) {
             m_entity->playAnimation(jmp, false);
             m_jumping = true;
+            m_falling = false;
             m_lastAnimIdx = jmp;
         }
     }
     // Fin du saut : animation terminee OU joueur a atterri (grounded).
-    // On laisse l'animation jouer en boucle tant que le joueur est en l'air
-    // (fin de la chute). Si l'animation se termine avant l'atterrissage,
-    // on la relance pour eviter un trou visuel.
+    // Si le joueur atterrit, on enclenche l'animation "Falling To Landing"
+    // (one-shot) avant de revenir aux animations normales.
+    // Si l'animation est finie mais pas encore au sol (descente), on
+    // bascule sur "Falling Idle" pour la phase de chute libre.
     if (m_jumping) {
         if (isGrounded || m_entity->getAnimator()->isFinished()) {
-            // Si l'animation est finie mais pas encore au sol : relance
-            if (!isGrounded && m_entity->getAnimator()->isFinished()) {
-                const int jmp = (m_wasSprintingWhenGrounded && m_isMoving && runJumpIdx >= 0) ? runJumpIdx : jumpIdx;
-                if (jmp >= 0) m_entity->playAnimation(jmp, false);
-            } else {
+            if (isGrounded) {
+                // Atterrissage direct depuis le saut : pas de ralenti.
                 m_jumping = false;
+            } else {
+                // Animation de saut finie, toujours en l'air → transition
+                // vers "Falling Idle" si le joueur descend.
+                if (verticalVelocity < 0.0f) {
+                    m_jumping = false;
+                    const int fallIdle = m_entity->getFallingIdleIdx();
+                    if (fallIdle >= 0) {
+                        m_entity->playAnimation(fallIdle, true);
+                        m_falling = true;
+                        m_fallStartY = playerPos.y;  // debut de la phase chute
+                        m_lastAnimIdx = fallIdle;
+                    }
+                } else {
+                    // Encore en montée → relancer l'animation de saut
+                    const int jmp = (m_wasSprintingWhenGrounded && m_isMoving && runJumpIdx >= 0) ? runJumpIdx : jumpIdx;
+                    if (jmp >= 0) m_entity->playAnimation(jmp, false);
+                }
             }
         }
     }
 
+    // ── One-shot: falling (descente libre) ──────────────────────────────
+    // Declenche quand le joueur descend assez vite ET n'est pas au sol
+    // ET n'est pas deja en train de sauter (la phase montante est geree
+    // par m_jumping). Joue "Falling Idle" en boucle.
+    if (isFallingDown && !m_jumping && !m_falling && !m_landing
+        && !m_punching && !m_turning) {
+        const int fallIdle = m_entity->getFallingIdleIdx();
+        if (fallIdle >= 0) {
+            m_entity->playAnimation(fallIdle, true);
+            m_falling = true;
+            m_fallStartY = playerPos.y;  // memoriser la hauteur de debut de chute
+            m_lastAnimIdx = fallIdle;
+        }
+    }
+    // Fin de chute : le joueur touche le sol → jouer "Falling To Landing"
+    // (one-shot, non-loop) SEULEMENT si la hauteur de chute depasse le seuil.
+    // Le ralenti post-atterrissage est active.
+    // L'animation doit jouer JUSQU'AU BOUT sans etre interrompue.
+    if (m_falling && isGrounded) {
+        m_falling = false;
+        const float fallHeight = m_fallStartY - playerPos.y;
+        const bool hasFallenEnough = fallHeight >= Constants::Player::FALL_HEIGHT_LANDING_THRESHOLD;
+        if (hasFallenEnough) {
+            const int landAnim = m_entity->getFallingToLandingIdx();
+            if (landAnim >= 0) {
+                m_entity->playAnimation(landAnim, false);
+                m_landing = true;
+                m_lastAnimIdx = landAnim;
+                m_landingAnimTimer = Constants::Player::LANDING_ANIM_MIN_DURATION;
+                // Ralenti post-chute : utiliser FALL_SLOWDOWN_FACTOR et FALL_SLOWDOWN_DURATION
+                startPostLandSlowdown(Constants::Player::FALL_SLOWDOWN_FACTOR,
+                                      Constants::Player::FALL_SLOWDOWN_DURATION);
+            }
+        }
+        // Note : pas de ralenti pour les chutes courtes (inferieures au seuil).
+    }
+    // Fin de l'animation de landing : relancer idle/walk/run
+    // L'animation doit jouer JUSQU'AU BOUT : on attend isFinished()
+    // ET que le timer minimum soit ecoule.
+    if (m_landing) {
+        // Decrementer le timer
+        m_landingAnimTimer -= dt;
+
+        const Animator* anim = m_entity->getAnimator();
+        const bool stillLanding = anim && anim->getCurrentAnimation()
+            && m_lastAnimIdx == m_entity->getFallingToLandingIdx();
+        // Sortir de l'etat landing SEULEMENT si :
+        // 1. L'animation est terminee (isFinished)
+        // 2. Le timer minimum est ecoule
+        // 3. ET aucun autre playAnime() n'a pris le relais
+        if (!stillLanding) {
+            m_landing = false;
+            m_landingAnimTimer = 0.0f;
+        } else if (anim->isFinished() && m_landingAnimTimer <= 0.0f) {
+            m_landing = false;
+            m_landingAnimTimer = 0.0f;
+        }
+    }
+
     // ── One-shot: turn ─────────────────────────────────────────────────
-    if (isTurning && !m_turning && !m_jumping && !m_punching) {
+    // PAS de turn si en cours de landing ou de falling.
+    if (isTurning && !m_turning && !m_jumping && !m_punching && !m_landing && !m_falling) {
         const int turn = (yawDelta < 0.0f ? turnLIdx : turnRIdx);
         if (turn >= 0) {
             m_entity->playAnimation(turn, false);
@@ -144,7 +238,7 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
     // l'animation de marche soit alignee avec la trajectoire. Strafe (lateral
     // pur), recul et idle gardent le modele face a la camera (offset 0).
     float targetYawOffsetDeg = 0.0f;
-    if (!m_punching && !m_jumping && !m_turning) {
+    if (!m_punching && !m_jumping && !m_turning && !m_falling && !m_landing) {
         int targetIdx = -1;
 
         if (m_isStrafing) {
@@ -206,6 +300,28 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
         m_animChangeTimer = 0.0f;
     }
 
+    // ── Post-atterrissage : mise a jour du timer de ralenti ──────────────
+    if (m_postLandTimer > 0.0f) {
+        m_postLandTimer -= dt;
+        if (m_postLandTimer <= 0.0f) {
+            m_postLandTimer = 0.0f;
+            m_postLandSpeedFactor = 1.0f;
+        } else {
+            // interpolation lineaire de 1.0 → targetFactor → 1.0
+            const float halfDur = m_postLandDuration * 0.5f;
+            const float elapsed = m_postLandDuration - m_postLandTimer;
+            if (elapsed < halfDur) {
+                // Premiere moitie : 1.0 → targetFactor
+                const float t = elapsed / halfDur;
+                m_postLandSpeedFactor = 1.0f + (m_postLandTargetFactor - 1.0f) * t;
+            } else {
+                // Deuxieme moitie : targetFactor → 1.0
+                const float t = (elapsed - halfDur) / halfDur;
+                m_postLandSpeedFactor = m_postLandTargetFactor + (1.0f - m_postLandTargetFactor) * t;
+            }
+        }
+    }
+
     // Lissage de l'offset de cap (pivotement progressif, pas de snap) puis
     // application au modele (utilise par getModelMatrix).
     const float blend = 1.0f - std::exp(-dt * kYawOffsetSmoothRate);
@@ -237,6 +353,8 @@ void CharacterAnimationController::drawDebugHUD(ModelEntity* entity,
     const int jumpI    = entity->getJumpIdx();
     const int runJumpI = entity->getRunJumpIdx();
     const int walkBackI = entity->getWalkBackIdx();
+    const int fallIdleI = entity->getFallingIdleIdx();
+    const int fallLandI = entity->getFallingToLandingIdx();
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -273,6 +391,8 @@ void CharacterAnimationController::drawDebugHUD(ModelEntity* entity,
         if (idx == jumpI)     line += "  JUMP";
         if (idx == runJumpI)  line += "  RUNNING JUMP";
         if (idx == walkBackI) line += "  WALK_BACK";
+        if (idx == fallIdleI) line += "  FALLING_IDLE";
+        if (idx == fallLandI) line += "  FALLING_LANDING";
 
         const bool isCurrent = animator && (anim == animator->getCurrentAnimation());
         hud->renderText(line, 20.0f, y, scale,

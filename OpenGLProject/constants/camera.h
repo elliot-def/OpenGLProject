@@ -15,13 +15,25 @@ namespace Constants {
 		inline constexpr float CAMERA_FP_OFFSET_Y = -0.05f;
 		inline constexpr float CAMERA_FP_OFFSET_Z = 0.0f;
 
+		// Decalage statique de la camera 1P dans la direction du regard
+		// (horizontal). Applique en permanence, meme a l'arret.
+		inline constexpr float CAMERA_FP_LOOK_OFFSET = 0.20f;
+
 		// Decalage de la camera 1P dans la direction de deplacement du joueur.
 		// Valeur positive = camera avance vers l'avant quand le joueur marche.
-		inline constexpr float CAMERA_FP_MOVEMENT_OFFSET = 0.15f;
+		inline constexpr float CAMERA_FP_MOVEMENT_OFFSET = 0.f;
 
 		// Vitesse de lissage (lerp) du decalage de mouvement en 1P.
 		// Plus la valeur est elevee, plus le decalage reagit vite au changement
 		// de direction (demarrage/arret). 10.0 = transition douce sans latence.
 		inline constexpr float CAMERA_FP_MOVEMENT_LERP_SPEED = 10.0f;
+
+		// Alpha fade progressif en 1P : les fragments proches de la camera
+		// (epaules, buste) deviennent transparents pour eviter l'effet
+		// "decoupe" du corps tronque. smoothstep(start, end, distance).
+		// - FP_NEAR_FADE_START : distance ou alpha = 0 (invisible)
+		// - FP_NEAR_FADE_END   : distance ou alpha = 1 (opaque)
+		inline constexpr float FP_NEAR_FADE_START = 0.08f;
+		inline constexpr float FP_NEAR_FADE_END   = 0.35f;
 	}
 }

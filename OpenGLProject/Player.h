@@ -62,6 +62,10 @@ public:
     inline bool getFlashlightIsEnabled() { return m_isFlashlightEnabled; };
     inline bool getWantsToMove() { return m_wantsToMove; };
 
+    // Facteur de vitesse post-atterrissage (0..1). 1.0 = normal.
+    void setPostLandSpeedFactor(float factor) { m_postLandSpeedFactor = factor; }
+    float getPostLandSpeedFactor() const { return m_postLandSpeedFactor; };
+
     // Retourne la position des yeux du joueur (pour la caméra)
 
     glm::vec3 getEyePosition() const { return m_position + Constants::Player::PLAYER_EYE_HEIGHT; }
@@ -70,4 +74,5 @@ private:
     bool m_isFlashlightEnabled = false;
     bool m_isSprinting = false;
 	bool m_wantsToMove = false;
+    float m_postLandSpeedFactor = 1.0f;  // facteur de vitesse post-atterrissage
 };

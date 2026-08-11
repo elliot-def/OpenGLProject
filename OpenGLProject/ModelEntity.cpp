@@ -6,6 +6,7 @@
 #include "LightManager.h"
 #include "Animator.h"
 #include "SkinningData.h"
+#include "constants/camera.h"
 #include <memory>
 
 #include <glad/glad.h>  // GL_TRUE/GL_FALSE/glDepthMask — requise par l'outline pass
@@ -151,6 +152,13 @@ void ModelEntity::draw(Shader* shader) {
     shader->setVec3("viewPos", m_camera->getPosition());
     m_lightManager->applyToShader(shader);
 
+    // Alpha fade : en 3P la camera est toujours > 0.4m (collision), donc
+    // aucun fragment n'est a moins de FP_NEAR_FADE_END (0.35m) → alpha=1.0.
+    // On set les uniforms quand meme par robustesse (evite de dependre des
+    // defaults GLSL si le shader est utilise par un autre code path).
+    shader->setFloat("uNearFadeStart", Constants::Camera::FP_NEAR_FADE_START);
+    shader->setFloat("uNearFadeEnd",   Constants::Camera::FP_NEAR_FADE_END);
+
     m_model->draw(*shader);
 }
 
@@ -162,7 +170,7 @@ void ModelEntity::drawFirstPerson(Shader* shader) {
     // ("mixamorig:LeftArm", "mixamorig:LeftHand", ...). Les jambes ne sont
     // PAS affichées en 1ère personne (voir Model::buildCulledIndices).
     if (!m_firstPersonCullingBuilt) {
-        m_model->buildCulledIndices({ "Shoulder", "Arm", "Hand" });
+        m_model->buildCulledIndices({ "Shoulder", "Arm", "Hand", "Spine" });
         m_firstPersonCullingBuilt = true;
         // Diagnostic : % de triangles conservés (bras) pour la vue 1P
         size_t total = 0, kept = 0;
@@ -191,6 +199,10 @@ void ModelEntity::drawFirstPerson(Shader* shader) {
 
     shader->setVec3("viewPos", m_camera->getPosition());
     m_lightManager->applyToShader(shader);
+
+    // Pas d'alpha fade en 1P.
+    shader->setFloat("uNearFadeStart", 0.0f);
+    shader->setFloat("uNearFadeEnd",   0.0f);
 
     for (auto* mesh : m_model->getMeshes()) {
         mesh->drawCulled();

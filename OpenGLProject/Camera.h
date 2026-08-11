@@ -41,6 +41,10 @@ public:
     // epaules du modele anime en 1P).
     void setPosition(const glm::vec3& pos) { m_position = pos; }
 
+    // Offset de mouvement lisse (direction de marche × lerp). Necessaire dans
+    // Game::update() pour le reappliquer apres le tracking de tete.
+    glm::vec3 getSmoothedMovementOffset() const { return m_smoothedMovementOffset; }
+
 private:
     Renderer* m_renderer;     // Pointeur vers le renderer pour accéder au rendu (non utilisé ici)
     Direction* m_direction;   // Contient yaw et pitch pour orienter la caméra
