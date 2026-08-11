@@ -12,17 +12,17 @@ Features :
  	- Chat ?
 
 Changements et Debug : 
-- Easter Egg DVD derrière le texte (devrait être devant)
 - Rendre les hitbox plus fidèles au modèles 3D (en troisième personne pour les joueurs) 
-- Nettoyer les caractères non-ascii dans les printf.
 - Trouver une skybox libre de droit
 - Faire le ménage dans l'organisation du projet .vsxproj
 - DA : 
 	- Sons bitcrushed
 	- Low-poly les modèles
+ 
 Fix :
 - Position des yeux en première personne
 - Temps de chargement après lancement du jeu pour la première fois (quand steam se lance)
+
 Opti :
 - Regarder les logs de chargement de texture :
 	+ Fichier de propriÚtÚs manquant pour container: ./res/textures/container\container.json
