@@ -25,10 +25,13 @@ void Rectangle::draw() {
         .rotate(glm::vec3(0.0f, 0.0f, 1.0f), m_rotation)         // 2. Rotation
         .scale(glm::vec3(m_size.x, m_size.y, 1.0f));             // 3. Taille
 
-    // Envoyer au shader
-    m_shader->setTransformation("model", &trans);
-    m_shader->setupMatrices2D();
-    m_shader->setVec3("color", m_color);
+    // Envoyer au shader — locations cachees (resolues une fois) : plus
+    // aucun hash/compare de string par frame (pattern LightManager/Spotlight).
+    ensureUniformLocations();
+    m_shader->setMat4(m_uniformLocations.model, trans.getMatrix());
+    m_shader->setMat4(m_uniformLocations.projection, m_shader->getProjection2D());
+    m_shader->setMat4(m_uniformLocations.uProjection, m_shader->getProjection2D());
+    m_shader->setVec3(m_uniformLocations.color, m_color);
 
     SharedQuad::draw();
 }

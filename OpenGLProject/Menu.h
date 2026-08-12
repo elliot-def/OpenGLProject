@@ -43,7 +43,7 @@ struct MenuText {
 
 // Structure pour un élément de menu
 struct MenuShape {
-    Shape* shape;
+    std::unique_ptr<Shape> shape;
     bool isHovered;
     std::function<void()> callback;
 
@@ -165,7 +165,7 @@ public:
         m_selects.clear();
     }
 
-    std::vector<MenuText> getItems() { return m_items; }
+    const std::vector<MenuText>& getItems() const { return m_items; }
 
     void setSelectedItem(int index) { 
         for (auto& item : m_items) {

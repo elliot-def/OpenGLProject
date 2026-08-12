@@ -98,8 +98,3 @@ void LightManager::update() {
     }
     m_flashlight->update(m_player);
 }
-void LightManager::draw(){
-    for (auto& light : m_lightSources) {
-        light->draw();
-    }
-}

@@ -36,12 +36,13 @@ void MaskImage::draw(glm::vec3 color) {
     model = glm::rotate(model, glm::radians(m_rotation), glm::vec3(0.0f, 0.0f, 1.0f));
     model = glm::scale(model, glm::vec3(m_size.x, m_size.y, 1.0f));
 
-    m_shader->setMat4("model", model);
-    m_shader->setMat4("projection", projection);
-    m_shader->setFloat("opacity", m_opacity);
+    ensureUniformLocations();
+    m_shader->setMat4(m_uniformLocations.model, model);
+    m_shader->setMat4(m_uniformLocations.projection, projection);
+    m_shader->setFloat(m_uniformLocations.opacity, m_opacity);
 
     if (m_shader->getType() == ShaderType::Mask) {
-        m_shader->setVec3("color", color);
+        m_shader->setVec3(m_uniformLocations.color, color);
 
     }
 
@@ -50,7 +51,7 @@ void MaskImage::draw(glm::vec3 color) {
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_textureID);
-    m_shader->setInt("image", 0);
+    m_shader->setInt(m_uniformLocations.image, 0);
 
     SharedQuad::draw();
 

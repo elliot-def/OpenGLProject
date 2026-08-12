@@ -2,85 +2,61 @@
 
 #include <glm/glm.hpp>
 #include <vector>
-#include <memory>
 
-#include "Vertex.h"
 #include "Outlineable.h"
 
 class Shader;
-class Mesh;
-class Shader;
 class Texture;
-class Transformation;
-class LightManager;
-class LightSource;
-class Player;
 class Renderer;
 
-// Classe Cube : represente un cube 3D dans le jeu
+// ─────────────────────────────────────────────────────────────────────────────
+// Cube : descripteur d'instance pour le rendu INSTANCIE (CubeRenderer).
+//
+// Le Cube ne possede plus de geometrie propre : un cube unitaire (edge=1,
+// centre origine) est partage par toutes les instances. La matrice modele
+// translate(center) · spin · scale(edge) est portee par instance au GPU.
+// Le rendu (glDrawElementsInstanced) est regroupe par shader dans
+// CubeRenderer, supprimant le draw call + set d'uniforms par cube.
+//
+// Collision : le CollisionManager transforme l'AABB LOCALE du cube unitaire
+// (±0.5) par getModelMatrix() → AABB world identique a l'ancien code.
+// ─────────────────────────────────────────────────────────────────────────────
 class Cube : public Outlineable {
 public:
-    // Constructeur
-    // center : position du centre du cube
-    // edge : taille d'une arête du cube
-    // shader : shader utilisé pour le rendu
-    // texture : texture appliquée au cube
-    
-    Cube(glm::vec3 center, float edge, Shader* shader, LightSource* lightSource, Player* player);
-    Cube(glm::vec3 center, float edge, Shader* shader, std::vector<Texture*> textures, Renderer* renderer, LightManager* lightManager, Player* player);
+    // center : centre world ; edge : arete ; shader : severallights ou lightsource.
+    // textures : materiau (vide pour un cube de lumiere). renderer : requis pour le spin.
+    Cube(glm::vec3 center, float edge, Shader* shader,
+         std::vector<Texture*> textures = {}, Renderer* renderer = nullptr);
 
-    // Destructeur : libere la memoire (mesh, transformation…)
     ~Cube() = default;
 
-    // Mise à jour du cube (transformations, animations, effets…)
     void update();
+    void setSpin(float speedDegPerSec, const glm::vec3& axis);
 
-    // Dessine le cube a l'ecran (appelle Mesh + Shader)
-    virtual void draw();
+    Shader* getShader() const { return m_shader; }
+    const std::vector<Texture*>& getTextures() const { return m_textures; }
+    glm::vec3 getCenter() const { return m_center; }
+    glm::mat4 getModelMatrix() const { return m_modelMatrix; }
 
-	inline Transformation* getTransformation() const { return m_transformation.get(); }
-
-    // Retourne la texture du cube
-    inline std::vector<Texture*> getTextures() const;
-
-	inline glm::vec3 getCenter() const { return m_center; }
-
-	inline Mesh* getMesh() const { return m_mesh.get(); }
-
-    // Outline (silhouette) — voir Outlineable.h
+    // Outline (silhouette) : conserve pour compatibilite (non utilise par le
+    // rendu instancie).
     void setOutlineShader(Shader* s) { m_outlineShader = s; }
     Shader* getOutlineShader() const { return m_outlineShader; }
 
-protected:
-    Cube(glm::vec3 center, float edge, Shader* shader, Player* player);
+private:
+    void rebuildModelMatrix();
 
-    std::unique_ptr<Mesh> m_mesh;     // Maillage du cube (buffers OpenGL)
-    glm::vec3 m_center;               // Centre du cube dans l'espace
-    std::vector<Texture*> m_textures; // Texture appliquee
-    Shader* m_shader;                 // Shader pour le rendu
-    Shader* m_outlineShader = nullptr;  // Outline (silhouette)
-    std::unique_ptr<Transformation> m_transformation; // Transformations : position, rotation, scale
-	LightManager* m_lightManager;     // Pointeur vers le LightBlock associé (si applicable)
-	LightSource* m_lightSource;       // Pointeur vers le LightSource associé (si applicable)
-    Player* m_player;
+    glm::vec3 m_center;
+    float     m_edge;
+    glm::mat4 m_modelMatrix = glm::mat4(1.0f);
+
+    Shader* m_shader;
+    Shader* m_outlineShader = nullptr;
+    std::vector<Texture*> m_textures;
     Renderer* m_renderer;
 
-    float m_edge;                      // Taille d'une arête du cube
-
-    // Spin sur place (rotation autour de son propre centre)
-    float    m_spinSpeedDeg = 0.0f;            // °/s, 0 = pas de rotation
-    glm::vec3 m_spinAxis    = glm::vec3(0.0f); // axe de rotation
-    float    m_spinAngle    = 0.0f;            // angle accumulé (degrés)
-
-public:
-    // Active une rotation continue autour du centre du cube
-    void setSpin(float speedDegPerSec, const glm::vec3& axis) {
-        m_spinSpeedDeg = speedDegPerSec;
-        m_spinAxis = axis;
-    }
-
-
-private:
-    void drawLightSourceShader();
-    void drawSeveralLightShader();
+    // Spin sur place (rotation continue autour du centre).
+    float     m_spinSpeedDeg = 0.0f;
+    glm::vec3 m_spinAxis     = glm::vec3(0.0f);
+    float     m_spinAngle    = 0.0f;
 };

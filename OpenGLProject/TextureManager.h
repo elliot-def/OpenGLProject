@@ -75,6 +75,14 @@ public:
      */
     Texture* getTexture(const std::string& path);
 
+    /// Texture blanche 1x1 partagée (fallback diffuse). Réutilisée par
+    /// Model::processMesh pour les meshes sans texture diffuse, au lieu de
+    /// générer une nouvelle texture par mesh.
+    unsigned int getDefaultDiffuseID() const { return m_defaultDiffuseID; }
+
+    /// Texture noire/gris foncé 1x1 partagée (fallback spéculaire).
+    unsigned int getDefaultSpecularID() const { return m_defaultSpecularID; }
+
     /**
      * @brief Affiche l'arborescence complète des textures dans la console
      *
@@ -88,6 +96,9 @@ public:
 private:
     TextureNode m_root; ///< Racine de l'arborescence des textures
     unsigned int m_defaultSpecularID = Constants::Texture::BLACK_TEXTURE_ID;  // Texture par défaut
+    // Placeholder (écrasé par createDefaultTextures() via glGenTextures) :
+    // l'ID réel de la texture blanche 1x1 par défaut (diffuse).
+    unsigned int m_defaultDiffuseID  = Constants::Texture::BLACK_TEXTURE_ID;
 
     /**
      * @brief Charge toutes les textures depuis des dossiers donnés

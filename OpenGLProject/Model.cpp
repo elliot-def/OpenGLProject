@@ -422,6 +422,12 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
         if (!diffuse.empty()) {
             textureIDs.push_back(diffuse[0]);
         }
+        else if (m_textureManager) {
+            // Réutilise la texture blanche 1x1 partagée du TextureManager au
+            // lieu d'en générer une nouvelle par mesh (évite des dizaines de
+            // textures GPU redondantes sur un modèle multi-meshes non texturés).
+            textureIDs.push_back(m_textureManager->getDefaultDiffuseID());
+        }
         else {
             unsigned int whiteTextureID;
             glGenTextures(1, &whiteTextureID);
@@ -433,15 +439,22 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
             textureIDs.push_back(whiteTextureID);
         }
 
-        // 2. CORRECTION : Si aucune spéculaire n'est trouvée, on génère/affecte un ID de texture noire
+        // 2. CORRECTION : Si aucune spéculaire n'est trouvée, on réutilise la
+        // texture noire 1x1 partagée du TextureManager (au lieu d'en générer
+        // une nouvelle par mesh).
         if (specular.empty()) {
-            unsigned int blackTextureID;
-            glGenTextures(1, &blackTextureID);
-            glBindTexture(GL_TEXTURE_2D, blackTextureID);
-            unsigned char blackPixel[] = { 10, 10, 10, 255 }; // Gris très sombre (faible spécularité par défaut)
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, blackPixel);
+            if (m_textureManager) {
+                textureIDs.push_back(m_textureManager->getDefaultSpecularID());
+            }
+            else {
+                unsigned int blackTextureID;
+                glGenTextures(1, &blackTextureID);
+                glBindTexture(GL_TEXTURE_2D, blackTextureID);
+                unsigned char blackPixel[] = { 10, 10, 10, 255 }; // Gris très sombre (faible spécularité par défaut)
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, blackPixel);
 
-            textureIDs.push_back(blackTextureID);
+                textureIDs.push_back(blackTextureID);
+            }
         }
         else {
             textureIDs.push_back(specular[0]);

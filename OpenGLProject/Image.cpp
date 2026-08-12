@@ -75,9 +75,10 @@ void Image::draw() {
     model = glm::translate(model, glm::vec3(-m_size.x * 0.5f, -m_size.y * 0.5f, 0.0f));
     model = glm::scale(model, glm::vec3(m_size.x, m_size.y, 1.0f));
 
-    m_shader->setMat4("model", model);
-    m_shader->setMat4("projection", projection);
-    m_shader->setFloat("opacity", m_opacity);
+    ensureUniformLocations();
+    m_shader->setMat4(m_uniformLocations.model, model);
+    m_shader->setMat4(m_uniformLocations.projection, projection);
+    m_shader->setFloat(m_uniformLocations.opacity, m_opacity);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

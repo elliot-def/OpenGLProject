@@ -6,11 +6,10 @@
 #include "Texture.h"  // Classe pour les textures
 #include "Transformation.h" // Classe pour position, rotation et scale
 #include "Cube.h"
-#include "Player.h"
 
-LightSource::LightSource(glm::vec3 center, Shader* shader, Player* player, glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular,
+LightSource::LightSource(glm::vec3 center, Shader* shader, glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular,
 	float constant, float linear, float quadratic, glm::vec3 lightColor) {
-	m_cube = std::make_unique<Cube>(center, 0.5f, shader, this, player);
+	m_cube = std::make_unique<Cube>(center, 0.5f, shader);
 	m_lightColor = lightColor;
 	m_constant = constant;
 	m_linear = linear;
@@ -22,10 +21,6 @@ LightSource::LightSource(glm::vec3 center, Shader* shader, Player* player, glm::
 
 LightSource::~LightSource() {
 	
-}
-
-void LightSource::draw() {
-	m_cube->draw();
 }
 
 void LightSource::update() {

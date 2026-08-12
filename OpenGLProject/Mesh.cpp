@@ -21,8 +21,9 @@ Mesh::~Mesh() {
     if (m_vbo) glDeleteBuffers(1, &m_vbo);
     if (m_vao) glDeleteVertexArrays(1, &m_vao);
     if (m_culledEbo) glDeleteBuffers(1, &m_culledEbo);
+    if (m_instanceVbo) glDeleteBuffers(1, &m_instanceVbo);
 
-    m_vao = m_vbo = m_ebo = m_culledEbo = 0;
+    m_vao = m_vbo = m_ebo = m_culledEbo = m_instanceVbo = 0;
     m_indexCount = 0;
     m_culledIndexCount = 0;
 }
@@ -92,6 +93,12 @@ void Mesh::drawCulled() const {
 
 void Mesh::reloadGPUResources() {
     setupMesh(m_attributeMask);
+    // Les attributs par-instance (mat4 loc 4-7 + vec3 loc 8) vivent dans le
+    // VAO : ils doivent être re-déclarés sur le VAO tout juste recréé. Le VBO
+    // d'instances, lui, est partagé entre contextes (contrairement aux VAO).
+    if (m_instanceStride > 0) {
+        setupInstanceAttributes(m_instanceStride);
+    }
 }
 
 void Mesh::setupMesh(unsigned int attributesMask) {
@@ -212,5 +219,46 @@ void Mesh::draw() const {
     glBindVertexArray(m_vao);
     glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
 
+    glBindVertexArray(0);
+}
+
+void Mesh::setupInstanceAttributes(size_t stride) {
+    m_instanceStride = stride;
+    glBindVertexArray(m_vao);
+    if (m_instanceVbo == 0) {
+        glGenBuffers(1, &m_instanceVbo);
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, m_instanceVbo);
+
+    // mat4 model : 4 vec4 consécutifs (locations 4, 5, 6, 7)
+    for (int i = 0; i < 4; ++i) {
+        glEnableVertexAttribArray(4 + i);
+        glVertexAttribPointer(4 + i, 4, GL_FLOAT, GL_FALSE,
+                              (GLsizei)stride,
+                              (void*)(size_t)(i * 4 * sizeof(float)));
+        glVertexAttribDivisor(4 + i, 1);
+    }
+    // vec3 color : location 8 (offset 64 = 4 * vec4)
+    glEnableVertexAttribArray(8);
+    glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE,
+                          (GLsizei)stride,
+                          (void*)(size_t)(4 * 4 * sizeof(float)));
+    glVertexAttribDivisor(8, 1);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+void Mesh::uploadInstanceData(const void* data, size_t instanceCount, size_t stride) {
+    glBindBuffer(GL_ARRAY_BUFFER, m_instanceVbo);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(instanceCount * stride), data, GL_STREAM_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void Mesh::drawInstanced(size_t instanceCount) const {
+    if (instanceCount == 0 || m_indexCount == 0) return;
+    glBindVertexArray(m_vao);
+    glDrawElementsInstanced(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0,
+                            (GLsizei)instanceCount);
     glBindVertexArray(0);
 }

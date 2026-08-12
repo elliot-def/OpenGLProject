@@ -91,7 +91,7 @@ void Menu::draw() {
     }
     for (const auto& shape : m_shapes) {
         // Shapes de premier plan : dessinés après le texte (drawOverlays)
-        if (std::find(m_overlayShapes.begin(), m_overlayShapes.end(), shape.second->shape) != m_overlayShapes.end()) {
+        if (std::find(m_overlayShapes.begin(), m_overlayShapes.end(), shape.second->shape.get()) != m_overlayShapes.end()) {
             continue;
         }
         shape.second->shape->draw();
@@ -103,17 +103,17 @@ void Menu::draw() {
         glm::vec2 pos = range->input->getPosition();
         glm::vec2 size = range->input->getSize();
         if (!range->label.empty()) {
-            std::stringstream ss;
-
             float labelX = pos.x - size.x / 2.0f - 20.0f;
             float valueX = pos.x + size.x / 2.0f + 20.0f;
             //float labelX = pos.x - size.x - 20.0f;
             drawTextRightAligned(range->label, labelX, pos.y - range->input->getSize().y / 2.0f, 0, Constants::Color::LINEN);
 
-            float val = range->input->getValue();
-            ss << std::fixed << std::setprecision(2) << val;
+            // Formatage léger (snprintf sur buffer stack) au lieu d'un
+            // std::stringstream alloué + ss.str() à chaque frame.
+            char valueBuf[32];
+            snprintf(valueBuf, sizeof(valueBuf), "%.2f", range->input->getValue());
 
-            drawTextLeftAligned(ss.str(), valueX, pos.y - range->input->getSize().y / 2.0f, 0, Constants::Color::LINEN);
+            drawTextLeftAligned(valueBuf, valueX, pos.y - range->input->getSize().y / 2.0f, 0, Constants::Color::LINEN);
         }
         range->input->draw();
     }

@@ -15,6 +15,7 @@ class Shader;
 class TextureManager;
 class InputManager;
 class Cube;
+class CubeRenderer;
 class ModelEntity;
 class Skybox;
 class CharacterAnimationController;
@@ -75,8 +76,8 @@ private:
     Shader* m_skinnedShader = nullptr;
 
     // Monde possédé par la scène
-    std::vector<std::unique_ptr<Cube>> m_cubes;
-    std::vector<std::unique_ptr<Cube>> m_alphacubes;   // transparences (triées)
+    std::vector<std::unique_ptr<Cube>> m_cubes;   // descripteurs d'instances (centre/edge/shader)
+    std::unique_ptr<CubeRenderer> m_cubeRenderer; // rendu instancié : cube unitaire + lots par shader
     std::unique_ptr<Skybox> m_skybox;
 
     // Entités 3D (vues non-propriétaires, possédées par ModelLoader)

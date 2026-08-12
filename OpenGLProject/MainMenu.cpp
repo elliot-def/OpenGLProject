@@ -67,7 +67,7 @@ void MainMenu::update(bool isAFK) {
         auto it = m_shapes.find(0);
         if (it == m_shapes.end()) return;
 
-        DVDShape* dvd = static_cast<DVDShape*>(it->second->shape);
+        DVDShape* dvd = static_cast<DVDShape*>(it->second->shape.get());
         dvd->update(Constants::Window::WINDOW_WIDTH, Constants::Window::WINDOW_HEIGHT);
 
         dvd->setIsVisible(true);
@@ -78,7 +78,7 @@ void MainMenu::update(bool isAFK) {
         if (it == m_shapes.end()) return;
         if (!m_shapes.at(0)->shape->getIsVisible()) return;
 
-        DVDShape* dvd = static_cast<DVDShape*>(it->second->shape);
+        DVDShape* dvd = static_cast<DVDShape*>(it->second->shape.get());
         dvd->setIsVisible(false);
         dvd->setPosition(static_cast<float>(std::rand() % (Constants::Window::WINDOW_WIDTH - static_cast<int>(dvd->getSize().x))),
             static_cast<float>(std::rand() % (Constants::Window::WINDOW_HEIGHT - static_cast<int>(dvd->getSize().y))));

@@ -79,18 +79,6 @@ void Shader::setupMatrices() {
     setMat4("projection", m_projection);
 }
 
-void Shader::setupMatrices2D() {
-    //setMat4("model", m_model);
-    // Envoie la projection ortho sous les DEUX conventions de nommage : les
-    // shaders 2D historiques (shape, text, image) declarent `uniform mat4
-    // projection;` (sans prefixe), mais le shader d'outline suit la
-    // convention 3D `uniform mat4 uProjection;`. setMat4 sur un nom inexistant
-    // dans le shader courant est un no-op cote GPU (getUniformLocation = -1),
-    // donc innoffensif pour les autres shaders qui ignorent uProjection.
-    setMat4("projection", m_projection2D);
-    setMat4("uProjection", m_projection2D);
-}
-
 GLuint Shader::getID() const {
     return m_id;
 }
@@ -111,11 +99,6 @@ void Shader::setTexture(const std::string& name, unsigned int textureID, unsigne
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, textureID);
     glUniform1i(getUniformLocation(name), unit);
-}
-
-void Shader::setTransformation(const std::string& name, Transformation* trans) {
-    unsigned int transformLoc = getUniformLocation(name);
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans->getMatrix()));
 }
 
 unsigned int Shader::compile(unsigned int type, const std::string& source) {
@@ -252,6 +235,18 @@ void Shader::setVec3(int location, const glm::vec3& value) {
 void Shader::setVec4(int location, const glm::vec4& value) {
     if (location != -1) {
         glUniform4fv(location, 1, &value[0]);
+    }
+}
+
+void Shader::setVec2(int location, const glm::vec2& value) {
+    if (location != -1) {
+        glUniform2fv(location, 1, &value[0]);
+    }
+}
+
+void Shader::setMat4(int location, const glm::mat4& mat) {
+    if (location != -1) {
+        glUniformMatrix4fv(location, 1, GL_FALSE, &mat[0][0]);
     }
 }
 

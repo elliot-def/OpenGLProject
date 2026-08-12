@@ -1,5 +1,6 @@
 #include "Shape.h"
 #include "Mesh.h"
+#include "Shader.h"
 
 Shape::Shape(Shader* shader, float x, float y, float width, float height)
     : m_mesh(nullptr),
@@ -28,4 +29,19 @@ void Shape::setColor(float r, float g, float b) {
 
 void Shape::setRotation(float angle) {
     m_rotation = angle;
+}
+
+void Shape::ensureUniformLocations() {
+    if (m_uniformLocationsResolved) return;
+    m_uniformLocationsResolved = true;
+
+    m_uniformLocations.model       = m_shader->getUniformLocation("model");
+    m_uniformLocations.transform   = m_shader->getUniformLocation("transform");
+    m_uniformLocations.projection  = m_shader->getUniformLocation("projection");
+    m_uniformLocations.uProjection = m_shader->getUniformLocation("uProjection");
+    m_uniformLocations.color       = m_shader->getUniformLocation("color");
+    m_uniformLocations.opacity     = m_shader->getUniformLocation("opacity");
+    m_uniformLocations.image       = m_shader->getUniformLocation("image");
+    m_uniformLocations.radius      = m_shader->getUniformLocation("radius");
+    m_uniformLocations.resolution  = m_shader->getUniformLocation("resolution");
 }

@@ -27,7 +27,10 @@ public:
     void addPointLight(LightSource* light);
     void applyToShader(Shader* shader);
     void update();
-    void draw();
+
+    // Accès (lecture) aux sources de lumière : utilisé par Scene pour le rendu
+    // instancié des cubes de lumière.
+    const std::vector<LightSource*>& getLightSources() const { return m_lightSources; }
 
 private:
 

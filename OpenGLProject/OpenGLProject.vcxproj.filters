@@ -63,6 +63,7 @@
     <ClCompile Include="Image.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
     <ClCompile Include="MaskImage.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
     <ClCompile Include="Cube.cpp"><Filter>Graphics\Shape\3D</Filter></ClCompile>
+    <ClCompile Include="CubeRenderer.cpp"><Filter>Graphics\Shape\3D</Filter></ClCompile>
     <ClCompile Include="Menu.cpp"><Filter>Menu</Filter></ClCompile>
     <ClCompile Include="MenuManager.cpp"><Filter>Menu</Filter></ClCompile>
     <ClCompile Include="MainMenu.cpp"><Filter>Menu</Filter></ClCompile>
@@ -130,6 +131,7 @@
     <ClInclude Include="MaskImage.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
     <ClInclude Include="SharedQuad.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
     <ClInclude Include="Cube.h"><Filter>Graphics\Shape\3D</Filter></ClInclude>
+    <ClInclude Include="CubeRenderer.h"><Filter>Graphics\Shape\3D</Filter></ClInclude>
     <ClInclude Include="Menu.h"><Filter>Menu</Filter></ClInclude>
     <ClInclude Include="MenuManager.h"><Filter>Menu</Filter></ClInclude>
     <ClInclude Include="MainMenu.h"><Filter>Menu</Filter></ClInclude>

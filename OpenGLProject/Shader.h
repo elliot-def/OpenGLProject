@@ -26,9 +26,6 @@ public:
     // Associe une texture 2D à un uniform du shader
     void setTexture(const std::string& name, unsigned int textureID, unsigned int unit);
 
-    // Envoie une transformation encapsulée dans la classe Transformation
-    void setTransformation(const std::string& name, Transformation* trans);
-
     // Vide le cache des uniforms
     void clearUniformLocations();
 
@@ -37,7 +34,6 @@ public:
 
 	// Envoie les matrices model, view, projection au shader
     void setupMatrices();
-    void setupMatrices2D();
 
     // Méthodes pour envoyer des variables uniformes simples
     void setBool(const std::string& name, bool value);
@@ -65,6 +61,8 @@ public:
     void setFloat(int location, float value);
     void setVec3(int location, const glm::vec3& value);
     void setVec4(int location, const glm::vec4& value);
+    void setVec2(int location, const glm::vec2& value);
+    void setMat4(int location, const glm::mat4& mat);
 
     // Resout (avec cache) la location d'un uniform. Retourne -1 si absent.
     // Public pour les caches par shader (LightManager, Spotlight...).
@@ -79,6 +77,7 @@ public:
     const glm::mat4& getModel() const { return m_model; }
     const glm::mat4& getView() const { return m_view; }
     const glm::mat4& getProjection() const { return m_projection; }
+    const glm::mat4& getProjection2D() const { return m_projection2D; }
 	inline const Camera* getCamera() const { return m_camera; }
 	inline const std::string getName() const { return m_name; }
 	inline ShaderType getType() const { return m_type; }

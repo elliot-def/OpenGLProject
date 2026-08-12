@@ -50,5 +50,26 @@ protected:
     float m_rotation;
 
     bool m_isVisible = true;
+
+    // ── Cache des uniform locations (hot path 2D) ────────────────────────
+    // Même pattern que LightManager/Spotlight : les locations sont résolues
+    // UNE SEULE FOIS par shape (au premier draw()), puis le hot path ne
+    // manipule que des GLint — plus aucun hash/compare de string par frame.
+    // Valide car le shader d'un Shape est fixé à la construction et son
+    // programme GL est déjà linké.
+    struct UniformLocations {
+        int model       = -1;
+        int transform   = -1;
+        int projection  = -1;
+        int uProjection = -1;
+        int color       = -1;
+        int opacity     = -1;
+        int image       = -1;
+        int radius      = -1;
+        int resolution  = -1;
+    };
+    void ensureUniformLocations();
+    UniformLocations m_uniformLocations;
+    bool m_uniformLocationsResolved = false;
 };
 

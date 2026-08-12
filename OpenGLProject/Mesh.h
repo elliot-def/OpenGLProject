@@ -78,6 +78,18 @@ public:
     // les VAO ne sont pas partagés entre contextes OpenGL.
     void reloadGPUResources();
 
+    // ── Instancing (batch de cubes) ──────────────────────────────────────
+    // Configure sur le VAO les attributs par-instance : mat4 model (loc 4-7)
+    // + vec3 color (loc 8), divisor 1. À appeler une fois après setupMesh
+    // (mesh unitaire partagé). stride = sizeof(CubeInstance) = 80 octets.
+    void setupInstanceAttributes(size_t stride);
+
+    // Upload les données d'instances (mat4 + vec3) dans le VBO d'instances.
+    void uploadInstanceData(const void* data, size_t instanceCount, size_t stride);
+
+    // Dessine `instanceCount` instances (glDrawElementsInstanced).
+    void drawInstanced(size_t instanceCount) const;
+
 	std::vector<Vertex> getVertices() const { return m_vertices; }
     std::vector<Vertex>& getWritableVertices() { return m_vertices; }
     std::vector<unsigned int> getIndices() const { return m_indices; }
@@ -91,6 +103,8 @@ private:
     unsigned int m_vao = 0;      // Vertex Array Object
     unsigned int m_vbo = 0;      // Vertex Buffer Object
     unsigned int m_ebo = 0;      // Element Buffer Object
+    unsigned int m_instanceVbo = 0; // VBO par-instance (mat4 model + vec3 color)
+    size_t m_instanceStride = 0;    // stride du layout par-instance (0 = pas d'instancing)
     int m_indexCount = 0;        // Nombre d'indices
 
     std::vector<Vertex> m_vertices;

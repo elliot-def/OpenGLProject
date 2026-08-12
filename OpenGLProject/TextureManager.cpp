@@ -17,6 +17,7 @@ TextureManager::TextureManager() {
 TextureManager::~TextureManager() {
     deleteNode(&m_root);
     glDeleteTextures(1, &m_defaultSpecularID);
+    glDeleteTextures(1, &m_defaultDiffuseID);
 };
 
 Texture* TextureManager::getTexture(const std::string& path) {
@@ -257,4 +258,19 @@ void TextureManager::createDefaultTextures() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     std::cout << "Default specular texture created (ID: " << m_defaultSpecularID << ")" << std::endl;
+
+    // Texture BLANCHE 1x1 partagée (fallback diffuse). Réutilisée par
+    // Model::processMesh pour les meshes sans texture diffuse.
+    glGenTextures(1, &m_defaultDiffuseID);
+    glBindTexture(GL_TEXTURE_2D, m_defaultDiffuseID);
+
+    unsigned char whitePixel[4] = { 255, 255, 255, 255 };
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, whitePixel);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    std::cout << "Default diffuse texture created (ID: " << m_defaultDiffuseID << ")" << std::endl;
 }

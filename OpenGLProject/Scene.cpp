@@ -2,6 +2,7 @@
 
 #include "Mesh.h"
 #include "Cube.h"
+#include "CubeRenderer.h"
 #include "Shader.h"
 #include "ShaderManager.h"
 #include "Texture.h"
@@ -19,7 +20,6 @@
 
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
-#include <algorithm>
 
 Scene::Scene(Camera* camera, Player* player, CollisionManager* collisionManager,
              LightManager* lightManager, Renderer* renderer, ShaderManager* shaderManager,
@@ -32,6 +32,11 @@ Scene::Scene(Camera* camera, Player* player, CollisionManager* collisionManager,
     m_skyboxShader  = m_shaderManager->getShader("skybox");
     m_modelShader   = m_shaderManager->getShader("model");
     m_skinnedShader = m_shaderManager->getShader("skinned");
+
+    // Rendu instancié des cubes : cube unitaire partagé (edge=1, origine) +
+    // lots par shader. Le contexte GL est courant ici (loadResources, thread
+    // principal), donc la création du VAO/VBO/EBO du cube unitaire est sûre.
+    m_cubeRenderer = std::make_unique<CubeRenderer>();
 }
 
 Scene::~Scene() = default;
@@ -42,13 +47,13 @@ void Scene::loadLights() {
     Shader* lightShader = m_shaderManager->getShader("cube/lightsource");
 
     m_lightManager->addPointLight(new LightSource(
-        glm::vec3(1, 0.5, 2), lightShader, m_player,
+        glm::vec3(1, 0.5, 2), lightShader,
         glm::vec3(0.2f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f),
         glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
         glm::vec3(5.0f, 0.0f, 0.0f)));
 
     m_lightManager->addPointLight(new LightSource(
-        glm::vec3(3, 0.5, -2), lightShader, m_player,
+        glm::vec3(3, 0.5, -2), lightShader,
         glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
         glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
         glm::vec3(0.0f, 5.0f, 0.0f)));
@@ -59,15 +64,19 @@ void Scene::loadCubes() {
     Shader*  cubeShader       = m_shaderManager->getShader("cube/severallights");
     std::vector<Texture*> crateTextures = { containerTexture };
 
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0, 0),  1.0f, cubeShader, crateTextures, m_renderer, m_lightManager, m_player));
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(0, 0, -2), 1.0f, cubeShader, crateTextures, m_renderer, m_lightManager, m_player));
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0.5, 2), 1.0f, cubeShader, crateTextures, m_renderer, m_lightManager, m_player));
+    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0, 0),  1.0f, cubeShader, crateTextures, m_renderer));
+    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(0, 0, -2), 1.0f, cubeShader, crateTextures, m_renderer));
+    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0.5, 2), 1.0f, cubeShader, crateTextures, m_renderer));
     m_cubes[2]->setSpin(10.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(0, -12, 0), 24.0f, cubeShader, crateTextures, m_renderer, m_lightManager, m_player));
+    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(0, -12, 0), 24.0f, cubeShader, crateTextures, m_renderer));
 
-    m_collisionManager->addStaticMesh(m_cubes[0]->getMesh(), m_cubes[0]->getTransformation()->getMatrix(), "cube1");
-    m_collisionManager->addStaticMesh(m_cubes[1]->getMesh(), m_cubes[1]->getTransformation()->getMatrix(), "cube2");
-    m_collisionManager->addStaticMesh(m_cubes[3]->getMesh(), m_cubes[3]->getTransformation()->getMatrix(), "cube4");
+    // Collisions statiques : AABB locale du cube unitaire (±0.5) transformée
+    // par la matrice modèle (translate·scale) → world AABB = centre ± edge/2,
+    // identique à l'ancien mesh par-cube. Le cube unitaire est partagé.
+    Mesh* unitCube = m_cubeRenderer->getUnitCubeMesh();
+    m_collisionManager->addStaticMesh(unitCube, m_cubes[0]->getModelMatrix(), "cube1");
+    m_collisionManager->addStaticMesh(unitCube, m_cubes[1]->getModelMatrix(), "cube2");
+    m_collisionManager->addStaticMesh(unitCube, m_cubes[3]->getModelMatrix(), "cube4");
     m_collisionManager->buildBVH();
 }
 
@@ -89,15 +98,14 @@ void Scene::update(float deltaTime) {
     for (auto& cube : m_cubes) {
         cube->update();
     }
-    for (auto& alphacube : m_alphacubes) {
-        alphacube->update();
-    }
 
-    // Collision dynamique du cube tournant (cube3)
+    // Collision dynamique du cube tournant (cube3) : l'OBB est recomputée à
+    // partir de l'AABB locale du cube unitaire + la matrice modèle (rotation
+    // incluse), donc la hitbox suit fidèlement le spin.
     if (m_cubes.size() > 2) {
         m_collisionManager->updateDynamic("cube3",
-            { m_cubes[2]->getMesh() },
-            m_cubes[2]->getTransformation()->getMatrix());
+            { m_cubeRenderer->getUnitCubeMesh() },
+            m_cubes[2]->getModelMatrix());
     }
 
     m_player->update();
@@ -162,10 +170,19 @@ void Scene::draw() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
+    // Cubes + lumières : rendu INSTANCIÉ. Un seul glDrawElementsInstanced par
+    // shader (severallights pour les cubes texturés, lightsource pour les
+    // cubes de lumière), au lieu d'un draw call + set d'uniforms par cube.
+    m_cubeRenderer->clear();
     for (auto& cube : m_cubes) {
-        cube->draw();
+        m_cubeRenderer->submit(cube->getShader(), cube->getTextures(), cube->getModelMatrix());
     }
-    m_lightManager->draw();
+    for (auto* light : m_lightManager->getLightSources()) {
+        Cube* lightCube = light->getCube().get();
+        m_cubeRenderer->submit(lightCube->getShader(), {}, lightCube->getModelMatrix(),
+                               light->getLightColor());
+    }
+    m_cubeRenderer->draw(m_camera, m_lightManager);
 
     if (m_modelShader) {
         if (m_modelEntity) m_modelEntity->draw(m_modelShader);
@@ -176,26 +193,6 @@ void Scene::draw() {
     if (m_humanEntity && m_skinnedShader && m_player->isThirdPerson()) {
         m_humanEntity->draw(m_skinnedShader);
     }
-
-    // 2. Transparences
-    glEnable(GL_BLEND);
-    glDepthMask(GL_FALSE);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    // Tri des cubes transparents du plus loin au plus proche
-    std::sort(m_alphacubes.begin(), m_alphacubes.end(),
-        [this](const std::unique_ptr<Cube>& a, const std::unique_ptr<Cube>& b) {
-            const float da = glm::length(m_camera->getPosition() - a->getCenter());
-            const float db = glm::length(m_camera->getPosition() - b->getCenter());
-            return da > db; // plus loin d'abord
-        });
-
-    for (auto& alphacube : m_alphacubes) {
-        alphacube->draw();
-    }
-
-    glDepthMask(GL_TRUE);
-    glDisable(GL_BLEND);
 
     // Vue 1ère personne : corps Mixamo (BRAS uniquement, le torse et les
     // jambes sont masqués pour ne pas interférer avec la caméra).

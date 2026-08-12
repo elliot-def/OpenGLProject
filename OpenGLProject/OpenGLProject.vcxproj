@@ -155,6 +155,7 @@
     <ClCompile Include="CheckboxInput.cpp" />
     <ClCompile Include="CollisionManager.cpp" />
     <ClCompile Include="Cube.cpp" />
+    <ClCompile Include="CubeRenderer.cpp" />
     <ClCompile Include="CursorManager.cpp" />
     <ClCompile Include="Direction.cpp" />
     <ClCompile Include="DVDShape.cpp" />
@@ -232,6 +233,7 @@
     <ClInclude Include="constants\shader.h" />
     <ClInclude Include="constants\window.h" />
     <ClInclude Include="Cube.h" />
+    <ClInclude Include="CubeRenderer.h" />
     <ClInclude Include="CursorManager.h" />
     <ClInclude Include="Direction.h" />
     <ClInclude Include="DVDShape.h" />
