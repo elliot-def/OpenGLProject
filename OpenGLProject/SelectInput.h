@@ -38,6 +38,15 @@ public:
 
     bool isOpen() const { return m_isOpen; }
     int getSelectedIndex() const { return m_selectedIndex; }
+
+    // Focus pour la navigation manette : met la case en surbrillance.
+    void setFocused(bool focused) { m_focused = focused; }
+    bool isFocused() const { return m_focused; }
+
+    // Navigation manette : ouvre/ferme la liste, et fait defiler l'option.
+    void open() { m_isOpen = true; }
+    void close() { m_isOpen = false; }
+    void cycleOption(int direction);
     const std::string& getSelectedLabel() const { return m_options[m_selectedIndex]; }
     const std::string& getOptionLabel(size_t i) const { return m_options[i]; }
     size_t getOptionCount() const { return m_options.size(); }
@@ -60,6 +69,7 @@ private:
     glm::vec2 m_size;
 
     bool m_isOpen = false;
+    bool m_focused = false; // surbrillance de la case (navigation manette)
 
     std::function<void(int)> m_onValueChanged;
 };

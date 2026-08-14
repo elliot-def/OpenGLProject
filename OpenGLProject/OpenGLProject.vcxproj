@@ -154,6 +154,10 @@
     <ClCompile Include="CharacterAnimationController.cpp" />
     <ClCompile Include="CheckboxInput.cpp" />
     <ClCompile Include="CollisionManager.cpp" />
+    <ClCompile Include="Controller.cpp" />
+    <ClCompile Include="GlfwController.cpp" />
+    <ClCompile Include="SteamController.cpp" />
+    <ClCompile Include="ControllerKey.cpp" />
     <ClCompile Include="Cube.cpp" />
     <ClCompile Include="CubeRenderer.cpp" />
     <ClCompile Include="CursorManager.cpp" />
@@ -167,6 +171,9 @@
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImageLoader.cpp" />
     <ClCompile Include="InputManager.cpp" />
+    <ClCompile Include="InputNotification.cpp" />
+    <ClCompile Include="KeyBindingsMenu.cpp" />
+    <ClCompile Include="ControllerBindingsMenu.cpp" />
     <ClCompile Include="LeftClick.cpp" />
     <ClCompile Include="LightManager.cpp" />
     <ClCompile Include="LoadingScreen.cpp" />
@@ -232,6 +239,10 @@
     <ClInclude Include="constants\renderer.h" />
     <ClInclude Include="constants\shader.h" />
     <ClInclude Include="constants\window.h" />
+    <ClInclude Include="Controller.h" />
+    <ClInclude Include="GlfwController.h" />
+    <ClInclude Include="SteamController.h" />
+    <ClInclude Include="ControllerKey.h" />
     <ClInclude Include="Cube.h" />
     <ClInclude Include="CubeRenderer.h" />
     <ClInclude Include="CursorManager.h" />
@@ -246,6 +257,9 @@
     <ClInclude Include="Image.h" />
     <ClInclude Include="ImageLoader.h" />
     <ClInclude Include="InputManager.h" />
+    <ClInclude Include="InputNotification.h" />
+    <ClInclude Include="KeyBindingsMenu.h" />
+    <ClInclude Include="ControllerBindingsMenu.h" />
     <ClInclude Include="Key.h" />
     <ClInclude Include="LeftClick.h" />
     <ClInclude Include="LightManager.h" />
@@ -294,7 +308,9 @@
     <ClInclude Include="Window.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="res\keys.json" />
     <None Include="res\options.json" />
+    <None Include="res\steam_input_manifest.vdf" />
     <None Include="res\shaders\cube\cube.frag" />
     <None Include="res\shaders\cube\cube.vert" />
     <None Include="res\shaders\cube\lightsource\lightsource.frag" />

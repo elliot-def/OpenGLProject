@@ -1,0 +1,59 @@
+"Action Manifest"
+{
+	"configurations"
+	{
+	}
+	"actions"
+	{
+		"Game"
+		{
+			"title"	"#Set_Game"
+			"StickPadGyro"
+			{
+				"Move"
+				{
+					"title"	"#Action_Move"
+					"input_mode"	"joystick_move"
+				}
+				"Look"
+				{
+					"title"	"#Action_Look"
+					"input_mode"	"absolute_mouse"
+				}
+			}
+			"AnalogTrigger"
+			{
+				"Sprint"	"#Action_Sprint"
+			}
+			"Button"
+			{
+				"Jump"	"#Action_Jump"
+				"Crouch"	"#Action_Crouch"
+				"Push"	"#Action_Push"
+				"ThirdPerson"	"#Action_ThirdPerson"
+				"Flashlight"	"#Action_Flashlight"
+				"Grab"	"#Action_Grab"
+				"Noclip"	"#Action_Noclip"
+				"Escape"	"#Action_Escape"
+			}
+		}
+	}
+	"localization"
+	{
+		"english"
+		{
+			"#Set_Game"	"In Game"
+			"#Action_Move"	"Move"
+			"#Action_Look"	"Look"
+			"#Action_Sprint"	"Sprint"
+			"#Action_Jump"	"Jump"
+			"#Action_Crouch"	"Crouch"
+			"#Action_Push"	"Push"
+			"#Action_ThirdPerson"	"Third person"
+			"#Action_Flashlight"	"Flashlight"
+			"#Action_Grab"	"Grab"
+			"#Action_Noclip"	"Noclip"
+			"#Action_Escape"	"Menu"
+		}
+	}
+}

@@ -38,6 +38,15 @@ void RangeInput::setValue(float value) {
     updateHandlePosition();
 }
 
+void RangeInput::nudge(float direction) {
+    float step = (m_maxValue - m_minValue) / 30.0f;
+    float v = std::round((m_value + direction * step) * 100.0f) / 100.0f;
+    setValue(v);
+    if (m_onValueChanged) {
+        m_onValueChanged(m_value);
+    }
+}
+
 void RangeInput::setValueFromMouseX(double mouseX) {
     float left = m_position.x - m_size.x / 2.0f;
     float t = static_cast<float>(mouseX - left) / m_size.x;
@@ -93,6 +102,12 @@ void RangeInput::update(double mouseX, double mouseY, bool mousePressed) {
 }
 
 void RangeInput::draw() {
+    // Le curseur passe en couleur d'accent quand le slider est selectionne
+    // (navigation manette) pour rendre le focus visible.
+    glm::vec3 handleColor = m_focused ? Constants::Color::TOMATO_JAM
+                                      : Constants::Color::VANILLA_CUSTARD;
+    m_handle->setColor(handleColor.r, handleColor.g, handleColor.b);
+
     m_track->draw();
     m_fill->draw();
     m_handle->draw();

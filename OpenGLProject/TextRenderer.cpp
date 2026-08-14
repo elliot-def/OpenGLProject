@@ -18,6 +18,27 @@ static constexpr int ATLAS_WIDTH = 4096;
 static constexpr int ATLAS_HEIGHT = 2048;
 static constexpr int ATLAS_PADDING = 2;
 
+// Decode un caractere UTF-8 et avance l'iterateur jusqu'au caractere suivant.
+// Retourne le point de code (les octets invalides sont ignores).
+static unsigned int decodeUtf8(const char*& it, const char* end) {
+    const unsigned char c = static_cast<unsigned char>(*it);
+    if (c < 0x80) { ++it; return c; }
+
+    unsigned int codepoint = 0;
+    int extra = 0;
+    if ((c & 0xE0) == 0xC0)      { codepoint = c & 0x1F; extra = 1; }
+    else if ((c & 0xF0) == 0xE0) { codepoint = c & 0x0F; extra = 2; }
+    else if ((c & 0xF8) == 0xF0) { codepoint = c & 0x07; extra = 3; }
+    else                         { ++it; return c; } // octet invalide
+
+    ++it;
+    for (int i = 0; i < extra && it != end; ++i) {
+        codepoint = (codepoint << 6) | (static_cast<unsigned char>(*it) & 0x3F);
+        ++it;
+    }
+    return codepoint;
+}
+
 TextRenderer::TextRenderer(ShaderManager* shaderManager)
     : m_shaderManager(shaderManager), m_fontSize(48.0f), m_VAO(0), m_VBO(0), m_shaderProgram(0),
     m_screenWidth(Constants::Window::WINDOW_WIDTH), m_screenHeight(Constants::Window::WINDOW_HEIGHT) {
@@ -58,85 +79,124 @@ void TextRenderer::setScreenSize(int width, int height) {
 }
 
 bool TextRenderer::loadFont(const std::string& fontPath, float fontSize) {
+    // Une nouvelle police de base (ASCII 0-127) remplace tout l'atlas
     m_fontSize = fontSize;
+    m_fontRanges.clear();
+    m_extraCharacters.clear();
+    m_characters.fill(Character{});
+    m_fontRanges.push_back({ fontPath, fontSize, 0, 128 });
+    return rebuildAtlas();
+}
 
-    std::ifstream file(fontPath, std::ios::binary | std::ios::ate);
-    if (!file.is_open()) {
-        std::cerr << "Erreur: Impossible d'ouvrir " << fontPath << std::endl;
-        return false;
-    }
+bool TextRenderer::loadFontRange(const std::string& fontPath, float fontSize,
+                                 unsigned int firstCodepoint, unsigned int numChars) {
+    // Ajoute une plage de points de code (ex: icones kenney U+E000..U+E0F2)
+    // aux plages deja chargees : l'atlas entier est re-paquete ensemble.
+    m_fontSize = fontSize;
+    m_fontRanges.push_back({ fontPath, fontSize, firstCodepoint, numChars });
+    return rebuildAtlas();
+}
 
-    std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg);
-    std::vector<unsigned char> buffer(size);
-    if (!file.read((char*)buffer.data(), size)) return false;
+bool TextRenderer::rebuildAtlas() {
+    if (m_fontRanges.empty()) return false;
 
-    stbtt_fontinfo font;
-    if (!stbtt_InitFont(&font, buffer.data(), 0)) return false;
-
-    // ── Atlas unique pour les 128 premiers caracteres (stbtt_Pack) ─────────
-    // Avant : 128 textures + 1 draw call + 1 glBufferSubData par glyphe.
-    // Apres : 1 texture, et 1 seul draw call pour toute la frame.
-    std::vector<unsigned char> atlasData(ATLAS_WIDTH * ATLAS_HEIGHT, 0);
+    // Atlas unique pour toutes les plages de glyphes (stbtt_Pack)
+    m_atlasData.assign(ATLAS_WIDTH * ATLAS_HEIGHT, 0);
 
     stbtt_pack_context packCtx;
-    if (!stbtt_PackBegin(&packCtx, atlasData.data(), ATLAS_WIDTH, ATLAS_HEIGHT,
+    if (!stbtt_PackBegin(&packCtx, m_atlasData.data(), ATLAS_WIDTH, ATLAS_HEIGHT,
                          ATLAS_WIDTH, ATLAS_PADDING, nullptr)) {
-        std::cerr << "Erreur: echec stbtt_PackBegin pour " << fontPath << std::endl;
+        std::cerr << "Erreur: echec stbtt_PackBegin (atlas trop petit ?)" << std::endl;
         return false;
     }
 
-    stbtt_packedchar chardata[128];
-    if (!stbtt_PackFontRange(&packCtx, buffer.data(), 0, fontSize, 0, 128, chardata)) {
-        std::cerr << "Erreur: echec stbtt_PackFontRange pour " << fontPath
-                  << " (atlas trop petit ?)" << std::endl;
-        stbtt_PackEnd(&packCtx);
-        return false;
+    // Les buffers de polices doivent rester vivants pendant le paquetage
+    std::vector<std::vector<unsigned char>> fontBuffers;
+    fontBuffers.reserve(m_fontRanges.size());
+
+    for (const auto& range : m_fontRanges) {
+        std::ifstream file(range.fontPath, std::ios::binary | std::ios::ate);
+        if (!file.is_open()) {
+            std::cerr << "Erreur: Impossible d'ouvrir " << range.fontPath << std::endl;
+            stbtt_PackEnd(&packCtx);
+            return false;
+        }
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+        std::vector<unsigned char> buffer(size);
+        if (!file.read((char*)buffer.data(), size)) {
+            stbtt_PackEnd(&packCtx);
+            return false;
+        }
+
+        std::vector<stbtt_packedchar> chardata(range.numChars);
+        if (!stbtt_PackFontRange(&packCtx, buffer.data(), 0, range.fontSize,
+                                 range.firstCodepoint, range.numChars, chardata.data())) {
+            std::cerr << "Erreur: echec stbtt_PackFontRange pour " << range.fontPath
+                      << " (atlas trop petit ?)" << std::endl;
+            stbtt_PackEnd(&packCtx);
+            return false;
+        }
+
+        // Construire la table des caracteres (UV + metriques depuis stbtt_packedchar)
+        for (unsigned int i = 0; i < range.numChars; ++i) {
+            const stbtt_packedchar& pc = chardata[i];
+            const unsigned int codepoint = range.firstCodepoint + i;
+
+            Character character;
+            // Inset d'un demi-texel : evite le bleeding du filtre LINEAIRE
+            // entre deux glyphes voisins de l'atlas.
+            character.u0 = (pc.x0 + 0.5f) / ATLAS_WIDTH;
+            character.v0 = (pc.y0 + 0.5f) / ATLAS_HEIGHT;
+            character.u1 = (pc.x1 - 0.5f) / ATLAS_WIDTH;
+            character.v1 = (pc.y1 - 0.5f) / ATLAS_HEIGHT;
+            character.sizeX = pc.x1 - pc.x0;
+            character.sizeY = pc.y1 - pc.y0;
+            character.bearingX = static_cast<int>(pc.xoff);
+            character.bearingY = static_cast<int>(pc.yoff);
+            character.advance = static_cast<unsigned int>(pc.xadvance);
+
+            if (codepoint < m_characters.size()) {
+                m_characters[codepoint] = character;
+            }
+            else {
+                m_extraCharacters[codepoint] = character;
+            }
+        }
+
+        fontBuffers.push_back(std::move(buffer));
     }
     stbtt_PackEnd(&packCtx);
 
     // Upload de l'atlas (format GL_RED, comme les anciennes textures de glyphes)
+    if (m_atlasTexture) glDeleteTextures(1, &m_atlasTexture);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glGenTextures(1, &m_atlasTexture);
     glBindTexture(GL_TEXTURE_2D, m_atlasTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, ATLAS_WIDTH, ATLAS_HEIGHT, 0,
-                 GL_RED, GL_UNSIGNED_BYTE, atlasData.data());
+                 GL_RED, GL_UNSIGNED_BYTE, m_atlasData.data());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
-    // Construire la table des caracteres (UV + metriques depuis stbtt_packedchar)
-    for (unsigned char c = 0; c < 128; c++) {
-        const stbtt_packedchar& pc = chardata[c];
-        Character& character = m_characters[c];
-        // Inset d'un demi-texel : evite le bleeding du filtre LINEAIRE
-        // entre deux glyphes voisins de l'atlas.
-        character.u0 = (pc.x0 + 0.5f) / ATLAS_WIDTH;
-        character.v0 = (pc.y0 + 0.5f) / ATLAS_HEIGHT;
-        character.u1 = (pc.x1 - 0.5f) / ATLAS_WIDTH;
-        character.v1 = (pc.y1 - 0.5f) / ATLAS_HEIGHT;
-        character.sizeX = pc.x1 - pc.x0;
-        character.sizeY = pc.y1 - pc.y0;
-        character.bearingX = static_cast<int>(pc.xoff);
-        character.bearingY = static_cast<int>(pc.yoff);
-        character.advance = static_cast<unsigned int>(pc.xadvance);
-    }
-
-    std::cout << "Police chargee: " << fontPath
+    std::cout << "Police chargee: " << m_fontRanges.size() << " plage(s) de glyphes"
               << " (atlas " << ATLAS_WIDTH << "x" << ATLAS_HEIGHT << ")" << std::endl;
     return true;
 }
 
 float TextRenderer::getTextWidth(const std::string& text, float scale) {
     float width = 0.0f;
-    for (char c : text) {
-        // L'atlas ne couvre que l'ASCII 0-127 : les octets >= 128 (accents
-        // UTF-8) sont ignores, comme avec l'ancien find() + skip.
-        const unsigned char uc = static_cast<unsigned char>(c);
-        if (uc >= m_characters.size()) continue;
-        width += m_characters[uc].advance * scale;
+    const char* it = text.data();
+    const char* end = it + text.size();
+    while (it < end) {
+        // Decodage UTF-8 : les glyphes hors ASCII (icones kenney en zone
+        // privee) sont mesures via m_extraCharacters, le reste est ignore.
+        const unsigned int codepoint = decodeUtf8(it, end);
+        const Character* ch = getCharacter(codepoint);
+        if (!ch) continue;
+        width += ch->advance * scale;
     }
     return width;
 }
@@ -147,17 +207,19 @@ float TextRenderer::getTextHeight(const std::string& text, float scale) {
     float maxBearingY = 0.0f;  // Point le plus haut
     float minY = 0.0f;          // Point le plus bas
 
-    for (char c : text) {
-        const unsigned char uc = static_cast<unsigned char>(c);
-        if (uc >= m_characters.size()) continue;
-        const Character& ch = m_characters[uc];
+    const char* it = text.data();
+    const char* end = it + text.size();
+    while (it < end) {
+        const unsigned int codepoint = decodeUtf8(it, end);
+        const Character* ch = getCharacter(codepoint);
+        if (!ch) continue;
 
         // Point le plus haut du caractere
-        float top = ch.bearingY * scale;
+        float top = ch->bearingY * scale;
         maxBearingY = std::max(maxBearingY, top);
 
         // Point le plus bas du caractere
-        float bottom = (ch.bearingY - ch.sizeY) * scale;
+        float bottom = (ch->bearingY - ch->sizeY) * scale;
         minY = std::min(minY, bottom);
     }
 
@@ -226,29 +288,33 @@ void TextRenderer::renderText(const std::string& text, float x, float y,
     m_batchVertices.reserve(m_batchVertices.size() + text.size() * 6 * 7);
 
     float currentX = x;
-    for (char c : text) {
-        const unsigned char uc = static_cast<unsigned char>(c);
-        if (uc >= m_characters.size()) continue;
-        const Character& ch = m_characters[uc];
+    const char* it = text.data();
+    const char* end = it + text.size();
+    while (it < end) {
+        // Decodage UTF-8 : supporte les glyphes hors ASCII (icones kenney
+        // U+E000..U+E0FF encodees en 3 octets UTF-8)
+        const unsigned int codepoint = decodeUtf8(it, end);
+        const Character* ch = getCharacter(codepoint);
+        if (!ch) continue;
 
         // Position correcte avec stb_truetype (meme convention que l'ancien code)
-        float xpos = currentX + ch.bearingX * scale;
-        float ypos = y + ch.bearingY * scale;
+        float xpos = currentX + ch->bearingX * scale;
+        float ypos = y + ch->bearingY * scale;
 
-        float w = ch.sizeX * scale;
-        float h = ch.sizeY * scale;
+        float w = ch->sizeX * scale;
+        float h = ch->sizeY * scale;
 
         const float quad[6][7] = {
-            { xpos,     ypos,     ch.u0, ch.v0, r, g, b },
-            { xpos + w, ypos,     ch.u1, ch.v0, r, g, b },
-            { xpos,     ypos + h, ch.u0, ch.v1, r, g, b },
-            { xpos + w, ypos,     ch.u1, ch.v0, r, g, b },
-            { xpos + w, ypos + h, ch.u1, ch.v1, r, g, b },
-            { xpos,     ypos + h, ch.u0, ch.v1, r, g, b }
+            { xpos,     ypos,     ch->u0, ch->v0, r, g, b },
+            { xpos + w, ypos,     ch->u1, ch->v0, r, g, b },
+            { xpos,     ypos + h, ch->u0, ch->v1, r, g, b },
+            { xpos + w, ypos,     ch->u1, ch->v0, r, g, b },
+            { xpos + w, ypos + h, ch->u1, ch->v1, r, g, b },
+            { xpos,     ypos + h, ch->u0, ch->v1, r, g, b }
         };
         m_batchVertices.insert(m_batchVertices.end(), &quad[0][0], &quad[0][0] + 6 * 7);
         m_batchVertexCount += 6;
 
-        currentX += ch.advance * scale;
+        currentX += ch->advance * scale;
     }
 }

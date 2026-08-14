@@ -40,6 +40,11 @@
     <ClCompile Include="Direction.cpp"><Filter>Core\Entity</Filter></ClCompile>
     <ClCompile Include="Transformation.h"><Filter>Core\Entity</Filter></ClCompile>
     <ClCompile Include="InputManager.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="InputNotification.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="Controller.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="GlfwController.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="SteamController.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="ControllerKey.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="PlayerKey.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="Mouse.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="LeftClick.cpp"><Filter>Input</Filter></ClCompile>
@@ -69,6 +74,8 @@
     <ClCompile Include="MainMenu.cpp"><Filter>Menu</Filter></ClCompile>
     <ClCompile Include="PauseMenu.cpp"><Filter>Menu</Filter></ClCompile>
     <ClCompile Include="OptionsMenu.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="KeyBindingsMenu.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="ControllerBindingsMenu.cpp"><Filter>Menu</Filter></ClCompile>
     <ClCompile Include="TextRenderer.cpp"><Filter>Menu</Filter></ClCompile>
     <ClCompile Include="CursorManager.cpp"><Filter>Menu</Filter></ClCompile>
     <ClCompile Include="CheckboxInput.cpp"><Filter>Menu\Input</Filter></ClCompile>
@@ -103,6 +110,11 @@
     <ClInclude Include="Player.h"><Filter>Core\Entity</Filter></ClInclude>
     <ClInclude Include="Direction.h"><Filter>Core\Entity</Filter></ClInclude>
     <ClInclude Include="InputManager.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="InputNotification.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="Controller.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="GlfwController.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="SteamController.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="ControllerKey.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="Key.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="configKeys.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="PlayerKey.h"><Filter>Input</Filter></ClInclude>
@@ -137,6 +149,8 @@
     <ClInclude Include="MainMenu.h"><Filter>Menu</Filter></ClInclude>
     <ClInclude Include="PauseMenu.h"><Filter>Menu</Filter></ClInclude>
     <ClInclude Include="OptionsMenu.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="KeyBindingsMenu.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="ControllerBindingsMenu.h"><Filter>Menu</Filter></ClInclude>
     <ClInclude Include="TextRenderer.h"><Filter>Menu</Filter></ClInclude>
     <ClInclude Include="CursorManager.h"><Filter>Menu</Filter></ClInclude>
     <ClInclude Include="CheckboxInput.h"><Filter>Menu\Input</Filter></ClInclude>
@@ -192,6 +206,7 @@
     <None Include="res\shaders\image\masque\mask.frag"><Filter>Resources\Shaders\Image</Filter></None>
     <None Include="res\shaders\image\masque\mask.vert"><Filter>Resources\Shaders\Image</Filter></None>
     <None Include="res\options.json"><Filter>Resources</Filter></None>
+    <None Include="res\steam_input_manifest.vdf"><Filter>Resources</Filter></None>
     <None Include="res\textures\crate\details.json"><Filter>Resources\Textures</Filter></None>
   </ItemGroup>
   <ItemGroup>

@@ -1,0 +1,30 @@
+{
+  "bindings": {
+    "Backward": 83,
+    "Crouch": 341,
+    "DebugHUD": 294,
+    "Escape": 256,
+    "Flashlight": 84,
+    "Forward": 87,
+    "Grab": 69,
+    "Jump": 32,
+    "Left": 65,
+    "Noclip": 78,
+    "Push": 82,
+    "Right": 68,
+    "Sprint": 340,
+    "ThirdPerson": 67
+  },
+  "controller_bindings": {
+    "Crouch": 1,
+    "Escape": 7,
+    "Flashlight": 4,
+    "Grab": 5,
+    "Jump": 0,
+    "Noclip": 6,
+    "Push": 2,
+    "ThirdPerson": 3
+  },
+  "controller_sensitivity": 0.30000001192092896,
+  "mouse_sensitivity": 0.05000000074505806
+}

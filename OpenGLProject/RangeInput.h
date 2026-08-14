@@ -31,6 +31,14 @@ public:
     float getValue() const { return m_value; }
     void setValue(float value);
 
+    // Focus pour la navigation manette : met en surbrillance le curseur.
+    void setFocused(bool focused) { m_focused = focused; }
+    bool isFocused() const { return m_focused; }
+
+    // Ajuste la valeur d'un cran (direction : -1 gauche / +1 droite) pour la
+    // navigation manette. Arrondi a 2 decimales comme le drag souris.
+    void nudge(float direction);
+
     bool isPointInside(double px, double py) const;
 
     glm::vec2 getPosition() const { return m_position; }
@@ -55,6 +63,7 @@ private:
     float m_value;
 
     bool m_isDragging = false;
+    bool m_focused = false; // surbrillance curseur (navigation manette)
 
     std::function<void(float)> m_onValueChanged;
 };

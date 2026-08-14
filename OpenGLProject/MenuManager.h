@@ -13,6 +13,8 @@ class SoundManager;
 class MainMenu;
 class PauseMenu;
 class OptionsMenu;
+class KeyBindingsMenu;
+class ControllerBindingsMenu;
 class Renderer;
 
 class MenuManager{
@@ -28,8 +30,13 @@ private:
     MainMenu* m_mainMenu;
     PauseMenu* m_pauseMenu;
     OptionsMenu* m_optionsMenu;
+    KeyBindingsMenu* m_keyBindingsMenu;
+    ControllerBindingsMenu* m_controllerBindingsMenu;
     GameState m_currentState = STATE_MENU;
     GameState m_previousState;
+    // Sous-menus affiches a la place des Options (STATE_OPTIONS)
+    bool m_showKeyBindings = false;
+    bool m_showControllerBindings = false;
 
     void initMenus();
 
@@ -39,7 +46,20 @@ public:
     ~MenuManager();
 
     Menu* getCurrentMenu();
-    void setInputManager(InputManager* inputManager) { m_inputManager = inputManager; };
+    void setInputManager(InputManager* inputManager);
+
+    // Navigation vers les sous-menus de reconfiguration / retour aux Options
+    void showKeyBindings() { m_showKeyBindings = true; m_showControllerBindings = false; resetCurrentMenuFocus(); };
+    void showControllerBindings() { m_showControllerBindings = true; m_showKeyBindings = false; resetCurrentMenuFocus(); };
+    void showOptions() { m_showKeyBindings = false; m_showControllerBindings = false; resetCurrentMenuFocus(); };
+
+    // ── Navigation manette (discrète) ──
+    // Transmet les déplacements/validations du stick gauche au menu courant
+    // (voir Menu::navigate / activateSelected / adjustSelected / resetFocus).
+    void navigateController(int direction);
+    void activateControllerSelection();
+    void adjustControllerSelection(int direction);
+    void resetCurrentMenuFocus();
 
     void updateHover(double mouseX, double mouseY);
     void handleClick(double mouseX, double mouseY);
