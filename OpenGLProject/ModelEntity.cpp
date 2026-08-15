@@ -1,4 +1,5 @@
 #include "ModelEntity.h"
+#include "Log.h"
 #include "Model.h"
 #include "Mesh.h"
 #include "Shader.h"
@@ -50,7 +51,7 @@ void ModelEntity::detectAnimations() {
 		if (!anim) continue;
 		std::string name(anim->mName.C_Str());
 		const float tps = anim->mTicksPerSecond > 0.0f ? static_cast<float>(anim->mTicksPerSecond) : 30.0f;
-		printf("[ModelEntity] Animation %zu: \"%s\" (%.1fs)\n", i, name.c_str(),
+		logPrintf("[ModelEntity] Animation %zu: \"%s\" (%.1fs)\n", i, name.c_str(),
 		       static_cast<float>(anim->mDuration) / tps);
 
 		std::string lower = name;
@@ -178,7 +179,7 @@ void ModelEntity::drawFirstPerson(Shader* shader) {
             total += mesh->getIndices().size();
             kept += mesh->getCulledIndexCount();
         }
-        printf("[ModelEntity] Culling 1P : %zu/%zu triangles conserves (%u%%)\n",
+        logPrintf("[ModelEntity] Culling 1P : %zu/%zu triangles conserves (%u%%)\n",
                kept / 3, total / 3, total ? static_cast<unsigned>(100 * kept / total) : 0u);
     }
 

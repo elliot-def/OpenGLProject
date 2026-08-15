@@ -28,13 +28,17 @@ public:
     // Transmet les bras au LeftClick (animation de tir au clic gauche)
     void setFirstPersonArms(FirstPersonArms* arms);
 
+    // Sensibilite de la souris (reglee dans le menu Clavier & Souris)
+    void setSensitivity(float sensitivity) { m_sensitivity = sensitivity; }
+    float getSensitivity() const { return m_sensitivity; }
+
 private:
 	std::map<std::string, Key*> m_keys; // Contient toutes les touches accessibles par leur nom
     std::map<InputContext, std::function<void(double xpos, double ypos)>> m_handleMovement;
 	MenuManager* m_menuManager;
     Player* m_player;                   // Pointeur vers le joueur pour appliquer les rotations de la camera
     double m_xpos, m_ypos;              // Dernieres positions connues de la souris
-    const float m_sensitivity;          // Sensibilite de la souris (vitesse de rotation)
+    float m_sensitivity;                // Sensibilite de la souris (vitesse de rotation)
 
     void setHandleMovements(InputContext context, std::function<void(double xpos, double ypos)> action) {
         m_handleMovement[context] = action;

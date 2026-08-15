@@ -86,6 +86,24 @@ struct MenuSelect {
 // Classe Menu
 class Menu {
 protected:
+    // ── Navigation manette (discrète) ──────────────────────────────────────
+    // Le stick gauche déplace la sélection parmi les éléments actionnables
+    // (items, cases à cocher, listes, sliders), A valide, gauche/droite ajuste.
+    // m_focusTargets est reconstruit à la demande (m_focusDirty) et trié du
+    // haut vers le bas selon centerY.
+    enum class FocusType { Item, Checkbox, Select, Range };
+    struct FocusTarget {
+        FocusType type;
+        int index;
+        float centerY; // tri vertical (haut -> bas)
+    };
+    std::vector<FocusTarget> m_focusTargets;
+    int m_focusIndex = 0;      // index dans m_focusTargets
+    bool m_focusDirty = true;  // liste à reconstruire (après clear/add)
+
+    void rebuildFocusTargets();
+    void applyFocusHighlight();
+
     std::vector<std::unique_ptr<TextRenderer>>* m_textRenderers;
 	ShaderManager* m_shaderManager;
 	SoundManager* m_soundManager;
@@ -122,6 +140,7 @@ public:
 
     void addItem(const std::string& text, float x = Constants::Window::WINDOW_WIDTH / 2, float y = Constants::Window::WINDOW_HEIGHT / 2, float width = 100, float height = 30, std::function<void()> callback = {}) {
         m_items.emplace_back(text, x, y, width, height, callback);
+        m_focusDirty = true;
     }
 
     void addShape(int id, Shape* shape, std::function<void()> callback = {}) {
@@ -163,9 +182,36 @@ public:
         m_ranges.clear();
         m_checkboxes.clear();
         m_selects.clear();
+        m_focusDirty = true;
     }
 
+    // ── Navigation manette (discrète) ──────────────────────────────────────
+    // Déplace la sélection d'un cran (direction : -1 = haut, +1 = bas, boucle).
+    void navigate(int direction);
+    // Valide la sélection (équivalent manette du clic) : callback d'item,
+    // bascule de checkbox, ouverture/fermeture de liste, etc.
+    void activateSelected();
+    // Ajuste la sélection (direction : -1 = gauche, +1 = droite) : slider ou
+    // option de liste.
+    void adjustSelected(int direction);
+    // Joue le son de clic partage des menus (bouton A, clic souris, bouton
+    // B/Retour). Rendu public pour MenuManager::goBack() (retour manette).
+    void playClickSound();
+    // Repositionne la sélection sur la première ligne (entrée dans un menu).
+    void resetFocus();
+    // Position manette courante (index dans m_focusTargets) : MenuManager la
+    // sauvegarde avant un changement de menu pour la restaurer au retour.
+    int getFocusIndex() const { return m_focusIndex; }
+    // Restaure une position manette sauvegardee (bornee a la liste courante ;
+    // 0 si liste vide). Reconstruit la liste des cibles si besoin.
+    void setFocusIndex(int index);
+
     const std::vector<MenuText>& getItems() const { return m_items; }
+
+    // Met a jour le texte d'un item (ex: affichage de la touche associee apres un rebinding)
+    void setItemText(size_t index, const std::string& text) {
+        if (index < m_items.size()) m_items[index].text = text;
+    }
 
     void setSelectedItem(int index) { 
         for (auto& item : m_items) {
@@ -178,6 +224,11 @@ public:
         for (auto& item : m_items) {
             item.isHovered = false;
         }
+        // La souris reprend la main : on retire aussi le focus manette des
+        // widgets (cases, listes, sliders) pour eviter un double surlignage.
+        for (auto& cb : m_checkboxes) if (cb && cb->input) cb->input->setFocused(false);
+        for (auto& sel : m_selects) if (sel && sel->input) sel->input->setFocused(false);
+        for (auto& rg : m_ranges) if (rg && rg->input) rg->input->setFocused(false);
         for (auto& item : m_items) {
             item.isHovered = item.contains(mouseX, mouseY);
 

@@ -17,9 +17,12 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include "Controller.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <cctype>
 #include <cmath>
+#include <cstdio>
+#include <cstring>
 #include <vector>
 
 
@@ -74,15 +77,50 @@ Game::~Game() {
 // ---------------------------------------------------------------------------
 
 void Game::initialize() {
+    // ── Mode hors-ligne forcé : argument -offline / -nosteam ──
+    // Steam n'est alors ni initialisé ni lancé : aucune capture de la manette
+    // par Steam Input, XInput/GLFW reste seul maître.
+    m_offlineMode = false;
+    for (int i = 1; i < m_argc; ++i) {
+        if (m_argv[i] &&
+            (std::strcmp(m_argv[i], "-offline") == 0 ||
+             std::strcmp(m_argv[i], "--offline") == 0 ||
+             std::strcmp(m_argv[i], "-nosteam") == 0 ||
+             std::strcmp(m_argv[i], "--nosteam") == 0)) {
+            m_offlineMode = true;
+            break;
+        }
+    }
+
+    // ── Diagnostic manette : liste ce que GLFW/XInput voit AVANT
+    // SteamAPI_InitEx. Si Steam Input est actif pour ce jeu, il peut masquer
+    // la manette du XInput : la comparaison avant/apres le montre.
+    Controller::logDevices("AVANT Steam (pre-SteamAPI_InitEx)");
+
     // Steam d'abord (bloquant) : lance Steam si absent, retente 10× 1s.
     // La fenêtre n'est créée qu'après → l'overlay pourra hooker le contexte.
+    // En mode hors-ligne forcé, on saute complètement l'initialisation Steam.
     m_steamManager = std::make_unique<SteamManager>();
-    bool steamOk = m_steamManager->init();
+    bool steamOk = false;
+    if (m_offlineMode) {
+        logPrintf("[Game] Mode hors-ligne force (-offline/-nosteam) : Steam ignore, manette via XInput.\n");
+    } else {
+        steamOk = m_steamManager->init();
+    }
+
+    Controller::logDevices(m_offlineMode
+        ? "APRES (mode hors-ligne force, Steam ignore)"
+        : (steamOk ? "APRES Steam (init OK)" : "APRES Steam (init echec / hors-ligne)"));
 
     if (steamOk) {
         LOG_INFO("[Game] Steam initialise, creation de la fenetre...");
     } else {
-        LOG_INFO("[Game] Steam non disponible, fonctionnement hors-ligne.");
+        // LOG_INFO concatene son 1er argument dans un litteral de chaine :
+        // on passe donc le texte via %s (une expression ternaire ne peut pas
+        // servir de fmt).
+        LOG_INFO("%s", m_offlineMode
+            ? "[Game] Mode hors-ligne force, Steam ignore."
+            : "[Game] Steam non disponible, fonctionnement hors-ligne.");
     }
 
     // Création de la fenêtre et du contexte OpenGL APRÈS SteamAPI_InitEx
@@ -139,6 +177,10 @@ void Game::loadResources() {
                                       m_renderer.get(), m_shaderManager.get(),
                                       m_textureManager.get(), m_inputManager.get());
 
+    // 0 : Amarna (texte des menus + notification), 1 : Gnocchi (titres),
+    // 2 : icones manette kenney, 3 : icones clavier/souris kenney
+    m_textRenderers->emplace_back(std::make_unique<TextRenderer>(m_shaderManager.get()));
+    m_textRenderers->emplace_back(std::make_unique<TextRenderer>(m_shaderManager.get()));
     m_textRenderers->emplace_back(std::make_unique<TextRenderer>(m_shaderManager.get()));
     m_textRenderers->emplace_back(std::make_unique<TextRenderer>(m_shaderManager.get()));
 
@@ -150,6 +192,10 @@ void Game::loadResources() {
     // Charger les polices avant le tick pour que le label s'affiche
 	m_textRenderers->at(0)->loadFont("res/fonts/armana/Amarna-Bold.ttf", 96.0f);
     m_textRenderers->at(1)->loadFont("res/fonts/Gnocchi.ttf", 282.0f);
+    // Icônes kenney (zone privee U+E000..) : manette Xbox + clavier/souris,
+    // utilisees par la notification de bascule de source d'entree.
+    m_textRenderers->at(2)->loadFontRange("res/fonts/kenney/kenney_input_steam_controller.ttf", 48.0f, 0xE000, 67);
+    m_textRenderers->at(3)->loadFontRange("res/fonts/kenney/kenney_input_keyboard_&_mouse.ttf", 48.0f, 0xE000, 243);
 
     if (!loadingTick()) return;
 
@@ -317,6 +363,8 @@ void Game::run() {
             // DRAW
             beginTextFrame();
             m_menuManager->draw();
+            // Notification de bascule clavier/souris <-> manette (au-dessus des menus)
+            drawInputNotification();
             flushTextFrame();
             // Easter egg DVD : dessiné APRÈS le flush du texte pour passer devant lui
             m_menuManager->drawOverlays();
@@ -375,9 +423,38 @@ void Game::update() {
                 glm::vec3 frontFlat = glm::normalize(glm::vec3(
                     m_camera->getFront().x, 0.0f, m_camera->getFront().z));
                 glm::vec3 lookOffset = frontFlat * Constants::Camera::CAMERA_FP_LOOK_OFFSET;
-                m_camera->setPosition(glm::vec3(worldHead.x, camPos.y, worldHead.z)
+                glm::vec3 newCamPos = glm::vec3(worldHead.x, camPos.y, worldHead.z)
                     + m_camera->getSmoothedMovementOffset()
-                    + lookOffset);
+                    + lookOffset;
+
+                // Garde anti-ecran-bleu : une position non finie (NaN/inf,
+                // ex: transform de bone invalide) ou aberrante (> 10m du
+                // joueur) rendrait la camera invisible -> seule la couleur de
+                // clear est rastérisée. On retombe sur les yeux du joueur.
+                const bool finite = std::isfinite(newCamPos.x)
+                    && std::isfinite(newCamPos.y) && std::isfinite(newCamPos.z);
+                const float distToPlayer = glm::length(newCamPos - m_player->getPosition());
+                if (finite && distToPlayer < 10.0f) {
+                    m_camera->setPosition(newCamPos);
+                } else {
+                    m_camera->setPosition(m_player->getEyePosition());
+                    LOG_WARN("[Game] Position camera 1P invalide (bone='%s', "
+                             "finite=%d dist=%.2f), fallback sur les yeux",
+                             headBone.c_str(), finite ? 1 : 0, distToPlayer);
+                }
+            }
+
+            // Diagnostic temporaire (ecran bleu 1P) : position cam/joueur
+            // toutes les ~5s pour verifier que la camera reste dans la scene.
+            static int fpDiagCounter = 0;
+            if (++fpDiagCounter % 300 == 0) {
+                glm::vec3 p = m_player->getPosition();
+                glm::vec3 c = m_camera->getPosition();
+                LOG_INFO("[Game] 1P diag: cam=(%.2f, %.2f, %.2f) player=(%.2f, %.2f, %.2f) "
+                         "thirdPerson=%d headBone='%s' human=%s",
+                         c.x, c.y, c.z, p.x, p.y, p.z,
+                         m_player->isThirdPerson() ? 1 : 0, headBone.c_str(),
+                         m_humanEntity ? "ok" : "null");
             }
         }
     }
@@ -399,9 +476,23 @@ void Game::draw() {
         CharacterAnimationController::drawDebugHUD(m_humanEntity, *m_textRenderers);
     }
 
+    // Notification de bascule clavier/souris <-> manette (icones kenney)
+    drawInputNotification();
+
     // Tout le texte de la frame (HUD, menus...) est dessiné en UN SEUL draw
     // call batche, au-dessus du reste de la scène.
     flushTextFrame();
+}
+
+// Dessine la notification de changement de source d'entree (manette <->
+// clavier/souris) avec les icones de la police kenney. A appeler entre
+// beginTextFrame() et flushTextFrame().
+void Game::drawInputNotification() {
+    if (!m_inputManager || !m_textRenderers || m_textRenderers->size() < 4) return;
+    m_inputManager->getNotification()->draw(
+        (*m_textRenderers)[2].get(),  // icones manette kenney (steam_controller)
+        (*m_textRenderers)[3].get(),  // icones clavier/souris kenney
+        (*m_textRenderers)[0].get()); // texte standard (Amarna)
 }
 
 void Game::beginTextFrame() {
@@ -419,8 +510,8 @@ void Game::toggleDebugHUD() {
     LOG_INFO("[Game] Debug HUD %s", m_debugHUD ? "ON" : "OFF");
 }
 
-void Game::changeState(GameState newState) {
-    m_menuManager->changeState(newState);
+void Game::changeState(GameState newState, bool restoreFocus) {
+    m_menuManager->changeState(newState, restoreFocus);
     Sound* sound;
     switch (newState) {
     case STATE_MENU:

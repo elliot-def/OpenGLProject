@@ -34,6 +34,11 @@ bool CheckboxInput::isPointInside(double px, double py) const {
 }
 
 void CheckboxInput::draw() {
+    // Cadre en couleur d'accent quand la case est selectionnee (navigation manette)
+    glm::vec3 boxColor = m_focused ? Constants::Color::TOMATO_JAM
+                                   : glm::vec3(0.3f, 0.3f, 0.3f);
+    m_box->setColor(boxColor.r, boxColor.g, boxColor.b);
+
     m_box->draw();
     if (m_value) {
         m_check->draw();

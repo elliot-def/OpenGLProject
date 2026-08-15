@@ -40,7 +40,19 @@ public:
 
     void run();
     void stop();
-    void changeState(GameState state);
+    // changeState : restoreFocus=true indique un retour vers un menu deja
+    // visite (la selection manette sauvegardee est restauree au lieu de
+    // repartir du premier element).
+    void changeState(GameState state, bool restoreFocus = false);
+
+    // Acces au gestionnaire de menus (ex: sous-menu de touches des Options)
+    MenuManager* getMenuManager() { return m_menuManager.get(); }
+
+    // Acces au gestionnaire Steam (utilise pour choisir le mode manette)
+    SteamManager* getSteamManager() { return m_steamManager.get(); }
+
+    // Acces au gestionnaire d'entrees (ex: sensibilites dans les Options)
+    InputManager* getInputManager() { return m_inputManager.get(); }
 
     // Bascule le HUD debug du personnage 3P (touche F3, voir InputManager)
     void toggleDebugHUD();
@@ -74,6 +86,11 @@ private:
     std::unique_ptr<ModelLoader> m_modelLoader;  // possède les entités 3D chargées
 
     bool m_isRunning = true;
+
+    // Mode hors-ligne forcé : argument -offline / -nosteam au lancement.
+    // Steam n'est alors PAS initialisé (ni lancé) → aucune capture de la
+    // manette par Steam Input, XInput/GLFW reste seul maître.
+    bool m_offlineMode = false;
     
     int m_argc;
     char** m_argv;
@@ -105,6 +122,10 @@ private:
     void loadResources();  // Chargement des ressources lourdes (textures, modèles, sons...)
     void update();
     void draw();
+
+    // Notification de bascule clavier/souris <-> manette (icônes kenney).
+    // À appeler entre beginTextFrame() et flushTextFrame().
+    void drawInputNotification();
 
     // TextRenderer : délimitation de frame pour le batching des glyphes
     // (1 seul draw call de texte par frame au lieu de ~2 draw calls par glyphe).

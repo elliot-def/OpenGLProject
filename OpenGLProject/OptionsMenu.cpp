@@ -1,5 +1,6 @@
 #include "OptionsMenu.h"
 #include "Game.h"
+#include "MenuManager.h"
 #include "CursorManager.h"
 #include "File.h"
 
@@ -23,17 +24,28 @@ OptionsMenu::~OptionsMenu() {
 }
 
 void OptionsMenu::createOptions(bool isMuted, float volume) {
-    addCheckbox("Son", Constants::Window::WINDOW_WIDTH / 2, 700, 40, !isMuted, [this](bool isChecked) {
+    // Sous-menu de reconfiguration des touches clavier/souris (res/keys.json)
+    // Contient aussi le slider de sensibilite de la souris.
+    addItem("Clavier & Souris", Constants::Window::WINDOW_WIDTH / 2, 620, 200, 50, [this]() {
+        m_game->getMenuManager()->showKeyBindings();
+        });
+
+    // Sous-menu de reconfiguration des boutons de manette + sensibilite camera
+    addItem("Manette", Constants::Window::WINDOW_WIDTH / 2, 690, 200, 50, [this]() {
+        m_game->getMenuManager()->showControllerBindings();
+        });
+
+    addCheckbox("Son", Constants::Window::WINDOW_WIDTH / 2, 760, 40, !isMuted, [this](bool isChecked) {
         m_soundManager->setMute(!isChecked);
         });
 
-    // Note : Pense à adapter la valeur par défaut (ici récupérée via le SoundManager si possible, sinon 1.0f)
-    addRange("Volume", Constants::Window::WINDOW_WIDTH / 2, 800, 300, 25, 0, 2, volume, [this](float volume) {
+    addRange("Volume", Constants::Window::WINDOW_WIDTH / 2, 820, 300, 25, 0, 2, volume, [this](float volume) {
         m_soundManager->setMasterVolume(volume);
         });
 
-    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 900, 200, 50, [this]() {
-        m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU);
+    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 890, 200, 50, [this]() {
+        // Retour vers le menu precedent : on restaure sa selection manette.
+        m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU, true);
         exportJSON();
         });
 }
@@ -66,6 +78,8 @@ void OptionsMenu::loadJSON() {
             m_soundManager->setMute(isMuted);
             m_soundManager->setMasterVolume(volume);
         }
+        // Les bindings et les sensibilites sont charges par l'InputManager
+        // depuis res/keys.json (voir InputManager::loadKeyBindings).
 
         std::cout << "[Options] Parametres charges avec succes.\n";
     }

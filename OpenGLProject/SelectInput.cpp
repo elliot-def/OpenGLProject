@@ -63,7 +63,21 @@ void SelectInput::handleClick(double mouseX, double mouseY) {
     m_isOpen = false;
 }
 
+void SelectInput::cycleOption(int direction) {
+    int n = static_cast<int>(m_options.size());
+    if (n == 0) return;
+    m_selectedIndex = ((m_selectedIndex + direction) % n + n) % n;
+    if (m_onValueChanged) {
+        m_onValueChanged(m_selectedIndex);
+    }
+}
+
 void SelectInput::draw() {
+    // Case en couleur d'accent quand la liste est selectionnee (navigation manette)
+    glm::vec3 boxColor = m_focused ? Constants::Color::TOMATO_JAM
+                                   : glm::vec3(0.3f, 0.3f, 0.3f);
+    m_box->setColor(boxColor.r, boxColor.g, boxColor.b);
+
     m_box->draw();
 
     if (m_isOpen) {

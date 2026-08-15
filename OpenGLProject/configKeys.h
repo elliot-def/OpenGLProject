@@ -1,5 +1,8 @@
 #pragma once
 
+// GLFW sans les headers OpenGL (GLAD les fournit) : evite le conflit
+// "OpenGL header already included" quand configKeys.h est inclus avant glad.h
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h> // Librairie pour la gestion des fenetres et des touches
 
 // Namespace ConfigKeys : contient toutes les touches et configurations par defaut du jeu
@@ -28,4 +31,29 @@ namespace ConfigKeys {
 
     // Sensibilite par defaut de la souris (pour rotation de la camera)
     inline const float DEFAULT_MOUSE_SENSITIVITY = 0.05f;
+
+    // ── Manette Xbox (mapping GLFW standard gamepad) ───────────────────────
+    // Boutons (index GLFW_GAMEPAD_BUTTON_*)
+    inline const int CONTROLLER_JUMP = GLFW_GAMEPAD_BUTTON_A;            // A : saut
+    inline const int CONTROLLER_CROUCH = GLFW_GAMEPAD_BUTTON_B;          // B : s'accroupir
+    inline const int CONTROLLER_PUSH = GLFW_GAMEPAD_BUTTON_X;            // X : pousser (R au clavier)
+    inline const int CONTROLLER_THIRD_PERSON = GLFW_GAMEPAD_BUTTON_Y;    // Y : 1P/3P (C au clavier)
+    inline const int CONTROLLER_FLASHLIGHT = GLFW_GAMEPAD_BUTTON_LEFT_BUMPER;  // LB : torche (T au clavier)
+    inline const int CONTROLLER_GRAB = GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER;       // RB : attraper (E au clavier)
+    inline const int CONTROLLER_ESCAPE = GLFW_GAMEPAD_BUTTON_START;      // Start : menu / reprendre (Echap)
+    inline const int CONTROLLER_NOCLIP = GLFW_GAMEPAD_BUTTON_BACK;       // Back : noclip (N au clavier)
+
+    // Axes (index GLFW_GAMEPAD_AXIS_*)
+    inline const int CONTROLLER_MOVE_X_AXIS = GLFW_GAMEPAD_AXIS_LEFT_X;  // Stick gauche : strafe
+    inline const int CONTROLLER_MOVE_Y_AXIS = GLFW_GAMEPAD_AXIS_LEFT_Y;  // Stick gauche : avant/arriere
+    inline const int CONTROLLER_LOOK_X_AXIS = GLFW_GAMEPAD_AXIS_RIGHT_X; // Stick droit : regard horizontal
+    inline const int CONTROLLER_LOOK_Y_AXIS = GLFW_GAMEPAD_AXIS_RIGHT_Y; // Stick droit : regard vertical
+    inline const int CONTROLLER_SPRINT_AXIS = GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER; // RT : sprinter
+
+    // Sensibilite du stick droit (regard analogique, en degres/frame) :
+    // plus c'est eleve, plus le regard tourne vite quand le stick est pousse.
+    inline const float CONTROLLER_LOOK_SENSITIVITY = 3.0f;
+
+    // Seuil (0..1) au-dessus duquel la gachette RT active le sprint
+    inline const float CONTROLLER_TRIGGER_THRESHOLD = 0.5f;
 }

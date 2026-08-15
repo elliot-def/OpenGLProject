@@ -125,6 +125,17 @@ les transparents sont triés par distance caméra puis dessinés avec `glDepthMa
 - Appelle `m_collisionManager->buildBVH()` après avoir ajouté tous les statiques (sinon la requête BVH est désactivée — `m_useBVH=false`).
 - **Règle de propreté** : `Game.cpp` ne doit PAS contenir de logique de chargement d'assets, de setup d'animation, ou de code spécifique à un sous-système. Chaque nouveau sous-système (ex: bras riggés, armes, inventaire…) doit être extrait dans une classe Manager dédiée (ex: `ArmsManager`). `Game::initialize()` ne fait qu'instancier et appeler `manager->initialize(...)`. `Game::update()` et `Game::draw()` délèguent aux managers. Le code de `Game.cpp` doit tenir en ~50 lignes utiles hors includes et boilerplate. Si un bloc de code dépasse 10 lignes dans `Game.cpp`, c'est qu'il mérite sa propre classe.
 
+### 4.1.bis Arguments de lancement
+- **Mode hors-ligne forcé** : `-offline`, `--offline`, `-nosteam`, `--nosteam` (équivalents).
+  Steam n'est alors ni initialisé ni lancé → aucune capture de la manette par Steam Input,
+  XInput/GLFW reste seul maître. Analyse dans `Game::initialize()` (`Game.cpp`).
+  Raccourci associé : `OpenGLProject - Release - Offline.lnk`.
+- **Invitation lobby au lancement** : `+connect_lobby <SteamID>` (argument ajouté par Steam quand
+  le jeu est lancé fermé depuis une invitation). Géré par `SteamManager::parseCommandLine()`.
+- Tous les arguments sont parsés depuis `main(argc, argv)` → `Game(argc, argv)` ; `Game::run()`
+  est ensuite appelé sans argument. Pour ajouter un nouveau flag, le parser se trouve dans
+  `Game::initialize()` (mode hors-ligne) et `SteamManager::parseCommandLine()` (lobby).
+
 ### 4.2 Window (`Window.h/.cpp`)
 - Wrapper GLFW3. Forward-declare `GLFWwindow` dans le header (n'inclut jamais GLFW dans l'API publique).
 - `setCursorCaptured(bool)` met `GLFW_CURSOR_DISABLED` (true) ou `GLFW_CURSOR_CAPTURED` (false). Le naming actuel est inversé de l'intuition — c'est un quirk connu, ne pas refactorer sans re-tester le focus souris.

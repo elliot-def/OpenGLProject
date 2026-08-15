@@ -2,6 +2,7 @@
 #include <cstdlib>
 
 #include "Window.h"
+#include "Log.h"
 #include "SoundManager.h"
 #include "constants/window.h"
 
@@ -126,7 +127,7 @@ void Window::setWindowIcon(const char* iconPath) {
     unsigned char* pixels = stbi_load(iconPath, &width, &height, &channels, 4); // Force RGBA
 
     if (!pixels) {
-        printf("Erreur: Impossible de charger l'icone %s\n", iconPath);
+        logPrintf("Erreur: Impossible de charger l'icone %s\n", iconPath);
         return;
     }
 
@@ -142,7 +143,7 @@ void Window::setWindowIcon(const char* iconPath) {
     // Libérer la mémoire de l'image
     stbi_image_free(pixels);
 
-    printf("Icone definie avec succes (%dx%d)\n", width, height);
+    logPrintf("Icone definie avec succes (%dx%d)\n", width, height);
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +155,7 @@ GLFWwindow* Window::createSharedContext() const {
     GLFWwindow* w = glfwCreateWindow(1, 1, "loader", nullptr, m_window);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);  // restore default
     if (!w) {
-        printf("[Window] ERREUR: impossible de creer le contexte partage.\n");
+        logPrintf("[Window] ERREUR: impossible de creer le contexte partage.\n");
     }
     return w;
 }
@@ -179,13 +180,13 @@ void Window::setCustomCursor(const char* cursorPath) {
             // Note: vous pouvez conserver le pointeur `cursor` si vous voulez le détruire plus tard avec glfwDestroyCursor
         }
         else {
-            printf("Erreur: Impossible de creer le curseur GLFW\n");
+            logPrintf("Erreur: Impossible de creer le curseur GLFW\n");
         }
 
         // glfwCreateCursor copie les données, on peut donc libérer l'image chargée
         stbi_image_free(cursor_pixels);
     }
     else {
-        printf("Erreur: Impossible de charger l'image du curseur ./res/textures/menu/cursor.png\n");
+        logPrintf("Erreur: Impossible de charger l'image du curseur ./res/textures/menu/cursor.png\n");
     }
 }

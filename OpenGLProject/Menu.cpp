@@ -50,12 +50,14 @@ void Menu::addRange(const std::string& label, float x, float y, float width, flo
     std::function<void(float)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
     m_ranges.push_back(std::make_unique<MenuRange>(label, new RangeInput(shader, x, y, width, height, minValue, maxValue, defaultValue, onValueChanged)));
+    m_focusDirty = true;
 }
 
 void Menu::addCheckbox(const std::string& label, float x, float y, float size,
     bool defaultValue, std::function<void(bool)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
     m_checkboxes.push_back(std::make_unique<MenuCheckbox>(label, new CheckboxInput(shader, x, y, size, defaultValue, onValueChanged)));
+    m_focusDirty = true;
 }
 
 void Menu::addSelect(const std::string& label, float x, float y, float width, float height,
@@ -63,6 +65,7 @@ void Menu::addSelect(const std::string& label, float x, float y, float width, fl
     std::function<void(int)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
     m_selects.push_back(std::make_unique<MenuSelect>(label, new SelectInput(shader, x, y, width, height, std::move(options), defaultIndex, onValueChanged)));
+    m_focusDirty = true;
 }
 
 void Menu::draw() {
@@ -173,10 +176,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
     for (auto& item : m_items) {
         if (item.contains(mouseX, mouseY) && item.callback) {
             item.callback();
-            Sound* clickSound = m_soundManager->get("menu_click_sound");
-            if (clickSound) {
-                clickSound->play();
-            }
+            playClickSound();
             return true;
         }
     }
@@ -184,10 +184,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
     for (const auto& shape : m_shapes) {
         if (shape.second->contains(mouseX, mouseY) && shape.second->callback) {
             shape.second->callback();
-            Sound* clickSound = m_soundManager->get("menu_click_sound");
-            if (clickSound) {
-                clickSound->play();
-            }
+            playClickSound();
             return true;
         }
     }
@@ -197,10 +194,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
         if (!checkbox || !checkbox->input) continue;
         if (checkbox->input->isPointInside(mouseX, mouseY)) {
             checkbox->input->toggle();
-            Sound* clickSound = m_soundManager->get("menu_click_sound");
-            if (clickSound) {
-                clickSound->play();
-            }
+            playClickSound();
             return true;
         }
     }
@@ -211,10 +205,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
         bool wasOpen = select->input->isOpen();
         select->input->handleClick(mouseX, mouseY);
         if (wasOpen || select->input->isOpen()) {
-            Sound* clickSound = m_soundManager->get("menu_click_sound");
-            if (clickSound) {
-                clickSound->play();
-            }
+            playClickSound();
             return true;
         }
     }
@@ -245,5 +236,141 @@ void Menu::ensureBackground() {
             static_cast<float>(Constants::Window::WINDOW_HEIGHT),
             Constants::Color::SHADOW_GREY
         );
+    }
+}
+
+// ── Navigation manette (discrète) ─────────────────────────────────────────
+
+void Menu::rebuildFocusTargets() {
+    m_focusTargets.clear();
+
+    // Items : seuls ceux avec un callback sont actionnables (le texte
+    // d'aide sans callback est ignoré par la navigation).
+    for (size_t i = 0; i < m_items.size(); ++i) {
+        if (!m_items[i].callback) continue;
+        m_focusTargets.push_back({ FocusType::Item, static_cast<int>(i),
+            m_items[i].y + m_items[i].height / 2.0f });
+    }
+    for (size_t i = 0; i < m_checkboxes.size(); ++i) {
+        if (!m_checkboxes[i] || !m_checkboxes[i]->input) continue;
+        m_focusTargets.push_back({ FocusType::Checkbox, static_cast<int>(i),
+            m_checkboxes[i]->input->getPosition().y });
+    }
+    for (size_t i = 0; i < m_selects.size(); ++i) {
+        if (!m_selects[i] || !m_selects[i]->input) continue;
+        m_focusTargets.push_back({ FocusType::Select, static_cast<int>(i),
+            m_selects[i]->input->getPosition().y });
+    }
+    for (size_t i = 0; i < m_ranges.size(); ++i) {
+        if (!m_ranges[i] || !m_ranges[i]->input) continue;
+        m_focusTargets.push_back({ FocusType::Range, static_cast<int>(i),
+            m_ranges[i]->input->getPosition().y });
+    }
+
+    std::sort(m_focusTargets.begin(), m_focusTargets.end(),
+        [](const FocusTarget& a, const FocusTarget& b) { return a.centerY < b.centerY; });
+
+    if (m_focusIndex < 0 || m_focusIndex >= static_cast<int>(m_focusTargets.size())) {
+        m_focusIndex = 0;
+    }
+    m_focusDirty = false;
+}
+
+void Menu::applyFocusHighlight() {
+    // Retire tout survol/focus existant (souris comme manette)
+    for (auto& item : m_items) item.isHovered = false;
+    for (auto& cb : m_checkboxes) if (cb && cb->input) cb->input->setFocused(false);
+    for (auto& sel : m_selects) if (sel && sel->input) sel->input->setFocused(false);
+    for (auto& rg : m_ranges) if (rg && rg->input) rg->input->setFocused(false);
+
+    if (m_focusDirty) rebuildFocusTargets();
+    if (m_focusIndex < 0 || m_focusIndex >= static_cast<int>(m_focusTargets.size())) return;
+
+    const FocusTarget& t = m_focusTargets[m_focusIndex];
+    switch (t.type) {
+    case FocusType::Item:     m_items[t.index].isHovered = true; break;
+    case FocusType::Checkbox: m_checkboxes[t.index]->input->setFocused(true); break;
+    case FocusType::Select:   m_selects[t.index]->input->setFocused(true); break;
+    case FocusType::Range:    m_ranges[t.index]->input->setFocused(true); break;
+    }
+}
+
+void Menu::navigate(int direction) {
+    if (m_focusDirty) rebuildFocusTargets();
+    int n = static_cast<int>(m_focusTargets.size());
+    if (n == 0) return;
+    m_focusIndex = ((m_focusIndex + direction) % n + n) % n;
+    applyFocusHighlight();
+}
+
+void Menu::activateSelected() {
+    if (m_focusDirty) rebuildFocusTargets();
+    if (m_focusIndex < 0 || m_focusIndex >= static_cast<int>(m_focusTargets.size())) return;
+
+    const FocusTarget& t = m_focusTargets[m_focusIndex];
+    switch (t.type) {
+    case FocusType::Item: {
+        auto& item = m_items[t.index];
+        if (item.callback) {
+            playClickSound();
+            item.callback();
+        }
+        break;
+    }
+    case FocusType::Checkbox: {
+        m_checkboxes[t.index]->input->toggle();
+        playClickSound();
+        break;
+    }
+    case FocusType::Select: {
+        // Ouvre/ferme la liste ; l'option se change via adjustSelected (gauche/droite)
+        SelectInput* sel = m_selects[t.index]->input;
+        if (sel->isOpen()) sel->close(); else sel->open();
+        playClickSound();
+        break;
+    }
+    case FocusType::Range: {
+        // Le slider se règle via gauche/droite ; A le pousse d'un cran à droite.
+        m_ranges[t.index]->input->nudge(1.0f);
+        break;
+    }
+    }
+}
+
+void Menu::adjustSelected(int direction) {
+    if (m_focusDirty) rebuildFocusTargets();
+    if (m_focusIndex < 0 || m_focusIndex >= static_cast<int>(m_focusTargets.size())) return;
+
+    const FocusTarget& t = m_focusTargets[m_focusIndex];
+    if (t.type == FocusType::Range) {
+        m_ranges[t.index]->input->nudge(static_cast<float>(direction));
+    }
+    else if (t.type == FocusType::Select) {
+        m_selects[t.index]->input->cycleOption(direction);
+    }
+}
+
+void Menu::resetFocus() {
+    m_focusIndex = 0;
+    applyFocusHighlight();
+}
+
+void Menu::setFocusIndex(int index) {
+    if (m_focusDirty) rebuildFocusTargets();
+    const int n = static_cast<int>(m_focusTargets.size());
+    if (n == 0) {
+        m_focusIndex = 0;
+        return;
+    }
+    // Borne la position restauree a la liste courante (les elements peuvent
+    // avoir change entre-temps, ex: rebuildItems d'un menu de bindings).
+    m_focusIndex = (index < 0) ? 0 : (index >= n ? n - 1 : index);
+    applyFocusHighlight();
+}
+
+void Menu::playClickSound() {
+    Sound* clickSound = m_soundManager->get("menu_click_sound");
+    if (clickSound) {
+        clickSound->play();
     }
 }

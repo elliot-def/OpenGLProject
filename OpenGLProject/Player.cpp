@@ -24,7 +24,7 @@ bool Player::getIsSprinting() const {
     return m_isSprinting && canSprint();
 }
 
-void Player::processDirectionKey(int direction) {
+void Player::processDirectionKey(int direction, float speedFactor) {
     // getIsSprinting() intègre déjà le filtre grounded/no-clip : en l'air,
     // on retombe sur la vitesse de marche même si la touche est tenue.
     // Le facteur post-atterrissage ralenti le joueur brievement apres une
@@ -32,7 +32,8 @@ void Player::processDirectionKey(int direction) {
     float velocity = getIsSprinting() ? Constants::Player::PLAYER_SPRINTING_SPEED : Constants::Player::PLAYER_WALKING_SPEED;
     velocity *= m_postLandSpeedFactor;
     float deltaTime = m_renderer->getDeltaTime();
-    float distance = velocity * deltaTime;
+    // speedFactor (0..1) : mouvement analogique au stick gauche de la manette
+    float distance = velocity * deltaTime * speedFactor;
 
     if (m_useGravity) {
         if (direction == EntityRelativeDirection::FORWARD)

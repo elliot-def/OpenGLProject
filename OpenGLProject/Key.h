@@ -32,6 +32,10 @@ public:
     int getKey() const { return m_key; }                     // Retourne le code de la touche physique
     bool getStatus() const { return m_isPressed; }          // Retourne si la touche est actuellement appuyee
 
+    // Change le code de la touche physique (utilise par le rebinding des
+    // touches dans le menu Options).
+    void setKey(int key) { m_key = key; }
+
     void onPress(InputContext context) {
         m_isPressed = true; // Change l'etat pour indiquer que la touche est appuyee
         auto it = m_contextOnPress.find(context);
@@ -74,7 +78,7 @@ public:
 protected:
     Player* m_player;         // Pointeur vers le joueur associe a la touche
     const std::string m_name; // Nom de la touche
-    const int m_key;          // Code de la touche physique
+    int m_key;                // Code de la touche physique (modifiable via setKey)
     bool m_isPressed;         // Etat de la touche (true si appuyee, false sinon)
 	std::map<InputContext, std::function<void()>> m_contextOnRelease; // Actions specifiques par contexte
 	std::map<InputContext, std::function<void()>> m_contextOnPress; // Actions specifiques par contexte

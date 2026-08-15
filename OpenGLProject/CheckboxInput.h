@@ -28,6 +28,10 @@ public:
     void setValue(bool value);
     bool getValue() const { return m_value; }
 
+    // Focus pour la navigation manette : met le cadre en surbrillance.
+    void setFocused(bool focused) { m_focused = focused; }
+    bool isFocused() const { return m_focused; }
+
     bool isPointInside(double px, double py) const;
 
     glm::vec2 getPosition() const { return m_position; }
@@ -43,6 +47,7 @@ private:
     float m_size;
 
     bool m_value;
+    bool m_focused = false; // surbrillance du cadre (navigation manette)
 
     std::function<void(bool)> m_onValueChanged;
 };

@@ -31,7 +31,10 @@ public:
 
     // Traite les touches de direction
     // direction : valeur parmi direction::FORWARD, BACKWARD, LEFT, RIGHT, UP, DOWN
-    void processDirectionKey(int direction);
+    // speedFactor : facteur analogique (0..1) multipliant la vitesse de
+    // deplacement (1.0 = pleine vitesse). Utilise par le stick gauche de la
+    // manette, ignore par le clavier (valeur par defaut 1.0).
+    void processDirectionKey(int direction, float speedFactor = 1.0f);
 
     // Déclenche un saut : délègue au CollisionManager qui applique l'impulsion
     // verticale si le joueur est au sol.

@@ -1,4 +1,5 @@
 #include "SteamManager.h"
+#include "Log.h"
 #include <cstring>
 
 #ifdef _WIN32
@@ -30,11 +31,11 @@ bool SteamManager::init() {
 
     if (result != k_ESteamAPIInitResult_OK) {
         if (result == k_ESteamAPIInitResult_NoSteamClient) {
-            printf("[SteamManager] Steam n'est pas lance, tentative de lancement...\n");
+            logPrintf("[SteamManager] Steam n'est pas lance, tentative de lancement...\n");
 #ifdef _WIN32
             // Lancer Steam via le protocole steam://
             ShellExecuteA(NULL, "open", "steam://open/main", NULL, NULL, SW_HIDE);
-            printf("[SteamManager]   -> Steam lance, attente du demarrage (3s)...\n");
+            logPrintf("[SteamManager]   -> Steam lance, attente du demarrage (3s)...\n");
 
             // Attendre que le client Steam démarre avant la 1ère tentative.
             // Sans ce délai, SteamAPI_InitEx échoue avec FailedGeneric
@@ -51,23 +52,23 @@ bool SteamManager::init() {
                 if (result == k_ESteamAPIInitResult_OK) goto steam_ready;
                 if (result != k_ESteamAPIInitResult_NoSteamClient &&
                     result != k_ESteamAPIInitResult_FailedGeneric) break;
-                printf("[SteamManager]   -> Tentative %d/20 (%d - %s)...\n", attempt + 1, result, errMsg);
+                logPrintf("[SteamManager]   -> Tentative %d/20 (%d - %s)...\n", attempt + 1, result, errMsg);
                 Sleep(1000);
             }
-            printf("[SteamManager] ERREUR: Steam n'a pas pu etre initialise apres lancement (%d - %s).\n", result, errMsg);
+            logPrintf("[SteamManager] ERREUR: Steam n'a pas pu etre initialise apres lancement (%d - %s).\n", result, errMsg);
 #else
-            printf("[SteamManager]   -> Steam n'est pas lance (lancement automatique non supporte sur cette plateforme).\n");
+            logPrintf("[SteamManager]   -> Steam n'est pas lance (lancement automatique non supporte sur cette plateforme).\n");
 #endif
             return false;
         }
 
-        printf("[SteamManager] ERREUR SteamAPI_InitEx: %d - %s\n", result, errMsg);
+        logPrintf("[SteamManager] ERREUR SteamAPI_InitEx: %d - %s\n", result, errMsg);
         switch (result) {
             case k_ESteamAPIInitResult_VersionMismatch:
-                printf("[SteamManager]   -> Version du client Steam obsolete.\n");
+                logPrintf("[SteamManager]   -> Version du client Steam obsolete.\n");
                 break;
             default:
-                printf("[SteamManager]   -> Erreur generique.\n");
+                logPrintf("[SteamManager]   -> Erreur generique.\n");
                 break;
         }
         return false;
@@ -95,23 +96,23 @@ SteamInitStatus SteamManager::initAsyncStart() {
     }
 
     if (result == k_ESteamAPIInitResult_NoSteamClient) {
-        printf("[SteamManager] Steam n'est pas lance, lancement asynchrone...\n");
+        logPrintf("[SteamManager] Steam n'est pas lance, lancement asynchrone...\n");
 #ifdef _WIN32
         ShellExecuteA(NULL, "open", "steam://open/main", NULL, NULL, SW_HIDE);
         m_initStatus    = SteamInitStatus::WAITING;
         m_launchTimer   = 0.0f;
         m_launchAttempt = 0;
-        printf("[SteamManager]   -> Steam lance, attente non-bloquante...\n");
+        logPrintf("[SteamManager]   -> Steam lance, attente non-bloquante...\n");
         return SteamInitStatus::WAITING;
 #else
-        printf("[SteamManager]   -> Steam n'est pas lance (lancement auto non supporte).\n");
+        logPrintf("[SteamManager]   -> Steam n'est pas lance (lancement auto non supporte).\n");
         m_initStatus = SteamInitStatus::FAILED;
         return SteamInitStatus::FAILED;
 #endif
     }
 
     // Autre erreur
-    printf("[SteamManager] ERREUR SteamAPI_InitEx: %d - %s\n", result, errMsg);
+    logPrintf("[SteamManager] ERREUR SteamAPI_InitEx: %d - %s\n", result, errMsg);
     m_initStatus = SteamInitStatus::FAILED;
     return SteamInitStatus::FAILED;
 
@@ -137,23 +138,23 @@ SteamInitStatus SteamManager::initAsyncPoll(float dt) {
     ESteamAPIInitResult result = SteamAPI_InitEx(&errMsg);
 
     if (result == k_ESteamAPIInitResult_OK) {
-        printf("[SteamManager] Steam connecte apres %d tentative(s) !\n", m_launchAttempt);
+        logPrintf("[SteamManager] Steam connecte apres %d tentative(s) !\n", m_launchAttempt);
         goto async_steam_ready;
     }
 
     if (result != k_ESteamAPIInitResult_NoSteamClient) {
-        printf("[SteamManager] ERREUR pendant l'attente: %d - %s\n", result, errMsg);
+        logPrintf("[SteamManager] ERREUR pendant l'attente: %d - %s\n", result, errMsg);
         m_initStatus = SteamInitStatus::FAILED;
         return SteamInitStatus::FAILED;
     }
 
     if (m_launchAttempt >= MAX_LAUNCH_ATTEMPTS) {
-        printf("[SteamManager] Timeout: Steam n'a pas repondu apres %d tentatives.\n", MAX_LAUNCH_ATTEMPTS);
+        logPrintf("[SteamManager] Timeout: Steam n'a pas repondu apres %d tentatives.\n", MAX_LAUNCH_ATTEMPTS);
         m_initStatus = SteamInitStatus::FAILED;
         return SteamInitStatus::FAILED;
     }
 
-    printf("[SteamManager]   -> Tentative %d/%d...\n", m_launchAttempt, MAX_LAUNCH_ATTEMPTS);
+    logPrintf("[SteamManager]   -> Tentative %d/%d...\n", m_launchAttempt, MAX_LAUNCH_ATTEMPTS);
     return SteamInitStatus::WAITING;
 
 async_steam_ready:
@@ -175,10 +176,10 @@ void SteamManager::completeInit() {
     m_cbEnter.Register(this, &SteamManager::onLobbyEnter);
     m_cbChatUpdate.Register(this, &SteamManager::onLobbyChatUpdate);
 
-    printf("[SteamManager] Initialise avec succes.\n");
-    printf("[SteamManager]   AppID       : %u\n", SteamUtils()->GetAppID());
-    printf("[SteamManager]   SteamID     : %llu\n", m_localSteamID.ConvertToUint64());
-    printf("[SteamManager]   PersonaName : %s\n", SteamFriends()->GetPersonaName());
+    logPrintf("[SteamManager] Initialise avec succes.\n");
+    logPrintf("[SteamManager]   AppID       : %u\n", SteamUtils()->GetAppID());
+    logPrintf("[SteamManager]   SteamID     : %llu\n", m_localSteamID.ConvertToUint64());
+    logPrintf("[SteamManager]   PersonaName : %s\n", SteamFriends()->GetPersonaName());
 
     m_appID = SteamUtils()->GetAppID();
 }
@@ -196,7 +197,7 @@ void SteamManager::shutdown() {
 
     SteamAPI_Shutdown();
     m_initialized = false;
-    printf("[SteamManager] Arrete.\n");
+    logPrintf("[SteamManager] Arrete.\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -221,7 +222,7 @@ void SteamManager::parseCommandLine(int argc, char* argv[]) {
             CSteamID steamIDLobby(lobbyID);
 
             if (steamIDLobby.IsValid() && steamIDLobby.IsLobby()) {
-                printf("[SteamManager] Invitation lobby detectee en ligne de commande : %llu\n", lobbyID);
+                logPrintf("[SteamManager] Invitation lobby detectee en ligne de commande : %llu\n", lobbyID);
                 if (m_onInviteReceived) {
                     m_onInviteReceived(steamIDLobby);
                 }
@@ -236,26 +237,26 @@ void SteamManager::parseCommandLine(int argc, char* argv[]) {
 
 void SteamManager::createLobby(ELobbyType eType, int maxMembers) {
     if (!m_initialized) {
-        printf("[SteamManager] ERREUR: Steam non initialise, impossible de creer un lobby.\n");
+        logPrintf("[SteamManager] ERREUR: Steam non initialise, impossible de creer un lobby.\n");
         return;
     }
-    printf("[SteamManager] Creation d'un lobby (type=%d, max=%d)...\n", eType, maxMembers);
+    logPrintf("[SteamManager] Creation d'un lobby (type=%d, max=%d)...\n", eType, maxMembers);
     SteamAPICall_t hCall = SteamMatchmaking()->CreateLobby(eType, maxMembers);
     m_callResultCreated.Set(hCall, this, &SteamManager::onLobbyCreated);
 }
 
 void SteamManager::joinLobby(CSteamID steamIDLobby) {
     if (!m_initialized) {
-        printf("[SteamManager] ERREUR: Steam non initialise, impossible de rejoindre un lobby.\n");
+        logPrintf("[SteamManager] ERREUR: Steam non initialise, impossible de rejoindre un lobby.\n");
         return;
     }
-    printf("[SteamManager] Rejoindre le lobby %llu...\n", steamIDLobby.ConvertToUint64());
+    logPrintf("[SteamManager] Rejoindre le lobby %llu...\n", steamIDLobby.ConvertToUint64());
     SteamMatchmaking()->JoinLobby(steamIDLobby);
 }
 
 void SteamManager::leaveLobby() {
     if (!m_initialized || !m_inLobby) return;
-    printf("[SteamManager] Quitter le lobby %llu...\n", m_currentLobby.ConvertToUint64());
+    logPrintf("[SteamManager] Quitter le lobby %llu...\n", m_currentLobby.ConvertToUint64());
     SteamMatchmaking()->LeaveLobby(m_currentLobby);
     m_currentLobby = CSteamID();
     m_inLobby = false;
@@ -263,10 +264,10 @@ void SteamManager::leaveLobby() {
 
 void SteamManager::openInviteDialog() {
     if (!m_initialized || !m_inLobby) {
-        printf("[SteamManager] ERREUR: Pas dans un lobby, impossible d'ouvrir l'invitation.\n");
+        logPrintf("[SteamManager] ERREUR: Pas dans un lobby, impossible d'ouvrir l'invitation.\n");
         return;
     }
-    printf("[SteamManager] Ouverture de l'overlay d'invitation Steam...\n");
+    logPrintf("[SteamManager] Ouverture de l'overlay d'invitation Steam...\n");
     SteamFriends()->ActivateGameOverlayInviteDialog(m_currentLobby);
 }
 
@@ -291,9 +292,9 @@ void SteamManager::setLobbyMetadata(CSteamID lobbyID) {
 
 void SteamManager::onGameOverlayActivated(GameOverlayActivated_t* pCallback) {
     if (pCallback->m_bActive) {
-        printf("[SteamManager] Overlay Steam active.\n");
+        logPrintf("[SteamManager] Overlay Steam active.\n");
     } else {
-        printf("[SteamManager] Overlay Steam desactive.\n");
+        logPrintf("[SteamManager] Overlay Steam desactive.\n");
     }
 }
 
@@ -302,7 +303,7 @@ void SteamManager::onGameOverlayActivated(GameOverlayActivated_t* pCallback) {
 // ---------------------------------------------------------------------------
 
 void SteamManager::onGameLobbyJoinRequested(GameLobbyJoinRequested_t* pCallback) {
-    printf("[SteamManager] Invitation lobby recue en jeu : %llu\n",
+    logPrintf("[SteamManager] Invitation lobby recue en jeu : %llu\n",
            pCallback->m_steamIDLobby.ConvertToUint64());
 
     // Si déjà dans un lobby, on le quitte d'abord
@@ -322,7 +323,7 @@ void SteamManager::onGameLobbyJoinRequested(GameLobbyJoinRequested_t* pCallback)
 
 void SteamManager::onLobbyCreated(LobbyCreated_t* pCallback, bool bIOFailure) {
     if (bIOFailure || pCallback->m_eResult != k_EResultOK) {
-        printf("[SteamManager] ERREUR creation du lobby (result=%d, IOFailure=%d)\n",
+        logPrintf("[SteamManager] ERREUR creation du lobby (result=%d, IOFailure=%d)\n",
                pCallback->m_eResult, bIOFailure);
         return;
     }
@@ -330,7 +331,7 @@ void SteamManager::onLobbyCreated(LobbyCreated_t* pCallback, bool bIOFailure) {
     m_currentLobby = CSteamID(pCallback->m_ulSteamIDLobby);
     m_inLobby      = true;
 
-    printf("[SteamManager] Lobby cree : %llu\n", m_currentLobby.ConvertToUint64());
+    logPrintf("[SteamManager] Lobby cree : %llu\n", m_currentLobby.ConvertToUint64());
 
     // Définir les métadonnées du lobby (filtre anti-collision Spacewar)
     setLobbyMetadata(m_currentLobby);
@@ -347,7 +348,7 @@ void SteamManager::onLobbyCreated(LobbyCreated_t* pCallback, bool bIOFailure) {
 
 void SteamManager::onLobbyEnter(LobbyEnter_t* pCallback) {
     if (pCallback->m_EChatRoomEnterResponse != k_EChatRoomEnterResponseSuccess) {
-        printf("[SteamManager] ERREUR: echec pour rejoindre le lobby (code=%d)\n",
+        logPrintf("[SteamManager] ERREUR: echec pour rejoindre le lobby (code=%d)\n",
                pCallback->m_EChatRoomEnterResponse);
         return;
     }
@@ -355,7 +356,7 @@ void SteamManager::onLobbyEnter(LobbyEnter_t* pCallback) {
     m_currentLobby = CSteamID(pCallback->m_ulSteamIDLobby);
     m_inLobby      = true;
 
-    printf("[SteamManager] Entre dans le lobby %llu\n", m_currentLobby.ConvertToUint64());
+    logPrintf("[SteamManager] Entre dans le lobby %llu\n", m_currentLobby.ConvertToUint64());
 
     if (m_onLobbyEntered) {
         m_onLobbyEntered(m_currentLobby);
@@ -377,7 +378,7 @@ void SteamManager::onLobbyChatUpdate(LobbyChatUpdate_t* pCallback) {
         if (flags & (k_EChatMemberStateChangeLeft |
                      k_EChatMemberStateChangeDisconnected |
                      k_EChatMemberStateChangeKicked)) {
-            printf("[SteamManager] Joueur local a quitte le lobby.\n");
+            logPrintf("[SteamManager] Joueur local a quitte le lobby.\n");
             m_inLobby = false;
             m_currentLobby = CSteamID();
             if (m_onLobbyLeft) {
@@ -386,7 +387,7 @@ void SteamManager::onLobbyChatUpdate(LobbyChatUpdate_t* pCallback) {
         }
     } else {
         const char* name = SteamFriends()->GetFriendPersonaName(userChanged);
-        printf("[SteamManager] Changement dans le lobby pour %s (SteamID %llu)\n",
+        logPrintf("[SteamManager] Changement dans le lobby pour %s (SteamID %llu)\n",
                name, userChanged.ConvertToUint64());
     }
 }
