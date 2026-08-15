@@ -124,7 +124,8 @@
       <IgnoreSpecificDefaultLibraries>LIBCMT;LIBCPMT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /D "$(ProjectDir)dependencies\bin\*.dll" "$(OutDir)"</Command>
+      <Command>xcopy /Y /D "$(ProjectDir)dependencies\bin\*.dll" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -144,6 +145,9 @@
       <AdditionalDependencies>glfw3.lib;steam_api64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMT;LIBCPMT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /D "$(ProjectDir)dependencies\bin\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AABB.h" />
