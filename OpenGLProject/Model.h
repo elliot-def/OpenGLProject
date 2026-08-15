@@ -19,7 +19,15 @@ class TextureManager;
 class Camera;
 class LightManager;
 
+// Debug -> assimp debug (mtd) ; Release -> assimp release (mt).
+// Ne PAS linker la version debug d'Assimp en Release : sa DLL depend du
+// runtime C++ debug (VCRUNTIME140D.dll, MSVCP140D.dll, ucrtbased.dll) qui
+// n'est pas redistribuable et absent des machines sans Visual Studio.
+#ifdef _DEBUG
 #pragma comment(lib, "assimp-vc143-mtd.lib")
+#else
+#pragma comment(lib, "assimp-vc143-mt.lib")
+#endif
 
 // Structure pour représenter une bounding box
 struct BoundingBox {
