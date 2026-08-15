@@ -176,10 +176,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
     for (auto& item : m_items) {
         if (item.contains(mouseX, mouseY) && item.callback) {
             item.callback();
-            Sound* clickSound = m_soundManager->get("menu_click_sound");
-            if (clickSound) {
-                clickSound->play();
-            }
+            playClickSound();
             return true;
         }
     }
@@ -187,10 +184,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
     for (const auto& shape : m_shapes) {
         if (shape.second->contains(mouseX, mouseY) && shape.second->callback) {
             shape.second->callback();
-            Sound* clickSound = m_soundManager->get("menu_click_sound");
-            if (clickSound) {
-                clickSound->play();
-            }
+            playClickSound();
             return true;
         }
     }
@@ -200,10 +194,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
         if (!checkbox || !checkbox->input) continue;
         if (checkbox->input->isPointInside(mouseX, mouseY)) {
             checkbox->input->toggle();
-            Sound* clickSound = m_soundManager->get("menu_click_sound");
-            if (clickSound) {
-                clickSound->play();
-            }
+            playClickSound();
             return true;
         }
     }
@@ -214,10 +205,7 @@ bool Menu::handleClick(double mouseX, double mouseY) {
         bool wasOpen = select->input->isOpen();
         select->input->handleClick(mouseX, mouseY);
         if (wasOpen || select->input->isOpen()) {
-            Sound* clickSound = m_soundManager->get("menu_click_sound");
-            if (clickSound) {
-                clickSound->play();
-            }
+            playClickSound();
             return true;
         }
     }

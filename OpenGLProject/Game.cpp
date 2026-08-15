@@ -103,7 +103,7 @@ void Game::initialize() {
     m_steamManager = std::make_unique<SteamManager>();
     bool steamOk = false;
     if (m_offlineMode) {
-        printf("[Game] Mode hors-ligne force (-offline/-nosteam) : Steam ignore, manette via XInput.\n");
+        logPrintf("[Game] Mode hors-ligne force (-offline/-nosteam) : Steam ignore, manette via XInput.\n");
     } else {
         steamOk = m_steamManager->init();
     }

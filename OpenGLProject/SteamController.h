@@ -48,5 +48,11 @@ private:
     std::array<float, GLFW_GAMEPAD_AXIS_LAST + 1> m_axes{};
     std::array<float, GLFW_GAMEPAD_AXIS_LAST + 1> m_prevAxes{};
 
+    // Delai de grace au debranchement : nombre de sondages consecutifs sans
+    // manette avant de la considerer vraiment debranchee. Filtre le
+    // clignotement au branchement (Steam re-applique la config a chaud).
+    static constexpr int kDisconnectGraceFrames = 30; // ~0.5s a 60 FPS
+    int m_disconnectGraceFrames = 0;
+
     bool init();
 };

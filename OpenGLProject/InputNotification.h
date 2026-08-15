@@ -12,6 +12,17 @@ enum class InputSource {
     CONTROLLER
 };
 
+// Type de notification affichee :
+//   - SOURCE_SWITCH : bascule clavier/souris <-> manette par l'usage
+//     ("Manette" / "Clavier & Souris")
+//   - CONNECTED     : manette branchee a chaud ("Manette branchee")
+//   - DISCONNECTED  : manette debranchee ("Manette debranchee")
+enum class NotificationKind {
+    SOURCE_SWITCH,
+    CONNECTED,
+    DISCONNECTED
+};
+
 // Classe InputNotification : petite notification a l'ecran (en haut au
 // centre de la fenetre GLFW) annoncant le passage clavier/souris <-> manette.
 // L'icone est un glyphe de la police kenney (res/fonts/kenney) dessine par
@@ -21,8 +32,11 @@ public:
     // Duree d'affichage de la notification (secondes)
     static constexpr float NOTIFICATION_DURATION = 2.5f;
 
-    // Affiche la notification pour la source donnee (repart le minuteur)
+    // Affiche la notification de bascule de source d'entree (repart le minuteur)
     void show(InputSource source);
+    // Affiche la notification de branchement / debranchement de la manette
+    void showConnected();
+    void showDisconnected();
 
     // True si la notification est encore affichee (minuteur non expire)
     bool isVisible() const;
@@ -37,6 +51,7 @@ public:
 
 private:
     InputSource m_source = InputSource::KEYBOARD_MOUSE;
+    NotificationKind m_kind = NotificationKind::SOURCE_SWITCH;
     std::chrono::steady_clock::time_point m_shownAt{};
     bool m_visible = false;
 

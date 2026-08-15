@@ -103,7 +103,6 @@ protected:
 
     void rebuildFocusTargets();
     void applyFocusHighlight();
-    void playClickSound();
 
     std::vector<std::unique_ptr<TextRenderer>>* m_textRenderers;
 	ShaderManager* m_shaderManager;
@@ -195,6 +194,9 @@ public:
     // Ajuste la sélection (direction : -1 = gauche, +1 = droite) : slider ou
     // option de liste.
     void adjustSelected(int direction);
+    // Joue le son de clic partage des menus (bouton A, clic souris, bouton
+    // B/Retour). Rendu public pour MenuManager::goBack() (retour manette).
+    void playClickSound();
     // Repositionne la sélection sur la première ligne (entrée dans un menu).
     void resetFocus();
     // Position manette courante (index dans m_focusTargets) : MenuManager la

@@ -1,4 +1,5 @@
 #include "MenuManager.h"
+#include "Log.h"
 #include "MainMenu.h"
 #include "PauseMenu.h"
 #include "OptionsMenu.h"
@@ -72,7 +73,10 @@ void MenuManager::changeState(GameState newState, bool restoreFocus) {
     // Retour vers un menu deja visite : on restaure la position manette
     // sauvegardee. Entree en avant (ou sans effet en jeu, getCurrentMenu()
     // retourne nullptr) : la selection repart du premier element.
-    if (restoreFocus) {
+    // Exception : le menu principal repart TOUJOURS sur "Jouer" (premier
+    // element) meme en revenant des Options, sinon on retombe sur l'item
+    // selectionne avant de partir (ex: "Options").
+    if (restoreFocus && newState != STATE_MENU) {
         restoreMenuFocus(getCurrentMenu());
     } else {
         resetCurrentMenuFocus();
@@ -120,7 +124,7 @@ Menu* MenuManager::getCurrentMenu() {
 	case STATE_PLAYING:
 		return nullptr; // Aucun menu à afficher pendant le jeu
     default:
-        printf("Aucun menu a afficher\n");
+        logPrintf("Aucun menu a afficher\n");
 		return m_mainMenu;
         //throw std::runtime_error("Aucun menu a afficher");
     }
@@ -159,7 +163,10 @@ void MenuManager::resetCurrentMenuFocus() {
 void MenuManager::goBack() {
     // Equivalent manette (bouton B) du bouton "Retour" du menu courant.
     switch (m_currentState) {
-    case STATE_OPTIONS:
+    case STATE_OPTIONS: {
+        // Meme retour sonore que le bouton "Retour" clique a la souris.
+        if (Menu* menu = getCurrentMenu()) menu->playClickSound();
+
         if (m_showKeyBindings || m_showControllerBindings) {
             // Sous-menu de bindings : retour vers les Options. Comme le
             // bouton "Retour", on annule une capture en cours.
@@ -175,6 +182,7 @@ void MenuManager::goBack() {
             m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU, true);
         }
         break;
+    }
     default:
         // Menu principal / pause / jeu : pas de menu precedent a rejoindre.
         break;

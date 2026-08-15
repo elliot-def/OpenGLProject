@@ -49,7 +49,7 @@ public:
 	std::chrono::system_clock::time_point getLastUpdateTime() { return m_lastUpdateTime; };
     InputContext getContext() { return m_context; };
 
-    void setContext(InputContext context) { m_context = context; };
+    void setContext(InputContext context) { m_context = context; resetNavState(); };
 
     // Source d'entree actuellement activee (clavier/souris ou manette) :
     // mise a jour dynamiquement dans update() a la moindre activite.
@@ -167,6 +167,15 @@ private:
     AxisNav m_navAxisY; // haut/bas : déplacer la sélection
     AxisNav m_navAxisX; // gauche/droite : ajuster (sliders / listes)
     int axisStep(AxisNav& nav, float value);
+    // Valeur de navigation effective sur un axe du stick gauche, en combinant
+    // la croix directionnelle (D-pad, prioritaire, numerique +-1) et le stick
+    // (analogique). axis = GLFW_GAMEPAD_AXIS_LEFT_Y ou LEFT_X.
+    float navAxisValue(int axis) const;
+    // Reinitialise l'etat de repetition de la navigation (au changement de
+    // contexte/menu) : une direction encore tenue (stick ou croix) pendant une
+    // transition ne doit pas declencher un deplacement immediat dans le
+    // nouveau menu (seule la repetition au maintien repart).
+    void resetNavState();
     // Navigation dans les menus (appelée quand le contexte n'est pas GAME).
     void updateMenuNavigation();
 

@@ -24,6 +24,21 @@ static std::string utf8Encode(unsigned int codepoint) {
 
 void InputNotification::show(InputSource source) {
     m_source = source;
+    m_kind = NotificationKind::SOURCE_SWITCH;
+    m_visible = true;
+    m_shownAt = std::chrono::steady_clock::now();
+}
+
+void InputNotification::showConnected() {
+    m_source = InputSource::CONTROLLER;
+    m_kind = NotificationKind::CONNECTED;
+    m_visible = true;
+    m_shownAt = std::chrono::steady_clock::now();
+}
+
+void InputNotification::showDisconnected() {
+    m_source = InputSource::CONTROLLER;
+    m_kind = NotificationKind::DISCONNECTED;
     m_visible = true;
     m_shownAt = std::chrono::steady_clock::now();
 }
@@ -39,22 +54,38 @@ void InputNotification::draw(TextRenderer* controllerIcons, TextRenderer* keyboa
                              TextRenderer* textRenderer) {
     if (!isVisible() || !controllerIcons || !keyboardIcons || !textRenderer) return;
 
-    // ── Contenu selon la source active ──
-    std::string label = (m_source == InputSource::CONTROLLER) ? "Manette" : "Clavier & Souris";
+    // ── Contenu selon le type de notification ──
+    // Pas d'accents : l'ecran est rendu avec une police ASCII (voir agent.md).
+    std::string label;
     std::string icon1;  // icone principale
     std::string icon2;  // icone secondaire (souris en mode clavier/souris)
     TextRenderer* iconRenderer = nullptr;
 
-    if (m_source == InputSource::CONTROLLER) {
-        // controller_steam = U+E000 dans la police manette kenney
+    switch (m_kind) {
+    case NotificationKind::CONNECTED:
+        label = "Manette branchee";
+        icon1 = utf8Encode(0xE000);  // controller_steam = U+E000 (police manette)
+        iconRenderer = controllerIcons;
+        break;
+    case NotificationKind::DISCONNECTED:
+        label = "Manette debranchee";
         icon1 = utf8Encode(0xE000);
         iconRenderer = controllerIcons;
-    }
-    else {
-        // keyboard = U+E000, mouse = U+E0E1 dans la police clavier/souris kenney
-        icon1 = utf8Encode(0xE000);
-        icon2 = utf8Encode(0xE0E1);
-        iconRenderer = keyboardIcons;
+        break;
+    case NotificationKind::SOURCE_SWITCH:
+    default:
+        if (m_source == InputSource::CONTROLLER) {
+            label = "Manette";
+            icon1 = utf8Encode(0xE000);
+            iconRenderer = controllerIcons;
+        } else {
+            label = "Clavier & Souris";
+            // keyboard = U+E000, mouse = U+E0E1 dans la police clavier/souris kenney
+            icon1 = utf8Encode(0xE000);
+            icon2 = utf8Encode(0xE0E1);
+            iconRenderer = keyboardIcons;
+        }
+        break;
     }
 
     // ── Largeurs pour centrer le groupe [icones][texte] ──

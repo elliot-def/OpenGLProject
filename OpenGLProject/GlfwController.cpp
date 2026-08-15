@@ -1,4 +1,5 @@
 #include "GlfwController.h"
+#include "Log.h"
 
 #include <cmath>
 #include <cstdio>
@@ -17,20 +18,39 @@ bool GlfwController::poll() {
     // peripheriques, Steam Input, manette rebranchee sur un autre index...) :
     // on cherche le premier joystick reconnu comme gamepad.
     const bool wasConnected = m_connected;
-    m_connected = false;
+
+    int foundId = -1;
     for (int jid = GLFW_JOYSTICK_1; jid <= GLFW_JOYSTICK_LAST; ++jid) {
         if (glfwJoystickIsGamepad(jid) == GLFW_TRUE) {
-            m_joystickId = jid;
-            m_connected = true;
+            foundId = jid;
             break;
         }
     }
 
+    if (foundId >= 0) {
+        // Manette presente : reset du delai de grace
+        m_joystickId = foundId;
+        m_disconnectGraceFrames = 0;
+        m_connected = true;
+    } else if (m_connected) {
+        // Manette absente : delai de grace pour filtrer le clignotement au
+        // branchement (re-enumeration USB, client Steam en arriere-plan qui
+        // fait disparaitre la manette 1-2 frames puis la re-fait apparaitre).
+        // On la considere encore connectee (etat vide : aucun input fantome)
+        // tant que le delai n'est pas expire.
+        if (m_disconnectGraceFrames < kDisconnectGraceFrames) {
+            ++m_disconnectGraceFrames;
+            m_state = GLFWgamepadstate{};
+            return false;
+        }
+        m_connected = false;
+    }
+
     if (m_connected != wasConnected) {
         if (m_connected) {
-            printf("[GlfwController] Manette XInput detectee (joystick %d)\n", m_joystickId);
+            logPrintf("[GlfwController] Manette XInput detectee (joystick %d)\n", m_joystickId);
         } else {
-            printf("[GlfwController] Manette XInput deconnectee\n");
+            logPrintf("[GlfwController] Manette XInput deconnectee\n");
         }
     }
 

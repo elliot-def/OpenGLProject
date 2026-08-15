@@ -22,4 +22,10 @@ private:
     bool m_connected = false;
     GLFWgamepadstate m_state{};     // Etat courant (apres poll)
     GLFWgamepadstate m_prevState{}; // Etat du frame precedent (edge detection)
+
+    // Delai de grace au debranchement : nombre de sondages consecutifs sans
+    // manette avant de la considerer vraiment debranchee. Filtre le
+    // clignotement (re-enumeration USB / client Steam) au branchement.
+    static constexpr int kDisconnectGraceFrames = 30; // ~0.5s a 60 FPS
+    int m_disconnectGraceFrames = 0;
 };

@@ -1,4 +1,5 @@
 #include "LoadingScreen.h"
+#include "Log.h"
 #include "TextRenderer.h"
 #include "constants/window.h"
 
@@ -107,7 +108,7 @@ static unsigned int compileProgram() {
         if (!ok) {
             char log[512];
             glGetShaderInfoLog(s, 511, nullptr, log);
-            printf("[LoadingScreen] ERREUR compile shader: %s\n", log);
+            logPrintf("[LoadingScreen] ERREUR compile shader: %s\n", log);
         }
         return s;
     };
@@ -125,7 +126,7 @@ static unsigned int compileProgram() {
     if (!ok) {
         char log[512];
         glGetProgramInfoLog(prog, 511, nullptr, log);
-        printf("[LoadingScreen] ERREUR link: %s\n", log);
+        logPrintf("[LoadingScreen] ERREUR link: %s\n", log);
     }
 
     glDeleteShader(vs);
@@ -145,7 +146,7 @@ LoadingScreen::LoadingScreen() {
     m_stepLoc     = glGetUniformLocation(m_shader, "uStep");
     m_stepCntLoc  = glGetUniformLocation(m_shader, "uStepCount");
     glGenVertexArrays(1, &m_vao);
-    printf("[LoadingScreen] Initialise.\n");
+    logPrintf("[LoadingScreen] Initialise.\n");
 }
 
 LoadingScreen::~LoadingScreen() {

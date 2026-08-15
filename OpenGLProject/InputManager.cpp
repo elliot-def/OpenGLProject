@@ -24,6 +24,15 @@
 
 using json = nlohmann::json;
 
+// ── CORRECTION TEMPORAIRE : Steam Input force hors-ligne ─────────────────
+// Avec l'AppID placeholder 480 (Spacewar), SteamAPI_InitEx suffit a faire
+// cacher la manette du XInput par le client Steam, mais la config Steam Input
+// du jeu (manifest 'Game', bloc "configurations" vide) n'est jamais chargee :
+// la manette tombe dans un trou (voir SteamController::init()). On force donc
+// XInput/GLFW meme en ligne. Pour reactiver Steam Input, repasser ce flag a
+// true ET fournir un vrai AppID Steamworks + une configuration dans le manifest.
+constexpr bool kUseSteamInput = false;
+
 InputManager::InputManager(Game* game, MenuManager* menuManager, Window* window, Player* player)
     : m_game(game), m_menuManager(menuManager), m_window(window), m_player(player) {
     m_notification = std::make_unique<InputNotification>();
@@ -38,7 +47,7 @@ InputManager::InputManager(Game* game, MenuManager* menuManager, Window* window,
 
     bool steamOnline = m_game && m_game->getSteamManager()
                     && m_game->getSteamManager()->isInitialized();
-    if (steamOnline) {
+    if (kUseSteamInput && steamOnline) {
         m_steamController = std::make_unique<SteamInputController>();
         if (m_steamController->isAvailable()) {
             m_controller = m_steamController.get();
@@ -48,7 +57,7 @@ InputManager::InputManager(Game* game, MenuManager* menuManager, Window* window,
             m_steamController.reset();
         }
     } else {
-        std::cout << "[Input] Mode manette : XInput (hors-connexion).\n";
+        std::cout << "[Input] Mode manette : XInput (GLFW).\n";
     }
 
     // Bindings depuis res/keys.json (fallback sur les defauts de ConfigKeys)
@@ -421,8 +430,8 @@ void InputManager::updateMenuNavigation() {
 	    m_menuManager->activateControllerSelection();
 	}
 
-	float x = m_controller->getAxisValue(ConfigKeys::CONTROLLER_MOVE_X_AXIS);
-	float y = m_controller->getAxisValue(ConfigKeys::CONTROLLER_MOVE_Y_AXIS);
+	float x = navAxisValue(ConfigKeys::CONTROLLER_MOVE_X_AXIS);
+	float y = navAxisValue(ConfigKeys::CONTROLLER_MOVE_Y_AXIS);
 
 	// Stick haut/bas : déplace la sélection (haut = valeur négative)
 	int stepY = axisStep(m_navAxisY, y);
@@ -471,6 +480,40 @@ int InputManager::axisStep(AxisNav& nav, float value) {
 	    return dir;
 	}
 	return 0;
+}
+
+float InputManager::navAxisValue(int axis) const {
+	// Croix directionnelle (D-pad) prioritaire : +-1.0 numerique si pressee,
+	// sinon la valeur analogique du stick gauche. Utilise les boutons
+	// GLFW_GAMEPAD_BUTTON_DPAD_* (meme source XInput que le stick).
+	int negButton, posButton;
+	if (axis == GLFW_GAMEPAD_AXIS_LEFT_Y) {
+	    negButton = GLFW_GAMEPAD_BUTTON_DPAD_UP;    // haut
+	    posButton = GLFW_GAMEPAD_BUTTON_DPAD_DOWN;  // bas
+	} else {
+	    negButton = GLFW_GAMEPAD_BUTTON_DPAD_LEFT;  // gauche
+	    posButton = GLFW_GAMEPAD_BUTTON_DPAD_RIGHT; // droite
+	}
+	if (!m_controller) return 0.0f;
+	if (m_controller->isButtonPressed(negButton)) return -1.0f;
+	if (m_controller->isButtonPressed(posButton)) return 1.0f;
+	return m_controller->getAxisValue(axis);
+}
+
+void InputManager::resetNavState() {
+    // On amorce la direction avec la valeur courante (stick ou croix
+    // directionnelle) : une direction encore tenue pendant la transition
+    // n'est pas traitee comme une nouvelle pression (pas de pas immediat),
+    // seule la repetition au maintien repart.
+    auto prime = [](AxisNav& nav, float value) {
+        nav.holdDir = (value > 0.5f) ? 1 : (value < -0.5f ? -1 : 0);
+        nav.holdStart = std::chrono::steady_clock::now();
+        nav.repeating = false;
+    };
+    const float y = navAxisValue(ConfigKeys::CONTROLLER_MOVE_Y_AXIS);
+    const float x = navAxisValue(ConfigKeys::CONTROLLER_MOVE_X_AXIS);
+    prime(m_navAxisY, y);
+    prime(m_navAxisX, x);
 }
 
 void InputManager::update() {
@@ -572,28 +615,33 @@ void InputManager::update() {
 		}
 	}
 
-	// ── 3. Bascule dynamique de la source d'entree + notification ──
+	// ── 3. Branchement/debranchement + bascule dynamique de la source ──
 	// Clavier/souris ET manette restent fonctionnels en permanence : la
 	// bascule ne change que la source "active" (affichee par la notification
 	// et consultable via getActiveSource()). La manette passe devant le
 	// clavier si les deux arrivent le meme frame.
-	if (controllerActivity && m_activeSource != InputSource::CONTROLLER) {
+	const bool controllerConnected = m_controller->isConnected();
+	const bool justConnected = controllerConnected && !m_lastControllerConnected;
+	const bool justDisconnected = !controllerConnected && m_lastControllerConnected;
+
+	if (justConnected) {
+		// Manette branchee a chaud : bascule immediate + notification dediee
+		m_activeSource = InputSource::CONTROLLER;
+		m_notification->showConnected();
+	}
+	else if (justDisconnected) {
+		// Manette debranchee : notification + retour clavier/souris si c'etait
+		// la source active.
+		m_notification->showDisconnected();
+		if (m_activeSource == InputSource::CONTROLLER) {
+			m_activeSource = InputSource::KEYBOARD_MOUSE;
+		}
+	}
+	else if (controllerActivity && m_activeSource != InputSource::CONTROLLER) {
 		m_activeSource = InputSource::CONTROLLER;
 		m_notification->show(InputSource::CONTROLLER);
 	}
 	else if (keyboardActivity && m_activeSource != InputSource::KEYBOARD_MOUSE) {
-		m_activeSource = InputSource::KEYBOARD_MOUSE;
-		m_notification->show(InputSource::KEYBOARD_MOUSE);
-	}
-
-	// ── 3bis. Debranchement de la manette (hot-unplug) ──
-	// Miroir du branchement : si la manette active vient d'etre debranchee,
-	// on rebascule immediatement sur clavier/souris avec une notification.
-	// (Le branchement, lui, est gere par controllerActivity ci-dessus : les
-	// poll() retournent true sur une connexion.)
-	const bool controllerConnected = m_controller->isConnected();
-	if (!controllerConnected && m_lastControllerConnected
-	    && m_activeSource == InputSource::CONTROLLER) {
 		m_activeSource = InputSource::KEYBOARD_MOUSE;
 		m_notification->show(InputSource::KEYBOARD_MOUSE);
 	}

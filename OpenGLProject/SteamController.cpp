@@ -1,4 +1,5 @@
 #include "SteamController.h"
+#include "Log.h"
 
 #include "dependencies/steam/steam_api.h"
 
@@ -17,14 +18,14 @@
 bool SteamInputController::init() {
     ISteamInput* input = SteamInput();
     if (!input) {
-        printf("[SteamController] SteamInput() indisponible.\n");
+        logPrintf("[SteamController] SteamInput() indisponible.\n");
         return false;
     }
 
     // bExplicitlyCallRunFrame = false : Steam Input est mis a jour par
     // SteamAPI_RunCallbacks() (deja appele chaque frame par SteamManager).
     if (!input->Init(false)) {
-        printf("[SteamController] SteamInput()->Init() a echoue (Steam Input desactive ?).\n");
+        logPrintf("[SteamController] SteamInput()->Init() a echoue (Steam Input desactive ?).\n");
         return false;
     }
     m_initialized = true;
@@ -33,7 +34,7 @@ bool SteamInputController::init() {
     std::filesystem::path manifest =
         std::filesystem::absolute(Constants::File::STEAM_INPUT_MANIFEST_PATH);
     if (!input->SetInputActionManifestFilePath(manifest.string().c_str())) {
-        printf("[SteamController] Avertissement : manifest d'actions introuvable/invalide (%s).\n",
+        logPrintf("[SteamController] Avertissement : manifest d'actions introuvable/invalide (%s).\n",
                manifest.string().c_str());
         // Non fatal : on continue, les handles d'actions seront peut-etre 0.
     }
@@ -62,7 +63,7 @@ bool SteamInputController::init() {
         InputHandle_t tmpHandles[STEAM_INPUT_MAX_COUNT];
         int nbControllers = input->GetConnectedControllers(tmpHandles);
         uint16 cfg = input->GetSessionInputConfigurationSettings();
-        printf("[SteamController] Action set 'Game' introuvable. Diagnostic : "
+        logPrintf("[SteamController] Action set 'Game' introuvable. Diagnostic : "
                "ship_controls=%llu menu_controls=%llu configSettings=0x%04X nbControllers=%d\n",
                (unsigned long long)input->GetActionSetHandle("ship_controls"),
                (unsigned long long)input->GetActionSetHandle("menu_controls"),
@@ -88,7 +89,7 @@ bool SteamInputController::init() {
     m_sprint = input->GetAnalogActionHandle("Sprint");
 
     m_available = true;
-    printf("[SteamController] Steam Input initialise (action set 'Game').\n");
+    logPrintf("[SteamController] Steam Input initialise (action set 'Game').\n");
     return true;
 }
 
@@ -114,9 +115,22 @@ bool SteamInputController::poll() {
     // Enumere les manettes Steam Input actives pour ce jeu.
     InputHandle_t handles[STEAM_INPUT_MAX_COUNT];
     int count = input->GetConnectedControllers(handles);
+    const bool wasConnected = m_connected;
+
     if (count <= 0) {
+        if (m_connected && m_disconnectGraceFrames < kDisconnectGraceFrames) {
+            // Delai de grace (meme logique que GlfwController) : filtre le
+            // clignotement au branchement (Steam re-applique la config a la
+            // manette fraichement branchee, la fait disparaitre 1-2 frames).
+            ++m_disconnectGraceFrames;
+            m_buttons = {};
+            m_prevButtons = {};
+            m_axes = {};
+            m_prevAxes = {};
+            return false;
+        }
         if (m_connected) {
-            printf("[SteamController] Manette Steam Input deconnectee.\n");
+            logPrintf("[SteamController] Manette Steam Input deconnectee.\n");
         }
         m_connected = false;
         m_handle = 0;
@@ -127,16 +141,15 @@ bool SteamInputController::poll() {
         return false;
     }
 
-    const bool wasConnected = m_connected;
     m_handle = handles[0]; // premiere manette (suffisant en solo)
+    m_disconnectGraceFrames = 0;
     m_connected = true;
     if (!wasConnected) {
-        printf("[SteamController] Manette Steam Input detectee (handle %llu).\n",
+        logPrintf("[SteamController] Manette Steam Input detectee (handle %llu).\n",
                static_cast<unsigned long long>(m_handle));
-        // Manette branchee a chaud (hotplug) : considere comme une activite,
-        // pour que la bascule de source d'entree + la notification "Manette"
-        // apparaissent immediatement, sans attendre le premier appui.
-        return true;
+        // PAS de return ici : on lit l'etat et on (re)active l'action set des
+        // ce frame, pour que la manette branchee a chaud soit fonctionnelle
+        // immediatement (l'activation est asynchrone cote Steam).
     }
 
     // Etat precedent pour l'edge detection
@@ -147,32 +160,38 @@ bool SteamInputController::poll() {
     // les changements d'etat du jeu sans gestion fine des transitions).
     input->ActivateActionSet(m_handle, m_actionSet);
 
-    // Boutons
+    // Boutons. bActive=false tant que la config Steam Input n'est pas
+    // appliquee au controleur branche a chaud : on ignore ces donnees pour ne
+    // pas traiter un etat transitoire comme une entree (ou un appui fantome).
     for (auto& entry : m_digital) {
         int button = entry.first;
         InputDigitalActionHandle_t handle = entry.second;
         if (handle) {
-            m_buttons[button] = input->GetDigitalActionData(m_handle, handle).bState;
+            InputDigitalActionData_t d = input->GetDigitalActionData(m_handle, handle);
+            m_buttons[button] = d.bActive && d.bState;
         }
     }
 
     // Axes
     if (m_move) {
         InputAnalogActionData_t d = input->GetAnalogActionData(m_handle, m_move);
-        m_axes[GLFW_GAMEPAD_AXIS_LEFT_X] = d.x;
-        m_axes[GLFW_GAMEPAD_AXIS_LEFT_Y] = d.y;
+        m_axes[GLFW_GAMEPAD_AXIS_LEFT_X] = d.bActive ? d.x : 0.0f;
+        m_axes[GLFW_GAMEPAD_AXIS_LEFT_Y] = d.bActive ? d.y : 0.0f;
     }
     if (m_look) {
         InputAnalogActionData_t d = input->GetAnalogActionData(m_handle, m_look);
-        m_axes[GLFW_GAMEPAD_AXIS_RIGHT_X] = d.x;
-        m_axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] = d.y;
+        m_axes[GLFW_GAMEPAD_AXIS_RIGHT_X] = d.bActive ? d.x : 0.0f;
+        m_axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] = d.bActive ? d.y : 0.0f;
     }
     if (m_sprint) {
         InputAnalogActionData_t d = input->GetAnalogActionData(m_handle, m_sprint);
-        m_axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] = d.x;
+        m_axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER] = d.bActive ? d.x : 0.0f;
     }
 
-    // Activite = un bouton vient d'etre presse OU un axe vient de bouger
+    // Activite = branchement a chaud OU un bouton vient d'etre presse OU un
+    // axe vient de bouger (retourne true sur la connexion pour declencher la
+    // bascule de source + la notification sans attendre un appui).
+    if (m_connected && !wasConnected) return true;
     for (int b = 0; b <= GLFW_GAMEPAD_BUTTON_LAST; ++b) {
         if (isButtonJustPressed(b)) return true;
     }

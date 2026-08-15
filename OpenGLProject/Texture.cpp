@@ -6,6 +6,7 @@
 #include <stb/stb_image.h>
 
 #include "Texture.h"
+#include "Log.h"
 #include "ImageLoader.h"
 #include "Shader.h"
 
@@ -16,7 +17,7 @@
 
 Texture::Texture(const std::string& filePath, const int textureID, float shininess, bool hasSpecular)
     : m_filePath(filePath), m_textureID(textureID), m_shininess(shininess) {
-	printf("Loading texture from: %s\n", filePath.c_str());
+	logPrintf("Loading texture from: %s\n", filePath.c_str());
     m_hasSpecular = hasSpecular; // Si il trouve _specular.png dans le filename
     loadTexture(m_filePath, m_textureID);
 

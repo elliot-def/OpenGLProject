@@ -25,6 +25,6 @@
     "Push": 2,
     "ThirdPerson": 3
   },
-  "controller_sensitivity": 0.30000001192092896,
-  "mouse_sensitivity": 0.05000000074505806
+  "controller_sensitivity": 0.1,
+  "mouse_sensitivity": 0.05
 }

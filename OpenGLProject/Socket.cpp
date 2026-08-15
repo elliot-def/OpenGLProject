@@ -1,4 +1,5 @@
 #include "Socket.h"
+#include "Log.h"
 #include "Packet.h"
 
 #include "constants/network.h"
@@ -10,22 +11,22 @@ void Socket::connectToServerAsync(const ServerInfo& serverInfo) {
 }
 
 bool Socket::connectToServer(const ServerInfo& serverInfo) {
-    printf("[Socket] Initialisation Winsock...\n");
+    logPrintf("[Socket] Initialisation Winsock...\n");
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        printf("[Socket] ERREUR: WSAStartup failed\n");
+        logPrintf("[Socket] ERREUR: WSAStartup failed\n");
         return false;
     }
 
-    printf("[Socket] Creation du socket...\n");
+    logPrintf("[Socket] Creation du socket...\n");
     m_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (m_socket == INVALID_SOCKET) {
-        printf("[Socket] ERREUR: creation du socket echouee\n");
+        logPrintf("[Socket] ERREUR: creation du socket echouee\n");
         WSACleanup();
         return false;
     }
 
-    printf("[Socket] Tentative de connexion a %s:%d...\n", serverInfo.ip.c_str(), serverInfo.port);
+    logPrintf("[Socket] Tentative de connexion a %s:%d...\n", serverInfo.ip.c_str(), serverInfo.port);
     sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(serverInfo.port);
@@ -35,19 +36,19 @@ bool Socket::connectToServer(const ServerInfo& serverInfo) {
         int error = WSAGetLastError();
         switch (error) {
         case WSAETIMEDOUT:
-            printf("[Socket]   -> Le serveur n'a pas repondu (timeout)\n");
-            printf("[Socket]   -> Verifier que le serveur est demarre\n");
+            logPrintf("[Socket]   -> Le serveur n'a pas repondu (timeout)\n");
+            logPrintf("[Socket]   -> Verifier que le serveur est demarre\n");
             break;
         case WSAECONNREFUSED:
-            printf("[Socket]   -> Connexion refusee, il y a-t-il deja une autre connexion en cours ?\n");
-            printf("[Socket]   -> Le port est peut-etre ferme\n");
+            logPrintf("[Socket]   -> Connexion refusee, il y a-t-il deja une autre connexion en cours ?\n");
+            logPrintf("[Socket]   -> Le port est peut-etre ferme\n");
             break;
         case WSAEHOSTUNREACH:
-            printf("[Socket]   -> Hote injoignable\n");
-            printf("[Socket]   -> Verifier l'adresse IP\n");
+            logPrintf("[Socket]   -> Hote injoignable\n");
+            logPrintf("[Socket]   -> Verifier l'adresse IP\n");
             break;
         default:
-            printf("[Socket]   -> Erreur inconnue\n");
+            logPrintf("[Socket]   -> Erreur inconnue\n");
         }
 
         closesocket(m_socket);
@@ -55,7 +56,7 @@ bool Socket::connectToServer(const ServerInfo& serverInfo) {
         return false;
     }
 
-    printf("[Socket] Connexion reussie!\n");
+    logPrintf("[Socket] Connexion reussie!\n");
 
     u_long mode = 1;
     ioctlsocket(m_socket, FIONBIO, &mode);
@@ -133,7 +134,7 @@ void Socket::networkLoop() {
         }
         else if (n == 0 || (n == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)) {
             // Déconnecté du serveur
-            printf("[Socket] Deconnecte du serveur\n");
+            logPrintf("[Socket] Deconnecte du serveur\n");
 
             std::lock_guard<std::mutex> lock(m_inMutex);
             ClientEvent evt;
