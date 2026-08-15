@@ -21,6 +21,11 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+# Exception : le build Release x64 est distribue via le depot (executable et
+# DLLs necessaires pour jouer sans recompiler). Les .pdb restent ignores
+# (regle *.pdb plus bas).
+!x64/Release/
+!x64/Release/**
 # x64/
 x86/
 [Ww][Ii][Nn]32/
