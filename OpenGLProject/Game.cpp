@@ -259,6 +259,12 @@ void Game::loadResources() {
     // ── Skybox nocturne : cubemap chargé dans le contexte principal ──
     m_scene->createSkybox(Constants::File::SKYBOX_NIGHT_PATH);
 
+    // Prépare la musique de jeu en streaming (Ogg Vorbis via stb_vorbis).
+    // Seul le fichier compressé (~quelques Mo) est lu ici : le décodage PCM se
+    // fait par petits morceaux dans SoundManager::update(), donc plus de freeze
+    // au premier "Jouer" (contrairement à l'ancien chargement du .wav complet).
+    m_soundManager->loadMusic("res/sounds/on&on.ogg");
+
     // ── Partie asynchrone : modèles 3D sur un thread separe ──
     m_modelLoader = std::make_unique<ModelLoader>(m_camera.get(), m_lightManager.get(), m_renderer.get(),
                                                   m_textureManager.get(), m_inputManager.get());
@@ -395,8 +401,10 @@ void Game::update() {
     // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
     m_scene->update(m_renderer->getDeltaTime());
 
-    // En 1P, placer la camera sur la position de la tete du modele anime.
-    if (!m_player->isThirdPerson() && m_humanEntity && m_humanEntity->hasAnimations()) {
+    // Suivre l'os de tete du modele anime (1P ET 3P) : la lampe torche est
+    // attachee a la tete, avec le meme decalage avant que la camera 1P
+    // (CAMERA_FP_LOOK_OFFSET). En 1P, la camera suit aussi la tete.
+    if (m_humanEntity && m_humanEntity->hasAnimations()) {
         Animator* anim = m_humanEntity->getAnimator();
         if (anim) {
             // Chercher le bone de tete dans la boneMap (insensible a la casse)
@@ -415,32 +423,42 @@ void Game::update() {
                 glm::mat4 headMat = anim->getGlobalNodeTransform(headBone);
                 glm::vec3 worldHead = glm::vec3(
                     m_humanEntity->getModelMatrix() * glm::vec4(glm::vec3(headMat[3]), 1.0f));
-                // Ne suivre que X et Z (le Y reste gere par Camera::update()).
-                // Reapplique les offsets ecrases par le setPosition :
-                //  - mouvement lisse (direction de marche × lerp)
-                //  - regard statique (direction du regard, permanent)
-                glm::vec3 camPos = m_camera->getPosition();
+
                 glm::vec3 frontFlat = glm::normalize(glm::vec3(
                     m_camera->getFront().x, 0.0f, m_camera->getFront().z));
+                // Meme decalage avant que la camera 1P : la source sort du
+                // crane (plus de lumiere projetee a l'interieur du corps).
                 glm::vec3 lookOffset = frontFlat * Constants::Camera::CAMERA_FP_LOOK_OFFSET;
-                glm::vec3 newCamPos = glm::vec3(worldHead.x, camPos.y, worldHead.z)
-                    + m_camera->getSmoothedMovementOffset()
-                    + lookOffset;
 
-                // Garde anti-ecran-bleu : une position non finie (NaN/inf,
-                // ex: transform de bone invalide) ou aberrante (> 10m du
-                // joueur) rendrait la camera invisible -> seule la couleur de
-                // clear est rastérisée. On retombe sur les yeux du joueur.
-                const bool finite = std::isfinite(newCamPos.x)
-                    && std::isfinite(newCamPos.y) && std::isfinite(newCamPos.z);
-                const float distToPlayer = glm::length(newCamPos - m_player->getPosition());
-                if (finite && distToPlayer < 10.0f) {
-                    m_camera->setPosition(newCamPos);
-                } else {
-                    m_camera->setPosition(m_player->getEyePosition());
-                    LOG_WARN("[Game] Position camera 1P invalide (bone='%s', "
-                             "finite=%d dist=%.2f), fallback sur les yeux",
-                             headBone.c_str(), finite ? 1 : 0, distToPlayer);
+                // ── Lampe torche attachee a la tete (1P et 3P) ──────────
+                // update() (Scene) vient de la recaler sur les yeux ; on la
+                // repositionne sur l'os de tete + offset avant du regard.
+                m_lightManager->setFlashlightPosition(worldHead + lookOffset);
+
+                // ── Camera 1P : suit la tete (X/Z ; le Y reste gere par
+                // Camera::update()). Reapplique les offsets ecrases par le
+                // setPosition : mouvement lisse + regard statique. ─────────
+                if (!m_player->isThirdPerson()) {
+                    glm::vec3 camPos = m_camera->getPosition();
+                    glm::vec3 newCamPos = glm::vec3(worldHead.x, camPos.y, worldHead.z)
+                        + m_camera->getSmoothedMovementOffset()
+                        + lookOffset;
+
+                    // Garde anti-ecran-bleu : une position non finie (NaN/inf,
+                    // ex: transform de bone invalide) ou aberrante (> 10m du
+                    // joueur) rendrait la camera invisible -> seule la couleur
+                    // de clear est rastérisée. On retombe sur les yeux.
+                    const bool finite = std::isfinite(newCamPos.x)
+                        && std::isfinite(newCamPos.y) && std::isfinite(newCamPos.z);
+                    const float distToPlayer = glm::length(newCamPos - m_player->getPosition());
+                    if (finite && distToPlayer < 10.0f) {
+                        m_camera->setPosition(newCamPos);
+                    } else {
+                        m_camera->setPosition(m_player->getEyePosition());
+                        LOG_WARN("[Game] Position camera 1P invalide (bone='%s', "
+                                 "finite=%d dist=%.2f), fallback sur les yeux",
+                                 headBone.c_str(), finite ? 1 : 0, distToPlayer);
+                    }
                 }
             }
 
@@ -512,26 +530,27 @@ void Game::toggleDebugHUD() {
 
 void Game::changeState(GameState newState, bool restoreFocus) {
     m_menuManager->changeState(newState, restoreFocus);
-    Sound* sound;
     switch (newState) {
     case STATE_MENU:
     case STATE_OPTIONS:
         m_inputManager->setContext(InputContext::MENU);
 		m_window->setCursorCaptured(false);
 		m_soundManager->applyReverbToAll(ReverbPreset::UNDERWATER);
+        m_soundManager->stopMusic();
         break;
     case STATE_PLAYING:
         m_inputManager->setContext(InputContext::GAME);
         m_window->setCursorCaptured(true);
         m_soundManager->applyReverbToAll(ReverbPreset::NONE);
 
-        sound = m_soundManager->load("on&on", "res/sounds/on&on.wav", true, 0.5f, 1.0f);
-        // sound->play();
+        // Musique en streaming : démarre/reprend sans chargement bloquant.
+        m_soundManager->playMusic();
         break;
     case STATE_PAUSED:
         m_inputManager->setContext(InputContext::PAUSED);
         m_window->setCursorCaptured(false);
         m_soundManager->applyReverbToAll(ReverbPreset::UNDERWATER);
+        m_soundManager->pauseMusic();
         break;
     }
 }

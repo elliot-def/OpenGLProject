@@ -16,7 +16,7 @@ public:
     void loadJSON();
     void exportJSON();
 
-    void createOptions(bool isMuted, float volume);
+    void createOptions(bool isMuted, float volume, float musicVolume);
 protected:
 	GameState& m_previousState;
 };

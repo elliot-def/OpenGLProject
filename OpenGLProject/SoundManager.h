@@ -8,6 +8,7 @@
 #include <AL/alc.h>
 
 class Sound;
+class MusicStream;
 class Window;
 
 struct GLFWwindow;
@@ -99,6 +100,33 @@ public:
      * @throws std::out_of_range si le nom est inconnu
      */
     Sound* get(const std::string& name);
+
+    // ─── Musique en streaming ────────────────────────────────────────────────
+
+    /**
+     * @brief Prépare une musique en streaming (Ogg Vorbis).
+     *
+     * Lit uniquement le fichier compressé en mémoire ; le décodage PCM se fait
+     * par petits morceaux dans update(). À appeler une fois au chargement des
+     * ressources (pas de freeze). Le gain appliqué est celui de setMusicVolume().
+     *
+     * @param filePath Chemin du fichier .ogg
+     */
+    MusicStream* loadMusic(const std::string& filePath);
+
+    /// Démarre / reprend la musique en streaming.
+    void playMusic();
+    void pauseMusic();
+    void stopMusic();
+
+    /**
+     * @brief Volume de la musique (0.0 = silence, 1.0 = plein volume).
+     *
+     * Indépendant du volume maître (qui agit sur le listener et donc sur tout).
+     * Appliqué immédiatement à la musique si elle est déjà chargée.
+     */
+    void setMusicVolume(float volume);
+    float getMusicVolume() const { return m_musicVolume; }
 
     // ─── Contrôle global ─────────────────────────────────────────────────────
 
@@ -216,9 +244,11 @@ private:
     ALCcontext* m_context = nullptr;
 
     std::unordered_map<std::string, std::unique_ptr<Sound>> m_sounds;
+    std::unique_ptr<MusicStream> m_music;      // musique de fond en streaming
     std::vector<unsigned int> m_effectSlots;   // Auxiliary effect slots EFX
 
     float m_masterVolume = 1.0f;
+    float m_musicVolume = 0.5f;   // volume de la musique (indépendant du maître)
     bool  m_isMuted = false;
     bool  m_efxAvailable = false;
 

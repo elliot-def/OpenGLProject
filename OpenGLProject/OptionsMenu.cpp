@@ -23,7 +23,7 @@ OptionsMenu::~OptionsMenu() {
     // Nettoyage des ressources si nécessaire
 }
 
-void OptionsMenu::createOptions(bool isMuted, float volume) {
+void OptionsMenu::createOptions(bool isMuted, float volume, float musicVolume) {
     // Sous-menu de reconfiguration des touches clavier/souris (res/keys.json)
     // Contient aussi le slider de sensibilite de la souris.
     addItem("Clavier & Souris", Constants::Window::WINDOW_WIDTH / 2, 620, 200, 50, [this]() {
@@ -43,7 +43,11 @@ void OptionsMenu::createOptions(bool isMuted, float volume) {
         m_soundManager->setMasterVolume(volume);
         });
 
-    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 890, 200, 50, [this]() {
+    addRange("Volume musique", Constants::Window::WINDOW_WIDTH / 2, 880, 300, 25, 0, 2, musicVolume, [this](float musicVolume) {
+        m_soundManager->setMusicVolume(musicVolume);
+        });
+
+    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 950, 200, 50, [this]() {
         // Retour vers le menu precedent : on restaure sa selection manette.
         m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU, true);
         exportJSON();
@@ -56,7 +60,7 @@ void OptionsMenu::loadJSON() {
     // On vérifie directement si le fichier existe
     if (!optionFile.exists()) {
         std::cout << "[Options] Aucun fichier de sauvegarde trouve. Utilisation des valeurs par defaut.\n";
-        createOptions(false, 1.0f);
+        createOptions(false, 1.0f, 0.5f);
         return;
     }
 
@@ -70,13 +74,15 @@ void OptionsMenu::loadJSON() {
         // Extraction des données avec valeurs de secours (fallback) si la clé est absente
         bool isMuted = j.value("muted", false);
         float volume = j.value("volume", 1.0f);
+        float musicVolume = j.value("musicVolume", 0.5f);
 
-        createOptions(isMuted, volume);
+        createOptions(isMuted, volume, musicVolume);
 
         // Application des parametres au SoundManager
         if (m_soundManager) {
             m_soundManager->setMute(isMuted);
             m_soundManager->setMasterVolume(volume);
+            m_soundManager->setMusicVolume(musicVolume);
         }
         // Les bindings et les sensibilites sont charges par l'InputManager
         // depuis res/keys.json (voir InputManager::loadKeyBindings).
@@ -84,7 +90,7 @@ void OptionsMenu::loadJSON() {
         std::cout << "[Options] Parametres charges avec succes.\n";
     }
     catch (const json::parse_error& e) {
-        createOptions(false, 1.0f);
+        createOptions(false, 1.0f, 0.5f);
         std::cerr << "[Options] Erreur lors de la lecture du JSON : " << e.what() << "\n";
     }
 }
@@ -99,6 +105,7 @@ void OptionsMenu::exportJSON() {
         if (m_soundManager) {
             j["muted"] = m_soundManager->isMuted();
             j["volume"] = m_soundManager->getMasterVolume();
+            j["musicVolume"] = m_soundManager->getMusicVolume();
         }
         else {
             throw std::runtime_error("SoundManager non initialise, impossible d'exporter les parametres.");

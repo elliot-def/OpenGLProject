@@ -2,6 +2,7 @@
 
 #include "SoundManager.h"
 #include "Sound.h"
+#include "MusicStream.h"
 #include "Window.h"
 
 #include <glad/glad.h>
@@ -66,6 +67,7 @@ SoundManager::~SoundManager() {
     m_effectSlots.clear();
 
     unloadAll();
+    m_music.reset();
     shutdownOpenAL();
 }
 
@@ -158,6 +160,30 @@ Sound* SoundManager::get(const std::string& name) {
     return it->second.get();
 }
 
+// ─── Musique en streaming ────────────────────────────────────────────────────
+
+MusicStream* SoundManager::loadMusic(const std::string& filePath) {
+    m_music = std::make_unique<MusicStream>(filePath, m_musicVolume);
+    return m_music.get();
+}
+
+void SoundManager::setMusicVolume(float volume) {
+    m_musicVolume = volume;
+    if (m_music) m_music->setGain(volume);
+}
+
+void SoundManager::playMusic() {
+    if (m_music) m_music->play();
+}
+
+void SoundManager::pauseMusic() {
+    if (m_music) m_music->pause();
+}
+
+void SoundManager::stopMusic() {
+    if (m_music) m_music->stop();
+}
+
 // ─── Contrôle global ─────────────────────────────────────────────────────────
 
 void SoundManager::setMasterVolume(float volume) {
@@ -170,17 +196,23 @@ void SoundManager::pauseAll() {
     for (auto& [name, sound] : m_sounds)
         if (sound->isPlaying())
             sound->pause();
+    if (m_music && m_music->isPlaying())
+        m_music->pause();
 }
 
 void SoundManager::resumeAll() {
     for (auto& [name, sound] : m_sounds)
         if (sound->isPaused())
             sound->resume();
+    if (m_music && m_music->isPaused())
+        m_music->resume();
 }
 
 void SoundManager::stopAll() {
     for (auto& [name, sound] : m_sounds)
         sound->stop();
+    if (m_music)
+        m_music->stop();
 }
 
 void SoundManager::setMute(bool mute) {
@@ -388,6 +420,9 @@ void SoundManager::applyReverbToAll(ReverbPreset preset) {
 // ─── Mise à jour ──────────────────────────────────────────────────────────────
 
 void SoundManager::update() {
+    // Re-remplir les buffers de la musique en streaming si nécessaire.
+    if (m_music) m_music->update();
+
     // Rien à faire pour l'instant — OpenAL gère la lecture en interne.
     // On pourrait ici nettoyer les sons one-shot terminés si on les stockait
     // séparément (ex: vector<Sound*> m_oneShotSounds).

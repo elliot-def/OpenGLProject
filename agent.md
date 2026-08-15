@@ -50,6 +50,12 @@ OpenGLProject/
 Toutes les sources `.cpp`/`.h` vivent à plat dans `OpenGLProject/` ; le regroupement visuel
 des filtres de solution (Fichiers sources/Inputs, …) est fait via `.vcxproj.filters`.
 
+> **Règle (Solution Explorer)** : tout fichier ajouté au `.vcxproj` **doit** avoir une entrée
+> correspondante dans `OpenGLProject.vcxproj.filters` avec un enfant `<Filter>…</Filter>`
+> (un dossier virtuel : `Core`, `Input`, `Graphics`, `Sound`, `Menu`, `Resources`, …).
+> **Aucun fichier ne doit rester à la racine** du projet dans l'Explorateur de solutions —
+> un item `<ClCompile Include="Foo.cpp" />` sans `<Filter>` apparaît détaché à la racine.
+
 ---
 
 ## 2. Architecture & flux d'exécution

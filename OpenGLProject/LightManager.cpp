@@ -98,3 +98,11 @@ void LightManager::update() {
     }
     m_flashlight->update(m_player);
 }
+
+void LightManager::setFlashlightPosition(const glm::vec3& position) {
+    // Position seule : la direction reste celle empruntee au joueur
+    // (setBorrowedDirection dans Spotlight::update(Player*)).
+    if (m_flashlight) {
+        m_flashlight->setPosition(position);
+    }
+}

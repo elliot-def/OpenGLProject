@@ -26,6 +26,8 @@
     <Filter Include="Resources\Shaders\Text"><UniqueIdentifier>{00000000-0000-0000-0000-000000000008}</UniqueIdentifier></Filter>
     <Filter Include="Resources\Shaders\Image"><UniqueIdentifier>{00000000-0000-0000-0000-000000000009}</UniqueIdentifier></Filter>
     <Filter Include="Resources\Textures"><UniqueIdentifier>{00000000-0000-0000-0000-00000000000a}</UniqueIdentifier></Filter>
+    <Filter Include="Resources\Shaders\Skybox"><UniqueIdentifier>{00000000-0000-0000-0000-00000000000c}</UniqueIdentifier></Filter>
+    <Filter Include="Dependencies"><UniqueIdentifier>{00000000-0000-0000-0000-00000000000b}</UniqueIdentifier></Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp"><Filter>Core</Filter></ClCompile>
@@ -96,6 +98,12 @@
     <ClCompile Include="Packet.cpp"><Filter>Network</Filter></ClCompile>
     <ClCompile Include="ReceiveBuffer.cpp"><Filter>Network</Filter></ClCompile>
     <ClCompile Include="constants\texture.h"><Filter>Constants</Filter></ClCompile>
+    <ClCompile Include="CharacterAnimationController.cpp"><Filter>Graphics\Animation</Filter></ClCompile>
+    <ClCompile Include="GlbAnimationRepair.cpp"><Filter>Graphics\Animation</Filter></ClCompile>
+    <ClCompile Include="MusicStream.cpp"><Filter>Sound</Filter></ClCompile>
+    <ClCompile Include="OutlinePass.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="Skybox.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="dependencies\stb\stb_vorbis.c"><Filter>Dependencies</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h"><Filter>Core</Filter></ClInclude>
@@ -183,6 +191,8 @@
     <ClInclude Include="constants\window.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="FirstPersonArms.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="File.h"><Filter>Utils</Filter></ClInclude>
+    <ClInclude Include="MusicStream.h"><Filter>Sound</Filter></ClInclude>
+    <ClInclude Include="Skybox.h"><Filter>Graphics</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\cube\cube.frag"><Filter>Resources\Shaders\Cube</Filter></None>
@@ -208,6 +218,9 @@
     <None Include="res\options.json"><Filter>Resources</Filter></None>
     <None Include="res\steam_input_manifest.vdf"><Filter>Resources</Filter></None>
     <None Include="res\textures\crate\details.json"><Filter>Resources\Textures</Filter></None>
+    <None Include="res\keys.json"><Filter>Resources</Filter></None>
+    <None Include="res\shaders\skybox\skybox.frag"><Filter>Resources\Shaders\Skybox</Filter></None>
+    <None Include="res\shaders\skybox\skybox.vert"><Filter>Resources\Shaders\Skybox</Filter></None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\textures\crate\container.png"><Filter>Resources\Textures</Filter></Image>

@@ -28,6 +28,11 @@ public:
     void applyToShader(Shader* shader);
     void update();
 
+    // Attache la lampe torche a une position monde explicite (ex: os de tete
+    // du modele anime). La direction reste celle du joueur (borrowed).
+    // A appeler APRES update() pour ecraser la position par defaut (yeux).
+    void setFlashlightPosition(const glm::vec3& position);
+
     // Accès (lecture) aux sources de lumière : utilisé par Scene pour le rendu
     // instancié des cubes de lumière.
     const std::vector<LightSource*>& getLightSources() const { return m_lightSources; }
