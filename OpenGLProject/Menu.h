@@ -197,6 +197,12 @@ public:
     void adjustSelected(int direction);
     // Repositionne la sélection sur la première ligne (entrée dans un menu).
     void resetFocus();
+    // Position manette courante (index dans m_focusTargets) : MenuManager la
+    // sauvegarde avant un changement de menu pour la restaurer au retour.
+    int getFocusIndex() const { return m_focusIndex; }
+    // Restaure une position manette sauvegardee (bornee a la liste courante ;
+    // 0 si liste vide). Reconstruit la liste des cibles si besoin.
+    void setFocusIndex(int index);
 
     const std::vector<MenuText>& getItems() const { return m_items; }
 

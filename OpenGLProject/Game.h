@@ -40,7 +40,10 @@ public:
 
     void run();
     void stop();
-    void changeState(GameState state);
+    // changeState : restoreFocus=true indique un retour vers un menu deja
+    // visite (la selection manette sauvegardee est restauree au lieu de
+    // repartir du premier element).
+    void changeState(GameState state, bool restoreFocus = false);
 
     // Acces au gestionnaire de menus (ex: sous-menu de touches des Options)
     MenuManager* getMenuManager() { return m_menuManager.get(); }

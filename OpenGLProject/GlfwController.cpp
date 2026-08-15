@@ -45,6 +45,11 @@ bool GlfwController::poll() {
         return false;
     }
 
+    // Une manette vient d'etre branchee (hotplug) : considere comme une
+    // activite, pour que la bascule de source d'entree + la notification
+    // "Manette" apparaissent immediatement, sans attendre le premier appui.
+    if (m_connected && !wasConnected) return true;
+
     // Activite = un bouton vient d'etre presse OU un axe vient de bouger
     for (int b = 0; b <= GLFW_GAMEPAD_BUTTON_LAST; ++b) {
         if (isButtonJustPressed(b)) return true;

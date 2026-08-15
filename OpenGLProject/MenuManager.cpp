@@ -47,8 +47,11 @@ void MenuManager::setInputManager(InputManager* inputManager) {
     if (m_controllerBindingsMenu) m_controllerBindingsMenu->setInputManager(inputManager);
 }
 
-void MenuManager::changeState(GameState newState) {
+void MenuManager::changeState(GameState newState, bool restoreFocus) {
     m_previousState = m_currentState;
+    // On retient la position manette du menu quitte avant de changer d'etat
+    // (au retour dans ce menu, elle sera restauree).
+    saveCurrentMenuFocus();
     m_currentState = newState;
     // En entrant dans les Options, on affiche la page principale (pas un
     // sous-menu laisse ouvert lors d'une session precedente)
@@ -66,9 +69,29 @@ void MenuManager::changeState(GameState newState) {
 	else if (newState == STATE_PLAYING) {
         m_soundManager->stopAll();
 	}
-    // A l'entree d'un menu, la selection manette repart du premier element
-    // (sans effet en jeu, getCurrentMenu() retourne nullptr).
-    resetCurrentMenuFocus();
+    // Retour vers un menu deja visite : on restaure la position manette
+    // sauvegardee. Entree en avant (ou sans effet en jeu, getCurrentMenu()
+    // retourne nullptr) : la selection repart du premier element.
+    if (restoreFocus) {
+        restoreMenuFocus(getCurrentMenu());
+    } else {
+        resetCurrentMenuFocus();
+    }
+}
+
+void MenuManager::saveCurrentMenuFocus() {
+    Menu* menu = getCurrentMenu();
+    if (menu) m_savedFocus[menu] = menu->getFocusIndex();
+}
+
+void MenuManager::restoreMenuFocus(Menu* menu) {
+    if (!menu) return;
+    auto it = m_savedFocus.find(menu);
+    if (it != m_savedFocus.end()) {
+        menu->setFocusIndex(it->second);
+    } else {
+        menu->resetFocus();
+    }
 }
 
 std::string MenuManager::stateToString(GameState state) {
@@ -131,6 +154,31 @@ void MenuManager::adjustControllerSelection(int direction) {
 void MenuManager::resetCurrentMenuFocus() {
     Menu* menu = getCurrentMenu();
     if (menu) menu->resetFocus();
+}
+
+void MenuManager::goBack() {
+    // Equivalent manette (bouton B) du bouton "Retour" du menu courant.
+    switch (m_currentState) {
+    case STATE_OPTIONS:
+        if (m_showKeyBindings || m_showControllerBindings) {
+            // Sous-menu de bindings : retour vers les Options. Comme le
+            // bouton "Retour", on annule une capture en cours.
+            if (m_inputManager) {
+                m_inputManager->cancelKeyCapture();
+                m_inputManager->cancelControllerCapture();
+            }
+            showOptions();
+        } else {
+            // Options : sauvegarde des reglages puis retour vers le menu
+            // precedent (restaure sa selection manette).
+            m_optionsMenu->exportJSON();
+            m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU, true);
+        }
+        break;
+    default:
+        // Menu principal / pause / jeu : pas de menu precedent a rejoindre.
+        break;
+    }
 }
 
 void MenuManager::updateDrag(double mouseX, double mouseY, bool mousePressed) {

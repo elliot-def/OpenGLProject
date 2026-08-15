@@ -133,6 +133,10 @@ bool SteamInputController::poll() {
     if (!wasConnected) {
         printf("[SteamController] Manette Steam Input detectee (handle %llu).\n",
                static_cast<unsigned long long>(m_handle));
+        // Manette branchee a chaud (hotplug) : considere comme une activite,
+        // pour que la bascule de source d'entree + la notification "Manette"
+        // apparaissent immediatement, sans attendre le premier appui.
+        return true;
     }
 
     // Etat precedent pour l'edge detection

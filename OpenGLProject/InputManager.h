@@ -103,6 +103,10 @@ private:
 	InputContext m_context = InputContext::MENU;  // Contexte actuel (jeu, menu, inventaire...)
     // Derniere source d'entree utilisee (bascule dynamique + notification)
     InputSource m_activeSource = InputSource::KEYBOARD_MOUSE;
+    // Etat de connexion de la manette active au frame precedent : sert a
+    // detecter les branchements/debranchements a chaud (hotplug) pour
+    // afficher la notification et basculer de source immediatement.
+    bool m_lastControllerConnected = false;
 
 
     Player* m_player;               // Pointeur vers le joueur

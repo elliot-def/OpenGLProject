@@ -44,7 +44,8 @@ void OptionsMenu::createOptions(bool isMuted, float volume) {
         });
 
     addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 890, 200, 50, [this]() {
-        m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU);
+        // Retour vers le menu precedent : on restaure sa selection manette.
+        m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU, true);
         exportJSON();
         });
 }

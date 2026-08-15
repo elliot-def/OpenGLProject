@@ -359,6 +359,14 @@ void InputManager::loadControllerKeys() {
 	    m_game->changeState(GameState::STATE_PLAYING);
 	});
 	m_controllerKeys["Escape"] = std::move(escape);
+
+	// B : retour au menu precedent (equivalent manette du bouton "Retour").
+	// Fixe (non rebindable) : en jeu, B reste l'accroupissement via la touche
+	// Crouch, seule l'action de menu est enregistree ici (contexte MENU couvre
+	// STATE_MENU et STATE_OPTIONS).
+	auto back = std::make_unique<ControllerKey>(m_player, "Back", GLFW_GAMEPAD_BUTTON_B, controller);
+	back->setOnReleaseAction(InputContext::MENU, [this]() { m_menuManager->goBack(); });
+	m_controllerKeys["Back"] = std::move(back);
 }
 
 void InputManager::updateController(InputContext context, int skipButton) {
@@ -577,6 +585,19 @@ void InputManager::update() {
 		m_activeSource = InputSource::KEYBOARD_MOUSE;
 		m_notification->show(InputSource::KEYBOARD_MOUSE);
 	}
+
+	// ── 3bis. Debranchement de la manette (hot-unplug) ──
+	// Miroir du branchement : si la manette active vient d'etre debranchee,
+	// on rebascule immediatement sur clavier/souris avec une notification.
+	// (Le branchement, lui, est gere par controllerActivity ci-dessus : les
+	// poll() retournent true sur une connexion.)
+	const bool controllerConnected = m_controller->isConnected();
+	if (!controllerConnected && m_lastControllerConnected
+	    && m_activeSource == InputSource::CONTROLLER) {
+		m_activeSource = InputSource::KEYBOARD_MOUSE;
+		m_notification->show(InputSource::KEYBOARD_MOUSE);
+	}
+	m_lastControllerConnected = controllerConnected;
 
 	// ── 4. Gameplay manette : sticks (regard/deplacement), gachettes, boutons ──
 	if (m_controller->isConnected()) {

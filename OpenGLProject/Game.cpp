@@ -115,7 +115,10 @@ void Game::initialize() {
     if (steamOk) {
         LOG_INFO("[Game] Steam initialise, creation de la fenetre...");
     } else {
-        LOG_INFO(m_offlineMode
+        // LOG_INFO concatene son 1er argument dans un litteral de chaine :
+        // on passe donc le texte via %s (une expression ternaire ne peut pas
+        // servir de fmt).
+        LOG_INFO("%s", m_offlineMode
             ? "[Game] Mode hors-ligne force, Steam ignore."
             : "[Game] Steam non disponible, fonctionnement hors-ligne.");
     }
@@ -507,8 +510,8 @@ void Game::toggleDebugHUD() {
     LOG_INFO("[Game] Debug HUD %s", m_debugHUD ? "ON" : "OFF");
 }
 
-void Game::changeState(GameState newState) {
-    m_menuManager->changeState(newState);
+void Game::changeState(GameState newState, bool restoreFocus) {
+    m_menuManager->changeState(newState, restoreFocus);
     Sound* sound;
     switch (newState) {
     case STATE_MENU:

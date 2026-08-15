@@ -367,6 +367,19 @@ void Menu::resetFocus() {
     applyFocusHighlight();
 }
 
+void Menu::setFocusIndex(int index) {
+    if (m_focusDirty) rebuildFocusTargets();
+    const int n = static_cast<int>(m_focusTargets.size());
+    if (n == 0) {
+        m_focusIndex = 0;
+        return;
+    }
+    // Borne la position restauree a la liste courante (les elements peuvent
+    // avoir change entre-temps, ex: rebuildItems d'un menu de bindings).
+    m_focusIndex = (index < 0) ? 0 : (index >= n ? n - 1 : index);
+    applyFocusHighlight();
+}
+
 void Menu::playClickSound() {
     Sound* clickSound = m_soundManager->get("menu_click_sound");
     if (clickSound) {
