@@ -444,6 +444,24 @@ void Game::update() {
                 // crane (plus de lumiere projetee a l'interieur du corps).
                 glm::vec3 lookOffset = frontFlat * Constants::Camera::CAMERA_FP_LOOK_OFFSET;
 
+                // ── Limite du lean avant de la tete ──────────────────────
+                // L'animation de marche/sprint penche la tete vers l'avant.
+                // Contre une hitbox, le corps s'arrete (collision) mais la
+                // tete continue d'avancer -> la camera 1P traverse le mur. On
+                // borne la composante AVANT de la tete par rapport au corps
+                // (strafe et recul inchanges).
+                {
+                    const glm::vec3 playerPos = m_player->getPosition();
+                    const glm::vec3 headRelXZ(worldHead.x - playerPos.x, 0.0f,
+                                              worldHead.z - playerPos.z);
+                    const float forwardRel = glm::dot(headRelXZ, frontFlat);
+                    const float clampedForward = glm::min(forwardRel,
+                        Constants::Camera::CAMERA_FP_HEAD_FORWARD_LIMIT);
+                    const glm::vec3 lateralXZ = headRelXZ - frontFlat * forwardRel;
+                    worldHead.x = playerPos.x + frontFlat.x * clampedForward + lateralXZ.x;
+                    worldHead.z = playerPos.z + frontFlat.z * clampedForward + lateralXZ.z;
+                }
+
                 // ── Lampe torche attachee a la tete (1P et 3P) ──────────
                 // update() (Scene) vient de la recaler sur les yeux ; on la
                 // repositionne sur l'os de tete + offset avant du regard.

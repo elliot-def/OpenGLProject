@@ -137,6 +137,30 @@ void MultiplayerManager::ensureRemotePlayer(uint64_t steamID) {
                                                 m_textureManager);
     ModelLoader::configureHumanCharacter(entity.get());
 
+    // ── Diagnostic (à retirer une fois le bug de skinning identifié) ──
+    {
+        const Model* model = entity->getModel();
+        const Animator* anim = entity->getAnimator();
+        const aiAnimation* cur = anim ? anim->getCurrentAnimation() : nullptr;
+        LOG_INFO("[Multiplayer] Joueur distant pret : %zu bones, %zu animations, "
+                 "hasAnimations=%d, scale=%.4f, anim='%s' (index=%d, loop=%d)",
+                 model ? model->getBoneInfoMap().size() : 0,
+                 model ? model->getNumAnimations() : 0,
+                 entity->hasAnimations() ? 1 : 0,
+                 entity->getScale(),
+                 cur ? cur->mName.C_Str() : "(null)",
+                 anim ? anim->getCurrentAnimationIndex() : -1,
+                 (anim && anim->isLooping()) ? 1 : 0);
+        const auto& bm = anim ? anim->getFinalBoneMatrices() : std::vector<glm::mat4>();
+        if (!bm.empty()) {
+            // bone[0] est normalement le Hips (root) : translation ~ (0, ~0.9, 0),
+            // diagonale ~1. Identité pure = translation 0 ; zéro = diag 0.
+            LOG_INFO("[Multiplayer]   bone[0] transl=(%.3f, %.3f, %.3f) diag=(%.3f, %.3f, %.3f, %.3f)",
+                     bm[0][3].x, bm[0][3].y, bm[0][3].z,
+                     bm[0][0][0], bm[0][1][1], bm[0][2][2], bm[0][3][3]);
+        }
+    }
+
     auto rp = std::make_unique<RemotePlayer>();
     rp->steamID = steamID;
     rp->entity  = std::move(entity);
@@ -226,6 +250,13 @@ void MultiplayerManager::applyState(RemotePlayer& rp) {
     rp.entity->getDirection()->setYawPitch(static_cast<double>(yaw), 0.0);
 
     if (rp.animIndex >= 0 && rp.animIndex != rp.lastAnimIndex) {
+        // ── Diagnostic (à retirer) ──
+        const aiAnimation* a = rp.entity->getModel()
+            ? rp.entity->getModel()->getAnimation(rp.animIndex) : nullptr;
+        LOG_INFO("[Multiplayer] Joueur %llu -> anim [%d] '%s' (loop=%d)",
+                 rp.steamID, rp.animIndex,
+                 a ? a->mName.C_Str() : "(INVALIDE)", rp.loopAnim ? 1 : 0);
+
         // Respecter le flag de boucle reçu : jouer un one-shot (jump/turn/
         // landing/punch) avec loop=false, sinon il boucle indéfiniment sur le
         // modèle distant — et pour "turn", la rotation racine de 90° restait
