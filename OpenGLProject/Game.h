@@ -31,6 +31,7 @@ class SteamManager;
 class LoadingScreen;
 class ModelLoader;
 class Scene;
+class MultiplayerManager;
 
 class Game {
 public:
@@ -84,6 +85,8 @@ private:
     FirstPersonArms* m_firstPersonArms = nullptr;
     std::unique_ptr<SteamManager> m_steamManager;
     std::unique_ptr<ModelLoader> m_modelLoader;  // possède les entités 3D chargées
+    // Joueurs distants du lobby Steam (possède leurs ModelEntity, les dessine).
+    std::unique_ptr<MultiplayerManager> m_multiplayerManager;
 
     bool m_isRunning = true;
 

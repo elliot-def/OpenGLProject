@@ -5,6 +5,8 @@
 #include "SoundManager.h"
 #include "Sound.h"
 #include "Renderer.h"
+#include "SteamManager.h"
+#include "Log.h"
 
 #include "constants/window.h"
 #include "constants/menu.h"
@@ -13,6 +15,17 @@ MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, s
         Menu(game, soundManager, textRenderers, shaderManager, cursorManager, t, bg), m_renderer(renderer), m_colorDVDLogo(glm::vec3(1.0f, 1.0f, 1.0f)) {
     addItem("Jouer", Constants::Window::WINDOW_WIDTH / 2, 700, 200, 50, [this]() {
         m_game->changeState(STATE_PLAYING);
+        });
+    addItem("Multijoueur", Constants::Window::WINDOW_WIDTH / 2, 750, 200, 50, [this]() {
+        // Crée un lobby friends-only et ouvre l'overlay d'invitation Steam.
+        // L'entrée en jeu se fait via l'invitation acceptée (callback
+        // onLobbyEntered -> changeState(STATE_PLAYING)) ou via "Jouer".
+        SteamManager* steam = m_game->getSteamManager();
+        if (steam && steam->isInitialized()) {
+            steam->createLobby();
+        } else {
+            LOG_WARN("[MainMenu] Steam indisponible : multijoueur desactive.");
+        }
         });
     addItem("Options", Constants::Window::WINDOW_WIDTH / 2, 800, 200, 50, [this]() {
         m_game->changeState(STATE_OPTIONS);

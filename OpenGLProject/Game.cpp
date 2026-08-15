@@ -5,6 +5,7 @@
 #include "LoadingScreen.h"
 #include "SteamManager.h"
 #include "ModelLoader.h"
+#include "MultiplayerManager.h"
 #include "TextRenderer.h"
 #include "FirstPersonArms.h"
 #include "Animator.h"
@@ -177,6 +178,14 @@ void Game::loadResources() {
                                       m_renderer.get(), m_shaderManager.get(),
                                       m_textureManager.get(), m_inputManager.get());
 
+    // Joueurs distants du lobby Steam (synchronisés en P2P). Le modèle local
+    // (humanEntity) n'est pas encore chargé : setLocalHuman() sera appelé dans
+    // adoptLoadedEntities().
+    m_multiplayerManager = std::make_unique<MultiplayerManager>(
+        m_steamManager.get(), m_camera.get(), m_lightManager.get(),
+        m_renderer.get(), m_textureManager.get(), m_shaderManager.get(),
+        m_player.get(), nullptr);
+
     // 0 : Amarna (texte des menus + notification), 1 : Gnocchi (titres),
     // 2 : icones manette kenney, 3 : icones clavier/souris kenney
     m_textRenderers->emplace_back(std::make_unique<TextRenderer>(m_shaderManager.get()));
@@ -226,18 +235,23 @@ void Game::loadResources() {
 
         m_steamManager->setOnLobbyCreated([this](CSteamID lobbyID) {
             LOG_INFO("[Game] Lobby cree avec succes, ouverture de l'invitation...");
+            if (m_multiplayerManager) m_multiplayerManager->onLobbyChanged();
             m_steamManager->openInviteDialog();
         });
 
         m_steamManager->setOnLobbyEntered([this](CSteamID lobbyID) {
             LOG_INFO("[Game] Connecte au lobby %llu !", lobbyID.ConvertToUint64());
-            if (m_socket) {
-                // TODO: utiliser le lobby pour établir la connexion réseau
+            if (m_multiplayerManager) m_multiplayerManager->onLobbyChanged();
+            // Invitation acceptée depuis le menu : entrer directement en jeu
+            // pour rejoindre les autres joueurs.
+            if (m_menuManager->getCurrentState() == STATE_MENU) {
+                changeState(STATE_PLAYING);
             }
         });
 
         m_steamManager->setOnLobbyLeft([this]() {
             LOG_INFO("[Game] Quitte le lobby.");
+            if (m_multiplayerManager) m_multiplayerManager->onLobbyLeft();
         });
 
         if (m_argc > 0 && m_argv != nullptr) {
@@ -479,6 +493,12 @@ void Game::update() {
 
     m_soundManager->setListenerTransform(m_camera->getPosition(), m_camera->getFront(), m_camera->getUp());
     m_soundManager->update();
+
+    // Joueurs distants : diffuser l'état local + recevoir/appliquer les états
+    // distants (création paresseuse de leur modèle Megan).
+    if (m_multiplayerManager) {
+        m_multiplayerManager->update(m_renderer->getDeltaTime());
+    }
 }
 
 void Game::draw() {
@@ -486,6 +506,11 @@ void Game::draw() {
 
     // Monde 3D : skybox, opaques, transparences.
     m_scene->draw();
+
+    // Joueurs distants du lobby (Megan, skinned) : rendus au-dessus du monde.
+    if (m_multiplayerManager) {
+        m_multiplayerManager->draw();
+    }
 
     // ── HUD debug (personnage 3P) : liste des animations du modele ────────
     // Désactivé par défaut ; bascule avec F3 (InputManager -> toggleDebugHUD).
@@ -570,6 +595,11 @@ void Game::adoptLoadedEntities() {
     // Transmet les vues à la Scene (qui les utilise pour update/draw).
     m_scene->adoptEntities(m_modelEntity, m_fropyEntity, m_humanEntity,
                            m_modelLoader->getCharacterAnim());
+
+    // Le MultiplayerManager lit l'animation du modèle local pour la diffuser.
+    if (m_multiplayerManager) {
+        m_multiplayerManager->setLocalHuman(m_humanEntity);
+    }
 }
 
 void Game::stop() {

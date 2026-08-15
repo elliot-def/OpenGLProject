@@ -80,13 +80,31 @@ void ModelLoader::loadHumanCharacter() {
                  model->getBoundingBox().getSize().z);
     }
 
+    // Configuration commune du personnage Megan : auto-scale + animations
+    // externes + mapping des index + idle. Partagee avec MultiplayerManager
+    // pour creer les joueurs distants a l'identique.
+    configureHumanCharacter(m_humanEntity.get());
+
+    // Controleur d'animation du personnage 3P (extrait de Game::update)
+    m_characterAnim = std::make_unique<CharacterAnimationController>(m_humanEntity.get(), m_inputManager);
+}
+
+// ---------------------------------------------------------------------------
+// Configuration commune du personnage Megan (auto-scale + animations externes
+// + mapping des index + idle). Reutilisee par le personnage local ET par les
+// joueurs distants (MultiplayerManager) pour garantir un mapping identique.
+// ---------------------------------------------------------------------------
+
+void ModelLoader::configureHumanCharacter(ModelEntity* entity) {
+    Model* model = entity->getModel();
+
     // Auto-scale : hauteur cible ~1.8 unites (~1.80m) divisee par la hauteur
     // reelle de la bounding box du modele (qui inclut le x100 FBX).
     {
         const float modelHeight = model->getBoundingBox().getSize().y;
         constexpr float targetHeight = 1.8f;
         if (modelHeight > 0.001f) {
-            m_humanEntity->setScale(targetHeight / modelHeight);
+            entity->setScale(targetHeight / modelHeight);
             LOG_INFO("[ModelLoader]   Megan auto-scale: %.4f (model=%.1f -> target=%.1f)",
                      targetHeight / modelHeight, modelHeight, targetHeight);
         } else {
@@ -124,20 +142,20 @@ void ModelLoader::loadHumanCharacter() {
         const size_t totalAnims = model->getNumAnimations();
         const size_t base = totalAnims - model->getNumExternalAnimations();
 
-        m_humanEntity->setIdleAnimIndex(static_cast<int>(base + 0));       // idle.fbx
-        m_humanEntity->setWalkAnimIndex(static_cast<int>(base + 1));       // walking.fbx
-        m_humanEntity->setRunAnimIndex(static_cast<int>(base + 2));        // standard run.fbx
-        m_humanEntity->setJumpIdx(static_cast<int>(base + 3));             // jump.fbx
-        m_humanEntity->setStrafeLeftIdx(static_cast<int>(base + 4));       // left strafe.fbx
-        m_humanEntity->setStrafeRightIdx(static_cast<int>(base + 5));      // right strafe.fbx
-        m_humanEntity->setStrafeWalkLeftIdx(static_cast<int>(base + 6));   // left strafe walking.fbx
-        m_humanEntity->setStrafeWalkRightIdx(static_cast<int>(base + 7));  // right strafe walking.fbx
-        m_humanEntity->setTurnLeftIdx(static_cast<int>(base + 8));         // left turn 90.fbx
-        m_humanEntity->setTurnRightIdx(static_cast<int>(base + 9));        // right turn 90.fbx
-        m_humanEntity->setRunJumpIdx(static_cast<int>(base + 10));         // Running Jump.fbx
-        m_humanEntity->setWalkBackIdx(static_cast<int>(base + 11));        // Walking Backwards.fbx
-        m_humanEntity->setFallingIdleIdx(static_cast<int>(base + 12));     // Falling Idle.fbx
-        m_humanEntity->setFallingToLandingIdx(static_cast<int>(base + 13)); // Falling To Landing.fbx
+        entity->setIdleAnimIndex(static_cast<int>(base + 0));       // idle.fbx
+        entity->setWalkAnimIndex(static_cast<int>(base + 1));       // walking.fbx
+        entity->setRunAnimIndex(static_cast<int>(base + 2));        // standard run.fbx
+        entity->setJumpIdx(static_cast<int>(base + 3));             // jump.fbx
+        entity->setStrafeLeftIdx(static_cast<int>(base + 4));       // left strafe.fbx
+        entity->setStrafeRightIdx(static_cast<int>(base + 5));      // right strafe.fbx
+        entity->setStrafeWalkLeftIdx(static_cast<int>(base + 6));   // left strafe walking.fbx
+        entity->setStrafeWalkRightIdx(static_cast<int>(base + 7));  // right strafe walking.fbx
+        entity->setTurnLeftIdx(static_cast<int>(base + 8));         // left turn 90.fbx
+        entity->setTurnRightIdx(static_cast<int>(base + 9));        // right turn 90.fbx
+        entity->setRunJumpIdx(static_cast<int>(base + 10));         // Running Jump.fbx
+        entity->setWalkBackIdx(static_cast<int>(base + 11));        // Walking Backwards.fbx
+        entity->setFallingIdleIdx(static_cast<int>(base + 12));     // Falling Idle.fbx
+        entity->setFallingToLandingIdx(static_cast<int>(base + 13)); // Falling To Landing.fbx
         // punch = -1 (pas d'anim de punch)
         // rest  = -1 (pas d'anim de rest)
 
@@ -153,26 +171,23 @@ void ModelLoader::loadHumanCharacter() {
         LOG_INFO("[ModelLoader]   Mapping : idle=%d walk=%d run=%d jump=%d strafeL=%d strafeR=%d "
                  "strafeWL=%d strafeWR=%d turnL=%d turnR=%d runJump=%d walkBack=%d "
                  "fallingIdle=%d fallingToLanding=%d",
-                 m_humanEntity->getIdleAnimIndex(), m_humanEntity->getWalkAnimIndex(),
-                 m_humanEntity->getRunAnimIndex(), m_humanEntity->getJumpIdx(),
-                 m_humanEntity->getStrafeLeftIdx(), m_humanEntity->getStrafeRightIdx(),
-                 m_humanEntity->getStrafeWalkLeftIdx(), m_humanEntity->getStrafeWalkRightIdx(),
-                 m_humanEntity->getTurnLeftIdx(), m_humanEntity->getTurnRightIdx(),
-                 m_humanEntity->getRunJumpIdx(), m_humanEntity->getWalkBackIdx(),
-                 m_humanEntity->getFallingIdleIdx(), m_humanEntity->getFallingToLandingIdx());
+                 entity->getIdleAnimIndex(), entity->getWalkAnimIndex(),
+                 entity->getRunAnimIndex(), entity->getJumpIdx(),
+                 entity->getStrafeLeftIdx(), entity->getStrafeRightIdx(),
+                 entity->getStrafeWalkLeftIdx(), entity->getStrafeWalkRightIdx(),
+                 entity->getTurnLeftIdx(), entity->getTurnRightIdx(),
+                 entity->getRunJumpIdx(), entity->getWalkBackIdx(),
+                 entity->getFallingIdleIdx(), entity->getFallingToLandingIdx());
         if (base + 13 >= totalAnims) {
             LOG_WARN("[ModelLoader]   !! ATTENTION : dernier clip externe (index %zu) >= nombre "
                      "d'animations (%zu) -> tous les clips n'existent pas.", base + 13, totalAnims);
         }
 
         // Jouer l'idle
-        const int idleIdx = m_humanEntity->getIdleAnimIndex();
+        const int idleIdx = entity->getIdleAnimIndex();
         if (idleIdx >= 0 && idleIdx < static_cast<int>(totalAnims)) {
-            m_humanEntity->getAnimator()->playAnimation(static_cast<unsigned int>(idleIdx), true);
-            m_humanEntity->getAnimator()->update(0.0f);
+            entity->getAnimator()->playAnimation(static_cast<unsigned int>(idleIdx), true);
+            entity->getAnimator()->update(0.0f);
         }
     }
-
-    // Controleur d'animation du personnage 3P (extrait de Game::update)
-    m_characterAnim = std::make_unique<CharacterAnimationController>(m_humanEntity.get(), m_inputManager);
 }

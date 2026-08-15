@@ -77,6 +77,7 @@ void Animator::playAnimation(unsigned int animIndex, bool loop, bool crossfade) 
         return;
     }
     playAnimation(anim, loop, crossfade);
+    m_currentAnimIndex = static_cast<int>(animIndex);
 }
 
 void Animator::playAnimation(const aiAnimation* newAnim, bool loop, bool crossfade) {
@@ -99,6 +100,7 @@ void Animator::playAnimation(const aiAnimation* newAnim, bool loop, bool crossfa
     }
 
     m_currentAnimation = newAnim;
+    m_currentAnimIndex = -1;  // lancé par pointeur : l'index n'est pas connu ici
     m_currentAnimName = m_currentAnimation->mName.C_Str();
     m_currentTime = 0.0f;
 

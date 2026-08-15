@@ -1,6 +1,7 @@
 #include "SteamManager.h"
 #include "Log.h"
 #include <cstring>
+#include <cstdlib>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -175,6 +176,7 @@ void SteamManager::completeInit() {
     m_cbLobbyJoin.Register(this, &SteamManager::onGameLobbyJoinRequested);
     m_cbEnter.Register(this, &SteamManager::onLobbyEnter);
     m_cbChatUpdate.Register(this, &SteamManager::onLobbyChatUpdate);
+    m_cbSessionRequest.Register(this, &SteamManager::onNetworkingSessionRequest);
 
     logPrintf("[SteamManager] Initialise avec succes.\n");
     logPrintf("[SteamManager]   AppID       : %u\n", SteamUtils()->GetAppID());
@@ -269,6 +271,98 @@ void SteamManager::openInviteDialog() {
     }
     logPrintf("[SteamManager] Ouverture de l'overlay d'invitation Steam...\n");
     SteamFriends()->ActivateGameOverlayInviteDialog(m_currentLobby);
+}
+
+// ---------------------------------------------------------------------------
+// Réseau P2P (Steam Networking Messages)
+// ---------------------------------------------------------------------------
+
+bool SteamManager::sendP2P(CSteamID target, const void* data, uint32_t size) {
+    if (!m_initialized) return false;
+    if (!target.IsValid() || !data || size == 0) return false;
+
+    ISteamNetworkingMessages* net = SteamNetworkingMessages();
+    if (!net) return false;
+
+    SteamNetworkingIdentity identity;
+    identity.SetSteamID(target);
+
+    EResult result = net->SendMessageToUser(
+        identity, data, size, k_nSteamNetworkingSend_Reliable, 0);
+
+    if (result != k_EResultOK) {
+        logPrintf("[SteamManager] sendP2P vers %llu echoue (result=%d)\n",
+               target.ConvertToUint64(), result);
+        return false;
+    }
+    return true;
+}
+
+bool SteamManager::broadcastP2P(const void* data, uint32_t size) {
+    if (!m_initialized || !m_inLobby) return false;
+
+    bool anySent = false;
+    for (CSteamID member : getLobbyMembers()) {
+        if (sendP2P(member, data, size)) anySent = true;
+    }
+    return anySent;
+}
+
+int SteamManager::receiveP2P(std::vector<P2PMessage>& out, int maxMessages) {
+    if (!m_initialized || maxMessages <= 0) return 0;
+
+    ISteamNetworkingMessages* net = SteamNetworkingMessages();
+    if (!net) return 0;
+
+    // Tampon fixe : on ne dépasse pas maxMessages par frame.
+    SteamNetworkingMessage_t* messages[64];
+    const int capacity = maxMessages < 64 ? maxMessages : 64;
+    const int count = net->ReceiveMessagesOnChannel(0, messages, capacity);
+
+    for (int i = 0; i < count; ++i) {
+        SteamNetworkingMessage_t* msg = messages[i];
+        if (!msg) continue;
+
+        P2PMessage outMsg;
+        outMsg.sender = msg->m_identityPeer.GetSteamID();
+        const uint8_t* bytes = static_cast<const uint8_t*>(msg->m_pData);
+        outMsg.data.assign(bytes, bytes + msg->m_cbSize);
+        out.push_back(std::move(outMsg));
+
+        msg->Release();
+    }
+    return count;
+}
+
+std::vector<CSteamID> SteamManager::getLobbyMembers() const {
+    std::vector<CSteamID> members;
+    if (!m_initialized || !m_inLobby) return members;
+
+    const int count = SteamMatchmaking()->GetNumLobbyMembers(m_currentLobby);
+    members.reserve(static_cast<size_t>(count > 0 ? count : 0));
+    for (int i = 0; i < count; ++i) {
+        CSteamID member = SteamMatchmaking()->GetLobbyMemberByIndex(m_currentLobby, i);
+        if (member.IsValid() && member != m_localSteamID) {
+            members.push_back(member);
+        }
+    }
+    return members;
+}
+
+// ---------------------------------------------------------------------------
+// Callbacks Steam - Demande de session P2P entrante
+// ---------------------------------------------------------------------------
+
+void SteamManager::onNetworkingSessionRequest(SteamNetworkingMessagesSessionRequest_t* pCallback) {
+    // Les lobbies sont FriendsOnly : on accepte toute session P2P entrante
+    // (l'envoi d'un message vers un pair accepte implicitement sa session,
+    // mais une requête entrante nécessite cet appel explicite).
+    ISteamNetworkingMessages* net = SteamNetworkingMessages();
+    if (net) {
+        net->AcceptSessionWithUser(pCallback->m_identityRemote);
+        logPrintf("[SteamManager] Session P2P acceptee (SteamID %llu)\n",
+               pCallback->m_identityRemote.GetSteamID().ConvertToUint64());
+    }
 }
 
 // ---------------------------------------------------------------------------

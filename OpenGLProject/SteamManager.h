@@ -3,6 +3,8 @@
 #include <string>
 #include <functional>
 #include <memory>
+#include <vector>
+#include <cstdint>
 
 // Steamworks SDK
 #include "dependencies/steam/steam_api.h"
@@ -80,6 +82,30 @@ public:
     // Ouvre l'overlay Steam pour inviter un ami au lobby courant.
     void openInviteDialog();
 
+    // ── Réseau P2P (Steam Networking Messages) ────────────────────────────
+    // Synchronisation de la position/direction/animation des joueurs du lobby
+    // via ISteamNetworkingMessages (UDP-like, fiable, routé par Steam).
+
+    // Message P2P reçu : expéditeur + charge utile binaire.
+    struct P2PMessage {
+        CSteamID sender;
+        std::vector<uint8_t> data;
+    };
+
+    // Envoie un paquet binaire FIABLE à un pair identifié par son SteamID.
+    // Retourne false si Steam n'est pas prêt ou si l'envoi échoue.
+    bool sendP2P(CSteamID target, const void* data, uint32_t size);
+
+    // Diffuse un paquet à tous les membres du lobby courant (sauf le local).
+    bool broadcastP2P(const void* data, uint32_t size);
+
+    // Lit les messages P2P en attente sur le canal 0. Retourne le nombre lu
+    // (les sessions entrantes sont acceptées automatiquement via callback).
+    int receiveP2P(std::vector<P2PMessage>& out, int maxMessages = 32);
+
+    // Membres du lobby courant, joueur local exclu. Vide si hors lobby.
+    std::vector<CSteamID> getLobbyMembers() const;
+
     // État du lobby
     bool isInLobby() const { return m_inLobby; }
     CSteamID getCurrentLobbyID() const { return m_currentLobby; }
@@ -124,6 +150,7 @@ private:
     STEAM_CALLBACK_MANUAL(SteamManager, onGameLobbyJoinRequested, GameLobbyJoinRequested_t, m_cbLobbyJoin);
     STEAM_CALLBACK_MANUAL(SteamManager, onLobbyEnter,             LobbyEnter_t,             m_cbEnter);
     STEAM_CALLBACK_MANUAL(SteamManager, onLobbyChatUpdate,        LobbyChatUpdate_t,        m_cbChatUpdate);
+    STEAM_CALLBACK_MANUAL(SteamManager, onNetworkingSessionRequest, SteamNetworkingMessagesSessionRequest_t, m_cbSessionRequest);
 
     // ---- CallResult pour CreateLobby / JoinLobby ----
     CCallResult<SteamManager, LobbyCreated_t> m_callResultCreated;

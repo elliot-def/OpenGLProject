@@ -53,6 +53,11 @@ public:
     // relancer playAnimation quand l'animation n'a pas changé)
     const aiAnimation* getCurrentAnimation() const { return m_currentAnimation; }
 
+    // Index de l'animation en cours (tel que passé à playAnimation(index)).
+    // -1 si l'animation a été lancée par pointeur (playAnimation(aiAnimation*))
+    // ou si aucune animation n'est active. Utile pour la synchro réseau.
+    int getCurrentAnimationIndex() const { return m_currentAnimIndex; }
+
     // Applique un offset local supplémentaire à un bone par son nom (ex:
     // décaler un bras). L'offset est composé avec la transformation du bone
     // à chaque frame, entre la transformation globale et l'offsetMatrix.
@@ -75,6 +80,7 @@ private:
     Model* m_model = nullptr;
     const aiScene* m_scene = nullptr;
     const aiAnimation* m_currentAnimation = nullptr;
+    int m_currentAnimIndex = -1;   // index lancé via playAnimation(index), -1 sinon
     std::string m_currentAnimName;
     float m_currentTime = 0.0f;
     float m_ticksPerSecond = 30.0f;
