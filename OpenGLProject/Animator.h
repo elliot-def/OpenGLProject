@@ -39,6 +39,10 @@ public:
     // Vérifie si une animation est en cours
     bool isPlaying() const { return m_currentAnimation != nullptr; }
 
+    // Vrai si l'animation en cours boucle (les one-shots jump/turn/punch
+    // ne bouclent pas). Utilisé pour la synchro réseau des joueurs distants.
+    bool isLooping() const { return m_loop; }
+
     // Vérifie si une animation NON-loop est arrivée à son terme (pour
     // enchaîner sur l'idle après un tir, par exemple)
     bool isFinished() const {
