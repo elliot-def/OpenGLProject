@@ -81,6 +81,8 @@ StyleCopReport.xml
 *.ilk
 *.meta
 *.obj
+# Exception : modèles 3D .obj du jeu (pas des fichiers objet compilés)
+!OpenGLProject/res/models/fropy/fropy_low_poly.obj
 *.iobj
 *.pch
 *.pdb
