@@ -8,8 +8,13 @@ Features :
 	- Sous-titres en bas de l'écran / Ajouter des bulles de dialogues ?
 - PlantUML depuis freebuff
 - Multijoueur
-	- Playermodèle et déplacement en direct
- 	- Chat ?
+	- Si le chef du lobby quitte le lobby puis revient, il ne voit plus les autres players modèles
+	- Le premier son est rejouer à l'infini dans le chat vocal
+	- On ne peut pas taper dans le chat textuel
+	- Le bug de la tete qui avance quand  on avance droit dans un mur (malgrès la hitbox)
+	- Select (attention au clic sur les boutons derrière les selects) + ajouter un fond derrière les options du select avec un couleur différente pour le hover
+	- Chat propre à la session (reset quand on en recréer une ou passe en solo)
+	- Fix la caméra en première personne quand en no clip 
 
 Changements et Debug : 
 - Rendre les hitbox plus fidèles au modèles 3D (en troisième personne pour les joueurs) 
