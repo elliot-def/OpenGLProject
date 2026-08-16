@@ -8,13 +8,6 @@ Features :
 	- Sous-titres en bas de l'écran / Ajouter des bulles de dialogues ?
 - PlantUML depuis freebuff
 - Multijoueur
-	- Si le chef du lobby quitte le lobby puis revient, il ne voit plus les autres players modèles
-	- Le premier son est rejouer à l'infini dans le chat vocal
-	- On ne peut pas taper dans le chat textuel
-	- Le bug de la tete qui avance quand  on avance droit dans un mur (malgrès la hitbox)
-	- Select (attention au clic sur les boutons derrière les selects) + ajouter un fond derrière les options du select avec un couleur différente pour le hover
-	- Chat propre à la session (reset quand on en recréer une ou passe en solo)
-	- Fix la caméra en première personne quand en no clip 
 
 Changements et Debug : 
 - Rendre les hitbox plus fidèles au modèles 3D (en troisième personne pour les joueurs) 
@@ -25,8 +18,16 @@ Changements et Debug :
 	- Low-poly les modèles
  
 Fix :
-- Position des yeux en première personne
-- Temps de chargement après lancement du jeu pour la première fois (quand steam se lance)
+- Si le chef du lobby quitte le lobby puis revient, il ne voit plus les autres players modèles
+- Le premier son est rejouer à l'infini dans le chat vocal
+- On ne peut pas taper dans le chat textuel
+- Le bug de la tete qui avance quand  on avance droit dans un mur (malgrès la hitbox)
+- Select (attention au clic sur les boutons derrière les selects) + ajouter un fond derrière les options du select avec un couleur différente pour le hover
+- Chat propre à la session (reset quand on en recréer une ou passe en solo)
+- Fix la caméra en première personne qui rentre dans le player model quand il est en no clip (ne reviens pas à la normal quand on s'enleve du no clip)- Position des yeux en première personne
+- Le rectangle blanc derrière le chat n'est visible qu'en première personne
+- Changer le nom des micro dans le select (enlevé openal machin truc)
+- Il manque certaines keyframes quand je strafe à droite
 
 Opti :
 - Regarder les logs de chargement de texture :
