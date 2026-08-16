@@ -7,6 +7,7 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "Log.h"
 #include "Shader.h"
 #include "constants/shader.h"
 #include "constants/file.h"
@@ -75,7 +76,7 @@ private:
      */
     void loadShaders(std::string shadersFolderPath = Constants::Shader::SHADERS_FOLDER_PATH) {
         if (!std::filesystem::is_directory(shadersFolderPath)) {
-            std::cerr << "Le dossier des shaders n'existe pas: " << shadersFolderPath << std::endl;
+            logErr() << "Le dossier des shaders n'existe pas: " << shadersFolderPath << std::endl;
             return;
         }
 

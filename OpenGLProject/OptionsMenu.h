@@ -5,10 +5,11 @@
 class Game;
 class ShaderManager;
 class TextRenderer;
+class VoiceChat;
 
 class OptionsMenu : public Menu {
 public:
-    OptionsMenu(Game* game, SoundManager* soundManager, GameState& previousState, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager);
+    OptionsMenu(Game* game, SoundManager* soundManager, GameState& previousState, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager, VoiceChat* voiceChat);
     ~OptionsMenu();
 
     // Charge/sauvegarde les options audio (res/options.json). Les bindings et
@@ -19,4 +20,5 @@ public:
     void createOptions(bool isMuted, float volume, float musicVolume);
 protected:
 	GameState& m_previousState;
+    VoiceChat* m_voiceChat = nullptr;
 };

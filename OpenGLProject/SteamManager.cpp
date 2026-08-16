@@ -308,6 +308,31 @@ bool SteamManager::broadcastP2P(const void* data, uint32_t size) {
     return anySent;
 }
 
+bool SteamManager::sendP2PUnreliable(CSteamID target, const void* data, uint32_t size) {
+    if (!m_initialized) return false;
+    if (!target.IsValid() || !data || size == 0) return false;
+
+    ISteamNetworkingMessages* net = SteamNetworkingMessages();
+    if (!net) return false;
+
+    SteamNetworkingIdentity identity;
+    identity.SetSteamID(target);
+
+    EResult result = net->SendMessageToUser(
+        identity, data, size, k_nSteamNetworkingSend_Unreliable, 0);
+    return result == k_EResultOK;
+}
+
+bool SteamManager::broadcastP2PUnreliable(const void* data, uint32_t size) {
+    if (!m_initialized || !m_inLobby) return false;
+
+    bool anySent = false;
+    for (CSteamID member : getLobbyMembers()) {
+        if (sendP2PUnreliable(member, data, size)) anySent = true;
+    }
+    return anySent;
+}
+
 int SteamManager::receiveP2P(std::vector<P2PMessage>& out, int maxMessages) {
     if (!m_initialized || maxMessages <= 0) return 0;
 
@@ -483,5 +508,13 @@ void SteamManager::onLobbyChatUpdate(LobbyChatUpdate_t* pCallback) {
         const char* name = SteamFriends()->GetFriendPersonaName(userChanged);
         logPrintf("[SteamManager] Changement dans le lobby pour %s (SteamID %llu)\n",
                name, userChanged.ConvertToUint64());
+        if (m_onLobbyMemberUpdate) {
+            m_onLobbyMemberUpdate(lobbyID, userChanged, pCallback->m_rgfChatMemberStateChange);
+        }
     }
+}
+
+const char* SteamManager::getPersonaName(CSteamID steamID) const {
+    if (!m_initialized) return "";
+    return SteamFriends()->GetFriendPersonaName(steamID);
 }

@@ -113,6 +113,14 @@ void ModelEntity::updateAnimation(float deltaTime) {
 
 void ModelEntity::playAnimation(int animIndex, bool loop) {
 	if (!m_hasAnimations || !m_animator || animIndex < 0) return;
+	// Clips de strafe : la compensation de pose (report du yaw Hips retire sur
+	// les jambes + zero du yaw de la chaine spine) n'a de sens que pour les
+	// 4 clips de strafe. L'Animator l'applique quand le drapeau est actif.
+	// Les autres animations (marche, course, turn, saut...) ne sont pas
+	// concernees : leur yaw Hips est ~0 ou une vraie rotation a conserver.
+	const bool isStrafe = (animIndex == m_strafeLeftIdx || animIndex == m_strafeRightIdx ||
+	                       animIndex == m_strafeWalkLeftIdx || animIndex == m_strafeWalkRightIdx);
+	m_animator->setStrafeCompensation(isStrafe);
 	m_animator->playAnimation(animIndex, loop);
 }
 

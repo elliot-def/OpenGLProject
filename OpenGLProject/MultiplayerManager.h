@@ -1,8 +1,10 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
+#include <string>
 
 #include <glm/glm.hpp>
 
@@ -55,6 +57,23 @@ public:
     // des modèles terminé (le pointeur n'est pas connu à la construction).
     void setLocalHuman(ModelEntity* localHuman) { m_localHuman = localHuman; }
 
+    // ── Chat du lobby ─────────────────────────────────────────────────────
+    // Diffuse un message de chat à tous les membres du lobby (sauf le local,
+    // qui affiche son propre message immédiatement via le LobbyChat).
+    void sendChatMessage(const std::string& text);
+
+    // Message de chat reçu d'un pair : expéditeur (SteamID + nom) + texte.
+    using ChatMessageCallback = std::function<void(uint64_t senderID,
+                                                   const std::string& senderName,
+                                                   const std::string& text)>;
+    void setOnChatMessage(ChatMessageCallback cb) { m_onChatMessage = std::move(cb); }
+
+    // Paquet de chat vocal reçu d'un pair (transmis tel quel au VoiceChat).
+    using VoicePacketCallback = std::function<void(uint64_t senderID,
+                                                   const uint8_t* data,
+                                                   uint32_t size)>;
+    void setOnVoicePacket(VoicePacketCallback cb) { m_onVoicePacket = std::move(cb); }
+
 private:
     struct RemotePlayer {
         uint64_t steamID = 0;
@@ -100,6 +119,9 @@ private:
 
     std::map<uint64_t, std::unique_ptr<RemotePlayer>> m_remotePlayers;
     float m_sendTimer = 0.0f;
+
+    ChatMessageCallback m_onChatMessage;
+    VoicePacketCallback m_onVoicePacket;
 
     static constexpr float SEND_INTERVAL  = 0.05f;              // 20 Hz
     static constexpr float INTERP_DURATION = SEND_INTERVAL;      // durée d'interpolation entre 2 checkpoints

@@ -5,6 +5,8 @@
 #include "OptionsMenu.h"
 #include "KeyBindingsMenu.h"
 #include "ControllerBindingsMenu.h"
+#include "AudioSettingsMenu.h"
+#include "VoiceChat.h"
 #include "TextRenderer.h"
 #include "ShaderManager.h"
 #include "Game.h"
@@ -18,8 +20,8 @@
 #include <glad/glad.h>  // dessin 2D des menus: glEnable / glDisable / glBlendFunc
 #include <chrono>
 
-MenuManager::MenuManager(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, TextureManager* textureManager, ShaderManager* shaderManager, CursorManager* cursorManager) :
-    m_game(game), m_soundManager(soundManager), m_renderer(renderer), m_inputManager(nullptr), m_textRenderers(textRenderers), m_textureManager(textureManager), m_shaderManager(shaderManager), m_cursorManager(cursorManager), m_currentState(STATE_MENU), m_previousState(STATE_MENU) {
+MenuManager::MenuManager(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, TextureManager* textureManager, ShaderManager* shaderManager, CursorManager* cursorManager, VoiceChat* voiceChat) :
+    m_game(game), m_soundManager(soundManager), m_renderer(renderer), m_inputManager(nullptr), m_textRenderers(textRenderers), m_textureManager(textureManager), m_shaderManager(shaderManager), m_cursorManager(cursorManager), m_currentState(STATE_MENU), m_previousState(STATE_MENU), m_voiceChat(voiceChat) {
     initMenus();
 	changeState(STATE_MENU);
 }
@@ -30,14 +32,16 @@ MenuManager::~MenuManager() {
     delete m_optionsMenu;
     delete m_keyBindingsMenu;
     delete m_controllerBindingsMenu;
+    delete m_audioSettingsMenu;
 }
 
 void MenuManager::initMenus() {
     m_mainMenu = new MainMenu(m_game, m_soundManager, m_renderer, m_textRenderers, m_shaderManager, m_cursorManager);
     m_pauseMenu = new PauseMenu(m_game, m_soundManager, m_textRenderers, m_shaderManager, m_cursorManager);
-    m_optionsMenu = new OptionsMenu(m_game, m_soundManager, m_previousState, m_textRenderers, m_shaderManager, m_cursorManager);
+    m_optionsMenu = new OptionsMenu(m_game, m_soundManager, m_previousState, m_textRenderers, m_shaderManager, m_cursorManager, m_voiceChat);
     m_keyBindingsMenu = new KeyBindingsMenu(m_game, m_soundManager, m_textRenderers, m_shaderManager, m_cursorManager);
     m_controllerBindingsMenu = new ControllerBindingsMenu(m_game, m_soundManager, m_textRenderers, m_shaderManager, m_cursorManager);
+    m_audioSettingsMenu = new AudioSettingsMenu(m_game, m_soundManager, m_textRenderers, m_shaderManager, m_cursorManager, m_voiceChat);
 }
 
 void MenuManager::setInputManager(InputManager* inputManager) {
@@ -59,6 +63,7 @@ void MenuManager::changeState(GameState newState, bool restoreFocus) {
     if (newState == STATE_OPTIONS) {
         m_showKeyBindings = false;
         m_showControllerBindings = false;
+        m_showAudioSettings = false;
     }
     if (newState == STATE_MENU) {
 		m_mainMenu->resetWeirdSoundPlayedTime();
@@ -120,6 +125,7 @@ Menu* MenuManager::getCurrentMenu() {
         // Sous-menus affiches a la place des Options
         if (m_showKeyBindings) return m_keyBindingsMenu;
         if (m_showControllerBindings) return m_controllerBindingsMenu;
+        if (m_showAudioSettings) return m_audioSettingsMenu;
         return m_optionsMenu;
 	case STATE_PLAYING:
 		return nullptr; // Aucun menu à afficher pendant le jeu
@@ -167,8 +173,8 @@ void MenuManager::goBack() {
         // Meme retour sonore que le bouton "Retour" clique a la souris.
         if (Menu* menu = getCurrentMenu()) menu->playClickSound();
 
-        if (m_showKeyBindings || m_showControllerBindings) {
-            // Sous-menu de bindings : retour vers les Options. Comme le
+        if (m_showKeyBindings || m_showControllerBindings || m_showAudioSettings) {
+            // Sous-menu de bindings/audio : retour vers les Options. Comme le
             // bouton "Retour", on annule une capture en cours.
             if (m_inputManager) {
                 m_inputManager->cancelKeyCapture();

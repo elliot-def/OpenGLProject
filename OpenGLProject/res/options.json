@@ -1,5 +1,13 @@
 {
     "musicVolume": 0.0,
     "muted": false,
+    "voice": {
+        "device": "OpenAL Soft on Virtual Input (RØDE Connect)",
+        "enabled": false,
+        "micMuted": false,
+        "sensitivity": 0.15000000596046448,
+        "voiceActivation": false,
+        "volume": 1.0
+    },
     "volume": 0.1599999964237213
 }

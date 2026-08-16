@@ -1,4 +1,5 @@
 #define GLM_ENABLE_EXPERIMENTAL
+#include "Log.h"
 #include "CollisionManager.h"
 #include "Mesh.h"
 
@@ -398,7 +399,7 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
     float     height)
 {
     if (std::isnan(currentPos.x) || std::isinf(currentPos.x)) {
-        std::cerr << "[Collision] Position NaN/Inf detectee !" << std::endl;
+        logErr() << "[Collision] Position NaN/Inf detectee !" << std::endl;
         return currentPos;
     }
 
@@ -516,17 +517,17 @@ bool CollisionManager::tryJump(float jumpVelocity) {
 // Debug
 // ─────────────────────────────────────────────────────────────────────────────
 void CollisionManager::printInfo() const {
-    std::cout << "=== CollisionManager (AABB) ===" << std::endl;
-    std::cout << "  Statiques  : " << m_staticBoxes.size() << " boite(s)" << std::endl;
+    logOut() << "=== CollisionManager (AABB) ===" << std::endl;
+    logOut() << "  Statiques  : " << m_staticBoxes.size() << " boite(s)" << std::endl;
     for (const auto& sb : m_staticBoxes) {
-        std::cout << "    [" << sb.name << "] "
+        logOut() << "    [" << sb.name << "] "
             << "min(" << sb.aabb.min.x << "," << sb.aabb.min.y << "," << sb.aabb.min.z << ") "
             << "max(" << sb.aabb.max.x << "," << sb.aabb.max.y << "," << sb.aabb.max.z << ")"
             << std::endl;
     }
-    std::cout << "  Dynamiques : " << m_dynamicBoxes.size() << " boite(s)" << std::endl;
+    logOut() << "  Dynamiques : " << m_dynamicBoxes.size() << " boite(s)" << std::endl;
     for (const auto& [key, db] : m_dynamicBoxes) {
-        std::cout << "    [" << key << "] "
+        logOut() << "    [" << key << "] "
             << "min(" << db.aabb.min.x << "," << db.aabb.min.y << "," << db.aabb.min.z << ") "
             << "max(" << db.aabb.max.x << "," << db.aabb.max.y << "," << db.aabb.max.z << ")"
             << std::endl;

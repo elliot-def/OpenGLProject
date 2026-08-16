@@ -4,6 +4,8 @@
 #include <cstdarg>
 #include <chrono>
 #include <ctime>
+#include <iostream>
+#include <string>
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Logging unifie : remplace le melange printf/cout/cerr par des macros
@@ -50,12 +52,24 @@ inline void logPrintf(const char* fmt, ...) {
     va_end(args);
 }
 
-#ifdef _DEBUG
-  #define LOG_INFO(fmt, ...)  do { logTimestamp(stdout); std::printf("[INFO]  " fmt "\n", ##__VA_ARGS__); } while (0)
-  #define LOG_WARN(fmt, ...)  do { logTimestamp(stderr); std::fprintf(stderr, "[WARN]  " fmt "\n", ##__VA_ARGS__); } while (0)
-  #define LOG_ERROR(fmt, ...) do { logTimestamp(stderr); std::fprintf(stderr, "[ERROR] " fmt "\n", ##__VA_ARGS__); } while (0)
-#else
-  #define LOG_INFO(fmt, ...)  ((void)0)
-  #define LOG_WARN(fmt, ...)  ((void)0)
-  #define LOG_ERROR(fmt, ...) ((void)0)
-#endif
+// LOG_* restent actifs en Release : utiles pour diagnostiquer chez les
+// testeurs (le build Release est celui partage). Le surcout est negligeable
+// car les appels LOG_* sont concentres dans le chargement/les evenements,
+// pas dans les hot paths par frame.
+#define LOG_INFO(fmt, ...)  do { logTimestamp(stdout); std::printf("[INFO]  " fmt "\n", ##__VA_ARGS__); } while (0)
+#define LOG_WARN(fmt, ...)  do { logTimestamp(stderr); std::fprintf(stderr, "[WARN]  " fmt "\n", ##__VA_ARGS__); } while (0)
+#define LOG_ERROR(fmt, ...) do { logTimestamp(stderr); std::fprintf(stderr, "[ERROR] " fmt "\n", ##__VA_ARGS__); } while (0)
+
+// Equivalent iostream de logPrintf pour les fichiers qui utilisent << :
+// remplace std::cout par logOut() et std::cerr par logErr() pour horodater
+// chaque ligne. Retourne le flux pour enchainer les << comme avant.
+inline std::ostream& logOut() { logTimestamp(stdout); return std::cout; }
+inline std::ostream& logErr() { logTimestamp(stderr); return std::cerr; }
+
+// Imprime un bloc deja formaté (multi-lignes) avec UN seul horodatage en tete.
+// Evite d'horodater le milieu d'un arbre/dump multi-lignes construit par
+// plusieurs appels successifs.
+inline void logRaw(const std::string& text) {
+    logTimestamp(stdout);
+    std::fwrite(text.c_str(), 1, text.size(), stdout);
+}

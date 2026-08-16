@@ -1,3 +1,4 @@
+#include "Log.h"
 #include "GlbAnimationRepair.h"
 
 #include <algorithm>
@@ -127,7 +128,7 @@ bool patchGlbAnimationRotations(const aiScene* scene, const std::string& path) {
     GlbAnimationData glb;
     if (!readGlb(path, glb) || !glb.document.contains("animations") ||
         !glb.document["animations"].is_array()) {
-        std::cerr << "[Model] Impossible de lire les animations brutes du GLB: " << path << std::endl;
+        logErr() << "[Model] Impossible de lire les animations brutes du GLB: " << path << std::endl;
         return false;
     }
 
@@ -211,7 +212,7 @@ bool patchGlbAnimationRotations(const aiScene* scene, const std::string& path) {
 
             aiNodeAnim* targetChannel = channelIt->second;
             if (!targetChannel) {
-                std::cerr << "[Model] Canal d'animation null pour le noeud \"" << nodeName << "\" - ignore" << std::endl;
+                logErr() << "[Model] Canal d'animation null pour le noeud \"" << nodeName << "\" - ignore" << std::endl;
                 continue;
             }
             // In-place overwrite : on ne delete[] JAMAIS la memoire allouee
@@ -227,7 +228,7 @@ bool patchGlbAnimationRotations(const aiScene* scene, const std::string& path) {
     }
 
     if (restoredChannels > 0) {
-        std::cout << "[Model] GLB rotations restaurees: " << restoredChannels
+        logOut() << "[Model] GLB rotations restaurees: " << restoredChannels
                   << " channels, " << restoredKeys << " cles" << std::endl;
     }
     return restoredChannels > 0;

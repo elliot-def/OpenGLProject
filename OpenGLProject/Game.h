@@ -32,6 +32,8 @@ class LoadingScreen;
 class ModelLoader;
 class Scene;
 class MultiplayerManager;
+class LobbyChat;
+class VoiceChat;
 
 class Game {
 public:
@@ -87,6 +89,12 @@ private:
     std::unique_ptr<ModelLoader> m_modelLoader;  // possède les entités 3D chargées
     // Joueurs distants du lobby Steam (possède leurs ModelEntity, les dessine).
     std::unique_ptr<MultiplayerManager> m_multiplayerManager;
+
+    // Chat du lobby Steam (logs systeme + messages des joueurs, saisie Entree).
+    std::unique_ptr<LobbyChat> m_lobbyChat;
+
+    // Chat vocal du lobby Steam (capture micro + lecture des voix distantes).
+    std::unique_ptr<VoiceChat> m_voiceChat;
 
     bool m_isRunning = true;
 

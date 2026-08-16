@@ -1,3 +1,4 @@
+#include "Log.h"
 #include "TextRenderer.h"
 #include "ShaderManager.h"
 
@@ -106,7 +107,7 @@ bool TextRenderer::rebuildAtlas() {
     stbtt_pack_context packCtx;
     if (!stbtt_PackBegin(&packCtx, m_atlasData.data(), ATLAS_WIDTH, ATLAS_HEIGHT,
                          ATLAS_WIDTH, ATLAS_PADDING, nullptr)) {
-        std::cerr << "Erreur: echec stbtt_PackBegin (atlas trop petit ?)" << std::endl;
+        logErr() << "Erreur: echec stbtt_PackBegin (atlas trop petit ?)" << std::endl;
         return false;
     }
 
@@ -117,7 +118,7 @@ bool TextRenderer::rebuildAtlas() {
     for (const auto& range : m_fontRanges) {
         std::ifstream file(range.fontPath, std::ios::binary | std::ios::ate);
         if (!file.is_open()) {
-            std::cerr << "Erreur: Impossible d'ouvrir " << range.fontPath << std::endl;
+            logErr() << "Erreur: Impossible d'ouvrir " << range.fontPath << std::endl;
             stbtt_PackEnd(&packCtx);
             return false;
         }
@@ -132,7 +133,7 @@ bool TextRenderer::rebuildAtlas() {
         std::vector<stbtt_packedchar> chardata(range.numChars);
         if (!stbtt_PackFontRange(&packCtx, buffer.data(), 0, range.fontSize,
                                  range.firstCodepoint, range.numChars, chardata.data())) {
-            std::cerr << "Erreur: echec stbtt_PackFontRange pour " << range.fontPath
+            logErr() << "Erreur: echec stbtt_PackFontRange pour " << range.fontPath
                       << " (atlas trop petit ?)" << std::endl;
             stbtt_PackEnd(&packCtx);
             return false;
@@ -181,7 +182,7 @@ bool TextRenderer::rebuildAtlas() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
-    std::cout << "Police chargee: " << m_fontRanges.size() << " plage(s) de glyphes"
+    logOut() << "Police chargee: " << m_fontRanges.size() << " plage(s) de glyphes"
               << " (atlas " << ATLAS_WIDTH << "x" << ATLAS_HEIGHT << ")" << std::endl;
     return true;
 }

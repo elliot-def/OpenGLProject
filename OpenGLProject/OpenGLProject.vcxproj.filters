@@ -42,6 +42,9 @@
     <ClCompile Include="Direction.cpp"><Filter>Core\Entity</Filter></ClCompile>
     <ClCompile Include="Transformation.h"><Filter>Core\Entity</Filter></ClCompile>
     <ClCompile Include="InputManager.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="LobbyChat.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="AudioSettingsMenu.cpp"><Filter>Menu</Filter></ClCompile>
+    <ClCompile Include="VoiceChat.cpp"><Filter>Network</Filter></ClCompile>
     <ClCompile Include="InputNotification.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="Controller.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="GlfwController.cpp"><Filter>Input</Filter></ClCompile>
@@ -119,6 +122,9 @@
     <ClInclude Include="Player.h"><Filter>Core\Entity</Filter></ClInclude>
     <ClInclude Include="Direction.h"><Filter>Core\Entity</Filter></ClInclude>
     <ClInclude Include="InputManager.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="LobbyChat.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="AudioSettingsMenu.h"><Filter>Menu</Filter></ClInclude>
+    <ClInclude Include="VoiceChat.h"><Filter>Network</Filter></ClInclude>
     <ClInclude Include="InputNotification.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="Controller.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="GlfwController.h"><Filter>Input</Filter></ClInclude>

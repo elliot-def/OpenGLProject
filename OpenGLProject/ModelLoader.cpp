@@ -15,6 +15,33 @@
 #include <string>
 #include <vector>
 
+namespace {
+// Diagnostic RrTt : dump l'arbre des noeuds (hierarchie + bind) pour les bones
+// du torse/jambes/tete afin d'identifier la structure de decomposition Assimp
+// (wrappers "_$AssimpFbx$_Translation" / "_PreRotation" autour de chaque bone).
+void dumpNodeTree(const aiNode* node, int depth) {
+    if (!node || depth > 10) return;
+    const std::string name = node->mName.C_Str();
+    const bool relevant =
+        name.find("Hip") != std::string::npos ||
+        name.find("Leg") != std::string::npos ||
+        name.find("Foot") != std::string::npos ||
+        name.find("Spine") != std::string::npos ||
+        name.find("Neck") != std::string::npos ||
+        name.find("Head") != std::string::npos;
+    if (relevant) {
+        const glm::mat4 m = aiMatrixToGlm(node->mTransformation);
+        const glm::vec3 t = glm::vec3(m[3]);
+        LOG_INFO("[ModelLoader]   %*s'%s' bind=(%.2f, %.2f, %.2f) diag=(%.2f, %.2f, %.2f)",
+                 depth * 2, "", name.c_str(), t.x, t.y, t.z,
+                 m[0][0], m[1][1], m[2][2]);
+    }
+    for (unsigned int i = 0; i < node->mNumChildren; i++) {
+        dumpNodeTree(node->mChildren[i], depth + 1);
+    }
+}
+} // namespace
+
 ModelLoader::ModelLoader(Camera* camera, LightManager* lightManager, Renderer* renderer,
                          TextureManager* textureManager, InputManager* inputManager)
     : m_camera(camera), m_lightManager(lightManager), m_renderer(renderer),
@@ -188,6 +215,60 @@ void ModelLoader::configureHumanCharacter(ModelEntity* entity) {
         if (idleIdx >= 0 && idleIdx < static_cast<int>(totalAnims)) {
             entity->getAnimator()->playAnimation(static_cast<unsigned int>(idleIdx), true);
             entity->getAnimator()->update(0.0f);
+        }
+    }
+
+    // ── Diagnostic skinning (à retirer une fois le bug identifié) ──────
+    // Utile en solo comme en multi : confirme que les bones ont bien ete
+    // importes et que la 1ere matrice de bone (souvent le Hips/root) est
+    // valide (translation non nulle, diagonale ~1) et non identite/zero.
+    {
+        const Animator* anim = entity->getAnimator();
+        const aiAnimation* cur = anim ? anim->getCurrentAnimation() : nullptr;
+        LOG_INFO("[ModelLoader] Skinning pret : %zu bones, %zu animations, hasAnimations=%d, "
+                 "scale=%.4f, anim='%s' (index=%d, loop=%d)",
+                 model->getBoneInfoMap().size(), model->getNumAnimations(),
+                 entity->hasAnimations() ? 1 : 0, entity->getScale(),
+                 cur ? cur->mName.C_Str() : "(null)",
+                 anim ? anim->getCurrentAnimationIndex() : -1,
+                 (anim && anim->isLooping()) ? 1 : 0);
+        const auto& bm = anim ? anim->getFinalBoneMatrices() : std::vector<glm::mat4>();
+        if (!bm.empty()) {
+            LOG_INFO("[ModelLoader]   bone[0] transl=(%.3f, %.3f, %.3f) diag=(%.3f, %.3f, %.3f, %.3f)",
+                     bm[0][3].x, bm[0][3].y, bm[0][3].z,
+                     bm[0][0][0], bm[0][1][1], bm[0][2][2], bm[0][3][3]);
+        }
+        // Positions monde (apres idle) : les jambes doivent avoir un Y
+        // DECROISSANT (LeftUpLeg < Hips, LeftLeg < LeftUpLeg, LeftFoot < LeftLeg).
+        // Un Y croissant = "jambes vers le haut" ; tout a (0,0,0) = "membres au centre".
+        if (anim) {
+            static const char* kBones[] = { "Hips", "Spine", "Head", "LeftUpLeg", "LeftLeg",
+                                            "LeftFoot", "LeftArm", "LeftForeArm", "LeftHand" };
+            for (const char* n : kBones) {
+                const glm::vec3 p = anim->getBoneWorldPosition(n);
+                LOG_INFO("[ModelLoader]   %-12s world=(%.3f, %.3f, %.3f)", n, p.x, p.y, p.z);
+            }
+        }
+        // Arbre des noeuds (structure RrTt) : montre l'ordre des wrappers
+        // "_$AssimpFbx$_Translation" / "_PreRotation" autour de chaque bone.
+        LOG_INFO("[ModelLoader]   Arbre des noeuds :");
+        if (model->getRootNode()) {
+            dumpNodeTree(model->getRootNode(), 0);
+        }
+        // Canaux de l'idle (index 0) : montre si l'animation est aussi RrTt
+        // (noms "_$AssimpFbx$_Rotation") ou fournit des rotations absolues.
+        const aiAnimation* idleAnim = model->getAnimation(0);
+        if (idleAnim) {
+            LOG_INFO("[ModelLoader]   idle '%s' : %u channels",
+                     idleAnim->mName.C_Str(), idleAnim->mNumChannels);
+            for (unsigned int i = 0; i < idleAnim->mNumChannels && i < 14; i++) {
+                const aiNodeAnim* ch = idleAnim->mChannels[i];
+                if (ch) {
+                    LOG_INFO("[ModelLoader]     '%s' pos=%u rot=%u scale=%u",
+                             ch->mNodeName.C_Str(), ch->mNumPositionKeys,
+                             ch->mNumRotationKeys, ch->mNumScalingKeys);
+                }
+            }
         }
     }
 }

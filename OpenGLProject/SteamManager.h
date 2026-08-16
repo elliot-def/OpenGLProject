@@ -99,6 +99,11 @@ public:
     // Diffuse un paquet à tous les membres du lobby courant (sauf le local).
     bool broadcastP2P(const void* data, uint32_t size);
 
+    // Variante NON-FIABLE (chat vocal temps reel) : les paquets peuvent se
+    // perdre/arriver en desordre, pas de retransmission.
+    bool sendP2PUnreliable(CSteamID target, const void* data, uint32_t size);
+    bool broadcastP2PUnreliable(const void* data, uint32_t size);
+
     // Lit les messages P2P en attente sur le canal 0. Retourne le nombre lu
     // (les sessions entrantes sont acceptées automatiquement via callback).
     int receiveP2P(std::vector<P2PMessage>& out, int maxMessages = 32);
@@ -121,6 +126,9 @@ public:
 
     using LobbyCallback = std::function<void(CSteamID lobbyID)>;
     using LobbyMemberCallback = std::function<void(CSteamID lobbyID, CSteamID memberID)>;
+    // Changement d'un membre du lobby (autre que le local) : flags bruts
+    // LobbyChatUpdate_t (k_EChatMemberStateChangeEntered/Left/Disconnected/Kicked).
+    using LobbyMemberUpdateCallback = std::function<void(CSteamID lobbyID, CSteamID memberID, uint32_t flags)>;
     using SimpleCallback     = std::function<void()>;
 
     void setOnLobbyCreated(LobbyCallback cb)   { m_onLobbyCreated = std::move(cb); }
@@ -130,6 +138,15 @@ public:
     // Appelé quand une invitation entrante doit être rejointe
     // (soit en jeu via callback, soit via ligne de commande).
     void setOnInviteReceived(LobbyCallback cb)  { m_onInviteReceived = std::move(cb); }
+
+    // Appelé quand un membre du lobby (autre que le local) entre/sort du
+    // lobby (flags LobbyChatUpdate_t). Utilise par le chat pour les logs
+    // systeme "X a rejoint/quitte le lobby".
+    void setOnLobbyMemberUpdate(LobbyMemberUpdateCallback cb) { m_onLobbyMemberUpdate = std::move(cb); }
+
+    // Nom public d'un utilisateur Steam (persona name). Retourne une chaine
+    // vide si Steam n'est pas initialise.
+    const char* getPersonaName(CSteamID steamID) const;
 
 private:
     bool               m_initialized  = false;
@@ -161,6 +178,7 @@ private:
     LobbyCallback       m_onLobbyEntered;
     SimpleCallback      m_onLobbyLeft;
     LobbyCallback       m_onInviteReceived;
+    LobbyMemberUpdateCallback m_onLobbyMemberUpdate;
 
     // ---- Détail interne ----
     void completeInit();   // finalise l'init après SteamAPI_InitEx OK

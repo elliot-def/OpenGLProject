@@ -1,6 +1,7 @@
 #include "MultiplayerManager.h"
 
 #include "SteamManager.h"
+#include "VoiceChat.h"   // VoicePacket (classification des paquets voix)
 #include "ModelEntity.h"
 #include "ModelLoader.h"
 #include "Animator.h"
@@ -44,8 +45,25 @@ struct PlayerStatePacket {
 #pragma pack(pop)
 static_assert(sizeof(PlayerStatePacket) == 32, "PlayerStatePacket doit faire 32 octets");
 
+// Paquet de chat du lobby (meme canal P2P 0, magic different) :
+//   [0..3]   magic       "MPGC"
+//   [4..7]   version     (uint32 = 1)
+//   [8..39]  senderName  (persona name, 31 chars + \0)
+//   [40..295] text       (message, 255 chars + \0)
+#pragma pack(push, 1)
+struct ChatPacket {
+    char     magic[4];
+    uint32_t version;
+    char     senderName[32];
+    char     text[256];
+};
+#pragma pack(pop)
+static_assert(sizeof(ChatPacket) == 296, "ChatPacket doit faire 296 octets");
+
 static constexpr uint32_t kPacketVersion = 2;
 static constexpr char     kPacketMagic[4] = { 'M', 'P', 'G', 'L' };
+static constexpr uint32_t kChatVersion   = 1;
+static constexpr char     kChatMagic[4]  = { 'M', 'P', 'G', 'C' };
 
 MultiplayerManager::MultiplayerManager(SteamManager* steam, Camera* camera,
                                        LightManager* lightManager, Renderer* renderer,
@@ -201,6 +219,36 @@ void MultiplayerManager::processIncomingMessages() {
     m_steam->receiveP2P(messages, 32);
 
     for (const auto& msg : messages) {
+        // ── Chat vocal : paquet voix temps reel (non-fiable) ──
+        if (msg.data.size() == sizeof(VoicePacket)) {
+            VoicePacket vp;
+            std::memcpy(&vp, msg.data.data(), sizeof(vp));
+            if (std::memcmp(vp.magic, "MPGV", 4) == 0 && vp.version == 1) {
+                if (m_onVoicePacket) {
+                    m_onVoicePacket(msg.sender.ConvertToUint64(),
+                                    msg.data.data(),
+                                    static_cast<uint32_t>(msg.data.size()));
+                }
+                continue;
+            }
+        }
+
+        // ── Chat du lobby : message utilisateur ──
+        if (msg.data.size() == sizeof(ChatPacket)) {
+            ChatPacket pkt;
+            std::memcpy(&pkt, msg.data.data(), sizeof(pkt));
+            if (std::memcmp(pkt.magic, kChatMagic, 4) == 0 && pkt.version == kChatVersion) {
+                // Sécurité : champs toujours terminés par \0 (memset à l'envoi).
+                pkt.senderName[sizeof(pkt.senderName) - 1] = '\0';
+                pkt.text[sizeof(pkt.text) - 1] = '\0';
+                if (m_onChatMessage) {
+                    m_onChatMessage(msg.sender.ConvertToUint64(), pkt.senderName, pkt.text);
+                }
+                continue;
+            }
+        }
+
+        // ── État de joueur (synchronisation P2P classique) ──
         if (msg.data.size() != sizeof(PlayerStatePacket)) continue;
 
         PlayerStatePacket pkt;
@@ -236,6 +284,22 @@ void MultiplayerManager::processIncomingMessages() {
         rp.loopAnim = (pkt.loop != 0);
         rp.timeSincePacket = 0.0f;
     }
+}
+
+void MultiplayerManager::sendChatMessage(const std::string& text) {
+    if (!m_steam || !m_steam->isInLobby()) return;
+
+    ChatPacket pkt;
+    std::memset(&pkt, 0, sizeof(pkt));
+    std::memcpy(pkt.magic, kChatMagic, 4);
+    pkt.version = kChatVersion;
+
+    const char* localName = m_steam->getLocalPersonaName();
+    snprintf(pkt.senderName, sizeof(pkt.senderName), "%s",
+             localName ? localName : "");
+    snprintf(pkt.text, sizeof(pkt.text), "%s", text.c_str());
+
+    m_steam->broadcastP2P(&pkt, sizeof(pkt));
 }
 
 void MultiplayerManager::applyState(RemotePlayer& rp) {

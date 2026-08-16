@@ -125,7 +125,7 @@ private:
      * @param prefix Préfixe pour l'indentation
      * @param isLast Indique si c'est le dernier enfant
      */
-    void printNode(const TextureNode* node, const std::string& prefix = "", bool isLast = true) const;
+    void printNode(const TextureNode* node, const std::string& prefix, bool isLast, std::ostringstream& out) const;
 
     // Fonctions privées pour décomposer la logique
     float loadTextureProperties(const std::filesystem::path& jsonPath);

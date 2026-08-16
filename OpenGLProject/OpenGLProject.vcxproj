@@ -176,6 +176,9 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImageLoader.cpp" />
     <ClCompile Include="InputManager.cpp" />
+    <ClCompile Include="LobbyChat.cpp" />
+    <ClCompile Include="AudioSettingsMenu.cpp" />
+    <ClCompile Include="VoiceChat.cpp" />
     <ClCompile Include="InputNotification.cpp" />
     <ClCompile Include="KeyBindingsMenu.cpp" />
     <ClCompile Include="ControllerBindingsMenu.cpp" />
@@ -264,6 +267,9 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Image.h" />
     <ClInclude Include="ImageLoader.h" />
     <ClInclude Include="InputManager.h" />
+    <ClInclude Include="LobbyChat.h" />
+    <ClInclude Include="AudioSettingsMenu.h" />
+    <ClInclude Include="VoiceChat.h" />
     <ClInclude Include="InputNotification.h" />
     <ClInclude Include="KeyBindingsMenu.h" />
     <ClInclude Include="ControllerBindingsMenu.h" />

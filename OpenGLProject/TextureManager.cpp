@@ -1,3 +1,4 @@
+#include "Log.h"
 #include "TextureManager.h"
 #include "Texture.h"
 
@@ -48,10 +49,10 @@ float TextureManager::loadTextureProperties(const std::filesystem::path& jsonPat
         return jsonData.value("shininess", Constants::Material::PLASTIC_GLOSSY);
     }
     catch (const json::exception& e) {
-        std::cerr << "Erreur parsing JSON " << jsonPath << ": " << e.what() << std::endl;
+        logErr() << "Erreur parsing JSON " << jsonPath << ": " << e.what() << std::endl;
     }
     catch (const std::exception& e) {
-        std::cerr << "Erreur ouverture JSON " << jsonPath << ": " << e.what() << std::endl;
+        logErr() << "Erreur ouverture JSON " << jsonPath << ": " << e.what() << std::endl;
     }
 
     return Constants::Material::PLASTIC_GLOSSY;
@@ -72,7 +73,7 @@ TextureInfo TextureManager::getTextureInfoFromFolder(const std::filesystem::path
         info.shininess = loadTextureProperties(info.shininessPath);
     }
     else {
-        std::cerr << "Fichier de proprietes manquant pour " << folderName << ": " << info.shininessPath << std::endl;
+        logErr() << "Fichier de proprietes manquant pour " << folderName << ": " << info.shininessPath << std::endl;
         info.shininess = Constants::Material::PLASTIC_GLOSSY;
 	}
 
@@ -119,7 +120,7 @@ bool TextureManager::loadTextureFromFolder(const std::filesystem::path& folderPa
 
     // Vérifier que la texture principale existe
     if (!std::filesystem::exists(info.texturePath)) {
-        std::cerr << "Texture principale manquante: " << info.texturePath << std::endl;
+        logErr() << "Texture principale manquante: " << info.texturePath << std::endl;
         return false;
     }
 
@@ -128,7 +129,7 @@ bool TextureManager::loadTextureFromFolder(const std::filesystem::path& folderPa
     createTextureNode(relativePath, info, textureIDCounter);
 
     // Log
-    std::cout << "Texture chargee: " << folderName
+    logOut() << "Texture chargee: " << folderName
         << " (shininess: " << info.shininess
         << ", specular: " << (info.hasSpecular ? "oui" : "non") << ")"
 		<< ", shininess file: " << (info.hasShininess ? info.shininessPath : "non trouvé")
@@ -146,7 +147,7 @@ void TextureManager::loadTextures(std::span<const char* const> texturesFolderPat
         const char* path = texturesFolderPath[i];
 
         if (!std::filesystem::is_directory(path)) {
-            std::cerr << "Le dossier des textures n'existe pas: " << path << std::endl;
+            logErr() << "Le dossier des textures n'existe pas: " << path << std::endl;
             return;
         }
 
@@ -177,9 +178,11 @@ void TextureManager::deleteNode(TextureNode* node) {
 }
 
 void TextureManager::printTextureTree() const {
-    std::cout << "\n=== Arborescence des Textures ===" << std::endl;
+    std::ostringstream out;
+    out << "\n=== Arborescence des Textures ===" << std::endl;
     if (m_root.children.empty()) {
-        std::cout << "(Aucune texture chargee)" << std::endl;
+        out << "(Aucune texture chargee)" << std::endl;
+        logRaw(out.str());
         return;
     }
 
@@ -189,30 +192,31 @@ void TextureManager::printTextureTree() const {
     for (const auto& pair : m_root.children) {
         bool isLast = (++count == total);   
         // Remplacement ici
-        std::cout << pair.first;
+        out << pair.first;
 
         if (pair.second->texture) {
-            std::cout << " [ID: " << pair.second->texture->getID()
+            out << " [ID: " << pair.second->texture->getID()
                 << ", shininess: " << pair.second->texture->getShininess();
             if (pair.second->texture->hasSpecular()) {
-                std::cout << ", specular";
+                out << ", specular";
             }
-            std::cout << "]";
+            out << "]";
         }
         else {
-            std::cout << "/";
+            out << "/";
         }
-        std::cout << std::endl;
+        out << std::endl;
 
         if (!pair.second->children.empty()) {
             std::string newPrefix = isLast ? "    " : "\xE2\x94\x82   ";
-            printNode(pair.second, newPrefix, false);
+            printNode(pair.second, newPrefix, false, out);
         }
     }
-    std::cout << "================================\n" << std::endl;
+    out << "================================\n" << std::endl;
+    logRaw(out.str());
 }
 
-void TextureManager::printNode(const TextureNode* node, const std::string& prefix, bool isLast) const {
+void TextureManager::printNode(const TextureNode* node, const std::string& prefix, bool isLast, std::ostringstream& out) const {
     if (!node || node->children.empty()) return;
 
     size_t count = 0;
@@ -222,24 +226,24 @@ void TextureManager::printNode(const TextureNode* node, const std::string& prefi
         bool isLastChild = (++count == total);
 
         // Remplacement ici
-        std::cout << prefix << (isLastChild ? "\xE2\x94\x94\xE2\x94\x80\xE2\x94\x80 " : "\xE2\x94\x9C\xE2\x94\x80\xE2\x94\x80 ") << pair.first;
+        out << prefix << (isLastChild ? "\xE2\x94\x94\xE2\x94\x80\xE2\x94\x80 " : "\xE2\x94\x9C\xE2\x94\x80\xE2\x94\x80 ") << pair.first;
 
         if (pair.second->texture) {
-            std::cout << " [ID: " << pair.second->texture->getID()
+            out << " [ID: " << pair.second->texture->getID()
                 << ", shininess: " << pair.second->texture->getShininess();
             if (pair.second->texture->hasSpecular()) {
-                std::cout << ", specular";
+                out << ", specular";
             }
-            std::cout << "]";
+            out << "]";
         }
         else {
-            std::cout << "/";
+            out << "/";
         }
-        std::cout << std::endl;
+        out << std::endl;
 
         if (!pair.second->children.empty()) {
             std::string newPrefix = prefix + (isLastChild ? "    " : "\xE2\x94\x82   ");
-            printNode(pair.second, newPrefix, false);
+            printNode(pair.second, newPrefix, false, out);
         }
     }
 }
@@ -257,7 +261,7 @@ void TextureManager::createDefaultTextures() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    std::cout << "Default specular texture created (ID: " << m_defaultSpecularID << ")" << std::endl;
+    logOut() << "Default specular texture created (ID: " << m_defaultSpecularID << ")" << std::endl;
 
     // Texture BLANCHE 1x1 partagée (fallback diffuse). Réutilisée par
     // Model::processMesh pour les meshes sans texture diffuse.
@@ -272,5 +276,5 @@ void TextureManager::createDefaultTextures() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    std::cout << "Default diffuse texture created (ID: " << m_defaultDiffuseID << ")" << std::endl;
+    logOut() << "Default diffuse texture created (ID: " << m_defaultDiffuseID << ")" << std::endl;
 }
