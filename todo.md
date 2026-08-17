@@ -25,8 +25,6 @@ Fix :
 - Select (attention au clic sur les boutons derrière les selects) + ajouter un fond derrière les options du select avec un couleur différente pour le hover
 - Chat propre à la session (reset quand on en recréer une ou passe en solo)
 - Fix la caméra en première personne qui rentre dans le player model quand il est en no clip (ne reviens pas à la normal quand on s'enleve du no clip)- Position des yeux en première personne
-- Le rectangle blanc derrière le chat n'est visible qu'en première personne
-- Changer le nom des micro dans le select (enlevé openal machin truc)
 - Il manque certaines keyframes quand je strafe à droite
 
 Opti :
