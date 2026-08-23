@@ -17,6 +17,7 @@
 #include "ShaderManager.h"
 #include "constants/camera.h"
 #include "constants/file.h"
+#include "constants/resource.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -28,6 +29,12 @@
 #include <cstring>
 #include <vector>
 
+namespace {
+// Pointeur vers l'unique Game, pour le char callback GLFW. Le user pointer de
+// la fenetre est deja utilise par le SoundManager (focus callback) qui
+// l'ecrase des sa construction dans loadResources().
+Game* g_activeGame = nullptr;
+} // namespace
 
 Game::Game() : m_argc(0), m_argv(nullptr) {
     if (!glfwInit()) {
@@ -75,6 +82,8 @@ Game::~Game() {
     m_loadingScreen.reset();
 
     glfwTerminate();
+
+    g_activeGame = nullptr;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,11 +148,17 @@ void Game::initialize() {
     // ── Saisie texte du chat du lobby ──
     // Le char callback GLFW alimente LobbyChat (cree plus tard dans
     // loadResources, d'ou le null-check).
-    glfwSetWindowUserPointer(m_window->getGLFWwindow(), this);
+    // NB : le user pointer de la fenetre est ECRASE par le SoundManager (focus
+    // callback) des sa construction dans loadResources(), donc on ne peut pas
+    // relire glfwGetWindowUserPointer ici (il ne renvoie plus le Game). On
+    // passe par un pointeur statique : un lambda capturant ne peut pas devenir
+    // un pointeur de fonction GLFW.
+    g_activeGame = this;
     glfwSetCharCallback(m_window->getGLFWwindow(),
-        [](GLFWwindow* w, unsigned int codepoint) {
-            Game* game = static_cast<Game*>(glfwGetWindowUserPointer(w));
-            if (game && game->m_lobbyChat) game->m_lobbyChat->onChar(codepoint);
+        [](GLFWwindow* /*window*/, unsigned int codepoint) {
+            if (g_activeGame && g_activeGame->m_lobbyChat) {
+                g_activeGame->m_lobbyChat->onChar(codepoint);
+            }
         });
 
     loadResources();  // passe en LOADING ou READY en interne
@@ -223,12 +238,12 @@ void Game::loadResources() {
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
 
     // Charger les polices avant le tick pour que le label s'affiche
-	m_textRenderers->at(0)->loadFont("res/fonts/armana/Amarna-Bold.ttf", 96.0f);
-    m_textRenderers->at(1)->loadFont("res/fonts/Gnocchi.ttf", 282.0f);
+	m_textRenderers->at(0)->loadFont(Constants::Resource::FONT_ARMANA, 96.0f);
+    m_textRenderers->at(1)->loadFont(Constants::Resource::FONT_GNOCCHI, 282.0f);
     // Icônes kenney (zone privee U+E000..) : manette Xbox + clavier/souris,
     // utilisees par la notification de bascule de source d'entree.
-    m_textRenderers->at(2)->loadFontRange("res/fonts/kenney/kenney_input_steam_controller.ttf", 48.0f, 0xE000, 67);
-    m_textRenderers->at(3)->loadFontRange("res/fonts/kenney/kenney_input_keyboard_&_mouse.ttf", 48.0f, 0xE000, 243);
+    m_textRenderers->at(2)->loadFontRange(Constants::Resource::FONT_KENNEY_STEAM, 48.0f, 0xE000, 67);
+    m_textRenderers->at(3)->loadFontRange(Constants::Resource::FONT_KENNEY_KB_MOUSE, 48.0f, 0xE000, 243);
 
     // ── Chat du lobby : logs systeme + messages des joueurs (saisie Entree) ──
     m_lobbyChat = std::make_unique<LobbyChat>(m_shaderManager.get(),
@@ -284,8 +299,11 @@ void Game::loadResources() {
 
         m_steamManager->setOnLobbyCreated([this](CSteamID lobbyID) {
             LOG_INFO("[Game] Lobby cree avec succes, ouverture de l'invitation...");
-            // Log systeme du chat.
+            // Debut d'une nouvelle session : le chat repart d'un historique
+            // vide (on peut arriver ici depuis le menu apres une session en
+            // lobby, ou d'un premier lancement).
             if (m_lobbyChat) {
+                m_lobbyChat->clear();
                 m_lobbyChat->addSystemMessage("Lobby cree - invite tes amis !");
             }
             if (m_multiplayerManager) m_multiplayerManager->onLobbyChanged();
@@ -296,6 +314,11 @@ void Game::loadResources() {
         m_steamManager->setOnLobbyEntered([this](CSteamID lobbyID) {
             LOG_INFO("[Game] Connecte au lobby %llu !", lobbyID.ConvertToUint64());
             if (m_lobbyChat) {
+                // Nouvelle session : on efface l'historique de la session
+                // precedente AVANT le message de bienvenue. C'est aussi ce
+                // clear qui neutralise le callback LobbyLeft en retard de
+                // l'ancien lobby (voir setOnLobbyLeft).
+                m_lobbyChat->clear();
                 m_lobbyChat->addSystemMessage("Vous avez rejoint le lobby");
             }
             if (m_multiplayerManager) m_multiplayerManager->onLobbyChanged();
@@ -309,10 +332,13 @@ void Game::loadResources() {
 
         m_steamManager->setOnLobbyLeft([this]() {
             LOG_INFO("[Game] Quitte le lobby.");
-            if (m_lobbyChat) {
-                m_lobbyChat->addSystemMessage("Vous avez quitte le lobby");
-                m_lobbyChat->clear();
-            }
+            // Pas de clear/message de chat ici : le callback LobbyLeft d'un
+            // ANCIEN lobby peut arriver APRES l'entree dans le nouveau
+            // (leave+rejoin — voir SteamManager::onGameLobbyJoinRequested) et
+            // effacerait le message de bienvenue de la session en cours. Le
+            // chat est reinitialise au DEBUT de chaque session
+            // (setOnLobbyCreated / setOnLobbyEntered) et au retour au menu
+            // (Game::changeState STATE_MENU).
             if (m_multiplayerManager) m_multiplayerManager->onLobbyLeft();
             if (m_voiceChat) m_voiceChat->onLobbyLeft();
         });
@@ -357,7 +383,7 @@ void Game::loadResources() {
     // Seul le fichier compressé (~quelques Mo) est lu ici : le décodage PCM se
     // fait par petits morceaux dans SoundManager::update(), donc plus de freeze
     // au premier "Jouer" (contrairement à l'ancien chargement du .wav complet).
-    m_soundManager->loadMusic("res/sounds/on&on.ogg");
+    m_soundManager->loadMusic(Constants::Resource::SOUND_MUSIC_ON_AND_ON);
 
     // ── Partie asynchrone : modèles 3D sur un thread separe ──
     m_modelLoader = std::make_unique<ModelLoader>(m_camera.get(), m_lightManager.get(), m_renderer.get(),
@@ -677,6 +703,10 @@ void Game::changeState(GameState newState, bool restoreFocus) {
     switch (newState) {
     case STATE_MENU:
     case STATE_OPTIONS:
+        // Retour au menu = fin de session : le chat repart vide au prochain
+        // jeu (solo depuis "Jouer", ou nouveau lobby via "Multijoueur"/
+        // invitation). Le lobby Steam persiste, seul l'historique est vide.
+        if (m_lobbyChat) m_lobbyChat->clear();
         // Fermer la saisie du chat (les touches redeviennent celles du menu).
         if (m_lobbyChat) m_lobbyChat->closeInput();
         // Chat vocal coupe hors jeu (micro ferme, voix coupees).

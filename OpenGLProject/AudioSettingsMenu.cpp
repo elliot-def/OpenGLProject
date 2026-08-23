@@ -44,13 +44,21 @@ AudioSettingsMenu::AudioSettingsMenu(Game* game, SoundManager* soundManager,
 
     // Device de capture (liste des micros + defaut systeme)
     {
+        // Noms bruts OpenAL (stockes + utilises pour ouvrir le device).
         const std::vector<std::string> devices = VoiceChat::getCaptureDevices();
+        // Libelles affiches dans le select : prefixe "OpenAL Soft on " retire.
+        std::vector<std::string> labels;
+        labels.reserve(devices.size());
+        for (const std::string& d : devices) {
+            labels.push_back(VoiceChat::cleanDeviceName(d));
+        }
+
         int defaultIndex = 0;
         for (size_t i = 1; i < devices.size(); ++i) {
             if (devices[i] == s.device) { defaultIndex = static_cast<int>(i); break; }
         }
         addSelect("Micro", Constants::Window::WINDOW_WIDTH / 2, 640, 420, 30,
-                  devices, defaultIndex, [this, devices](int index) {
+                  labels, defaultIndex, [this, devices](int index) {
                       if (!m_voiceChat) return;
                       m_voiceChat->settings().device =
                           (index <= 0) ? std::string() : devices[static_cast<size_t>(index)];

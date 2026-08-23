@@ -112,8 +112,7 @@ float vadThreshold(float sensitivity) {
 // ---------------------------------------------------------------------------
 struct VoiceChat::Stream {
     unsigned int source = 0;           // ALuint
-    std::vector<unsigned int> buffers; // ALuint, pool circulaire
-    size_t nextBuffer = 0;
+    std::vector<unsigned int> buffers; // ALuint, buffers actuellement en file (FIFO)
     bool playing = false;
 
     ~Stream() {
@@ -170,6 +169,16 @@ std::vector<std::string> VoiceChat::getCaptureDevices() {
         }
     }
     return devices;
+}
+
+std::string VoiceChat::cleanDeviceName(const std::string& raw) {
+    // OpenAL Soft prefixe les devices par "OpenAL Soft on ". On le retire
+    // pour n'afficher que le nom lisible dans le select du menu Audio.
+    const std::string prefix = "OpenAL Soft on ";
+    if (raw.rfind(prefix, 0) == 0) {
+        return raw.substr(prefix.size());
+    }
+    return raw;
 }
 
 int VoiceChat::pttKey() {
@@ -272,14 +281,16 @@ void VoiceChat::onVoicePacket(uint64_t senderID, const uint8_t* data, uint32_t s
     }
     Stream& s = *streamPtr;
 
-    // Recycler les buffers deja joues.
+    // Recycler les buffers deja joues (FIFO) : les retirer de la source et
+    // du pool, puis les liberer. Sans cela, ils restaient en file et etaient
+    // rejoues a l'infini une fois la source arretee (voir update()).
     ALint processed = 0;
     alGetSourcei(s.source, AL_BUFFERS_PROCESSED, &processed);
-    while (processed > 0 && !s.buffers.empty()) {
-        ALuint buf = s.buffers[s.nextBuffer];
+    for (ALint i = 0; i < processed; ++i) {
+        ALuint buf = 0;
         alSourceUnqueueBuffers(s.source, 1, &buf);
-        s.nextBuffer = (s.nextBuffer + 1) % s.buffers.size();
-        --processed;
+        if (buf != 0) alDeleteBuffers(1, &buf);
+        if (!s.buffers.empty()) s.buffers.erase(s.buffers.begin());
     }
 
     // Si toute la pool est encore en file (lecture en retard), on jette le
@@ -332,12 +343,18 @@ void VoiceChat::update(float dt) {
         ALint state = AL_STOPPED;
         alGetSourcei(s.source, AL_SOURCE_STATE, &state);
         if (state != AL_PLAYING) {
-            ALint queued = 0;
+            // Une source arretee = sous-approvisionnement (tous les buffers
+            // ont ete joues). Les buffers joues restent marques "processed"
+            // tant qu'ils ne sont pas dequeues : rejouer la source ici ferait
+            // tourner le premier son en boucle. On ne reprend que s'il reste
+            // des buffers NON joues, sinon on libere le stream.
+            ALint queued = 0, processed = 0;
             alGetSourcei(s.source, AL_BUFFERS_QUEUED, &queued);
-            if (queued > 0) {
-                alSourcePlay(s.source);  // reprise apres un trou de paquets
+            alGetSourcei(s.source, AL_BUFFERS_PROCESSED, &processed);
+            if (processed < queued) {
+                alSourcePlay(s.source);  // reste des buffers non joues
             } else {
-                // Plus rien a jouer depuis longtemps : liberer le stream.
+                // Plus rien a jouer : liberer le stream.
                 it = m_streams.erase(it);
                 continue;
             }

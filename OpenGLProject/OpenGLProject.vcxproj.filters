@@ -147,6 +147,7 @@
     <ClInclude Include="ModelLoader.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="Texture.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="TextureManager.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="ResourceTree.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="ImageLoader.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="Animator.h"><Filter>Graphics\Animation</Filter></ClInclude>
     <ClInclude Include="SkinningData.h"><Filter>Graphics\Animation</Filter></ClInclude>
@@ -195,6 +196,7 @@
     <ClInclude Include="constants\physics.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\player.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\renderer.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\resource.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\shader.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\window.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="FirstPersonArms.h"><Filter>Core</Filter></ClInclude>

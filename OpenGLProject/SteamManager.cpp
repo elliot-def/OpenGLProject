@@ -287,8 +287,14 @@ bool SteamManager::sendP2P(CSteamID target, const void* data, uint32_t size) {
     SteamNetworkingIdentity identity;
     identity.SetSteamID(target);
 
+    // AutoRestartBrokenSession : si la session a ete cassee (ex: le pair a
+    // ferme puis relance le jeu), on la retablit automatiquement au lieu de
+    // renvoyer k_EResultNoConnection. Sans ce flag, le chef qui relance le
+    // jeu ne recoit plus l'etat des autres joueurs (session cassee cote pair).
     EResult result = net->SendMessageToUser(
-        identity, data, size, k_nSteamNetworkingSend_Reliable, 0);
+        identity, data, size,
+        k_nSteamNetworkingSend_Reliable | k_nSteamNetworkingSend_AutoRestartBrokenSession,
+        0);
 
     if (result != k_EResultOK) {
         logPrintf("[SteamManager] sendP2P vers %llu echoue (result=%d)\n",
@@ -318,8 +324,12 @@ bool SteamManager::sendP2PUnreliable(CSteamID target, const void* data, uint32_t
     SteamNetworkingIdentity identity;
     identity.SetSteamID(target);
 
+    // Meme flag que sendP2P : retablit une session cassee (voix qui reprend
+    // apres un rejoin) au lieu d'echouer silencieusement.
     EResult result = net->SendMessageToUser(
-        identity, data, size, k_nSteamNetworkingSend_Unreliable, 0);
+        identity, data, size,
+        k_nSteamNetworkingSend_Unreliable | k_nSteamNetworkingSend_AutoRestartBrokenSession,
+        0);
     return result == k_EResultOK;
 }
 
@@ -425,7 +435,17 @@ void SteamManager::onGameLobbyJoinRequested(GameLobbyJoinRequested_t* pCallback)
     logPrintf("[SteamManager] Invitation lobby recue en jeu : %llu\n",
            pCallback->m_steamIDLobby.ConvertToUint64());
 
-    // Si déjà dans un lobby, on le quitte d'abord
+    // Deja dans ce lobby (ex: "Rejoindre" sur un ami qui est dans le MEME
+    // lobby) : ne rien faire. Un leave+rejoin serait inutile et racerait
+    // (JoinLobby peut arriver avant la fin du LeaveLobby) : le joueur reste
+    // alors hors du lobby et ne voit plus les autres joueurs.
+    if (m_inLobby && m_currentLobby == pCallback->m_steamIDLobby) {
+        logPrintf("[SteamManager] Deja dans le lobby %llu, invitation ignoree.\n",
+               pCallback->m_steamIDLobby.ConvertToUint64());
+        return;
+    }
+
+    // Si déjà dans un AUTRE lobby, on le quitte d'abord
     if (m_inLobby) {
         leaveLobby();
     }

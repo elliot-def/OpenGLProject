@@ -141,19 +141,35 @@ void Scene::update(float deltaTime) {
 
         // Animation du personnage 3P : deleguee au CharacterAnimationController
         // Sauf en no-clip (gravite desactivee) → on force l'idle.
+        const bool noClip = !m_player->isGravityEnabled();
         if (m_characterAnim) {
-            if (m_player->isGravityEnabled()) {
+            if (!noClip) {
+                // Sortie de no-clip : resynchroniser la machine a etats
+                // (m_lastPos/m_lastYaw perimes -> faux saut/turn/fall qui
+                // laissaient la camera 1P dans une pose incorrecte).
+                if (m_wasNoClip) {
+                    m_characterAnim->resetState(
+                        m_player->getPosition(),
+                        static_cast<float>(m_humanEntity->getDirection()->getYaw()));
+                }
                 m_characterAnim->update(m_player->getPosition(), deltaTime,
                                         m_player->getIsSprinting(),
                                         m_collisionManager->getIsPlayerGrounded());
                 // Transmettre le facteur de vitesse post-atterrissage au joueur
                 m_player->setPostLandSpeedFactor(m_characterAnim->getPostLandSpeedFactor());
             } else {
-                const int idle = m_humanEntity->getIdleAnimIndex();
-                if (idle >= 0) m_humanEntity->playAnimation(idle, true);
+                // Entree en no-clip : forcer l'idle UNE SEULE FOIS. L'appeler
+                // chaque frame remettait m_currentTime a 0 et gelait l'animation
+                // sur sa premiere frame (pose de transition) au lieu de la
+                // laisser atteindre sa pose neutre.
+                if (!m_wasNoClip) {
+                    const int idle = m_humanEntity->getIdleAnimIndex();
+                    if (idle >= 0) m_humanEntity->playAnimation(idle, true);
+                }
                 m_humanEntity->updateAnimation(deltaTime);
             }
         }
+        m_wasNoClip = noClip;
     }
 }
 

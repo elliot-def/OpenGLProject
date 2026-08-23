@@ -49,14 +49,14 @@ void Menu::addRange(const std::string& label, float x, float y, float width, flo
     float minValue, float maxValue, float defaultValue,
     std::function<void(float)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
-    m_ranges.push_back(std::make_unique<MenuRange>(label, new RangeInput(shader, x, y, width, height, minValue, maxValue, defaultValue, onValueChanged)));
+    m_inputs.push_back(std::make_unique<MenuRange>(label, new RangeInput(shader, x, y, width, height, minValue, maxValue, defaultValue, onValueChanged)));
     m_focusDirty = true;
 }
 
 void Menu::addCheckbox(const std::string& label, float x, float y, float size,
     bool defaultValue, std::function<void(bool)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
-    m_checkboxes.push_back(std::make_unique<MenuCheckbox>(label, new CheckboxInput(shader, x, y, size, defaultValue, onValueChanged)));
+    m_inputs.push_back(std::make_unique<MenuCheckbox>(label, new CheckboxInput(shader, x, y, size, defaultValue, onValueChanged)));
     m_focusDirty = true;
 }
 
@@ -64,7 +64,7 @@ void Menu::addSelect(const std::string& label, float x, float y, float width, fl
     std::vector<std::string> options, int defaultIndex,
     std::function<void(int)> onValueChanged) {
     Shader* shader = m_shaderManager->getShader("shape");
-    m_selects.push_back(std::make_unique<MenuSelect>(label, new SelectInput(shader, x, y, width, height, std::move(options), defaultIndex, onValueChanged)));
+    m_inputs.push_back(std::make_unique<MenuSelect>(label, new SelectInput(shader, x, y, width, height, std::move(options), defaultIndex, onValueChanged)));
     m_focusDirty = true;
 }
 
@@ -100,60 +100,9 @@ void Menu::draw() {
         shape.second->shape->draw();
     }
 
-    // Dessiner les sliders (label a gauche + widget)
-    for (const auto& range : m_ranges) {
-        if (!range || !range->input) continue;
-        glm::vec2 pos = range->input->getPosition();
-        glm::vec2 size = range->input->getSize();
-        if (!range->label.empty()) {
-            float labelX = pos.x - size.x / 2.0f - 20.0f;
-            float valueX = pos.x + size.x / 2.0f + 20.0f;
-            //float labelX = pos.x - size.x - 20.0f;
-            drawTextRightAligned(range->label, labelX, pos.y - range->input->getSize().y / 2.0f, 0, Constants::Color::LINEN);
-
-            // Formatage léger (snprintf sur buffer stack) au lieu d'un
-            // std::stringstream alloué + ss.str() à chaque frame.
-            char valueBuf[32];
-            snprintf(valueBuf, sizeof(valueBuf), "%.2f", range->input->getValue());
-
-            drawTextLeftAligned(valueBuf, valueX, pos.y - range->input->getSize().y / 2.0f, 0, Constants::Color::LINEN);
-        }
-        range->input->draw();
-    }
-
-    // Dessiner les checkbox (label a gauche + widget)
-    for (const auto& checkbox : m_checkboxes) {
-        if (!checkbox || !checkbox->input) continue;
-        glm::vec2 pos = checkbox->input->getPosition();
-        float size = checkbox->input->getSize();
-        if (!checkbox->label.empty()) {
-            float labelX = pos.x - size / 2.0f - 20.0f;
-            // float labelX = pos.x - size - 20.0f;
-            drawTextRightAligned(checkbox->label, labelX, pos.y - size / 2.0f, 0, Constants::Color::LINEN);
-        }
-        checkbox->input->draw();
-    }
-
-    // Dessiner les select (label a gauche, valeur selectionnee, options si ouvert)
-    for (const auto& select : m_selects) {
-        if (!select || !select->input) continue;
-        glm::vec2 pos = select->input->getPosition();
-        if (!select->label.empty()) {
-            float labelX = pos.x - 20.0f;
-            drawTextRightAligned(select->label, labelX, pos.y - 30.0f, 0, Constants::Color::LINEN, 0.4f);
-        }
-        select->input->draw();
-
-        // Valeur selectionnee, toujours visible sur la case fermee
-        drawTextCentered(select->input->getSelectedLabel(), pos.x, pos.y, 0, Constants::Color::LINEN, 0.4f);
-
-        // Libelles des options, seulement si la liste est ouverte
-        if (select->input->isOpen()) {
-            for (size_t i = 0; i < select->input->getOptionCount(); ++i) {
-                glm::vec2 optPos = select->input->getOptionPosition(i);
-                drawTextCentered(select->input->getOptionLabel(i), optPos.x, optPos.y, 0, Constants::Color::LINEN, 0.4f);
-            }
-        }
+    // Dessiner les widgets (slider/checkbox/select) : libellé + valeur + widget
+    for (const auto& w : m_inputs) {
+        if (w) w->draw(*this);
     }
 }
 
@@ -173,6 +122,19 @@ bool Menu::handleClick(double mouseX, double mouseY) {
         return false;
     }*/
 
+    // Un widget de liste OUVERT capture le clic en priorite : ses options
+    // peuvent recouvrir des items/checkbox dessines derriere. Sans cela, un
+    // clic sur une option qui chevauche un bouton declenchait le bouton (les
+    // items sont testes avant les widgets) au lieu de selectionner l'option.
+    // Un clic en dehors referme simplement la liste (consomme, sans declencher
+    // l'element masque) — comportement deja attendu par handleClick().
+    for (auto& w : m_inputs) {
+        if (!w || !w->isOpen()) continue;
+        w->handleClick(mouseX, mouseY);
+        playClickSound();
+        return true;
+    }
+
     for (auto& item : m_items) {
         if (item.contains(mouseX, mouseY) && item.callback) {
             item.callback();
@@ -189,32 +151,13 @@ bool Menu::handleClick(double mouseX, double mouseY) {
         }
     }
 
-    // Checkbox : un clic dedans bascule son etat (le callback est appele dans toggle())
-    for (auto& checkbox : m_checkboxes) {
-        if (!checkbox || !checkbox->input) continue;
-        if (checkbox->input->isPointInside(mouseX, mouseY)) {
-            checkbox->input->toggle();
-            playClickSound();
-            return true;
-        }
-    }
-
-    // Select : ouvre/ferme la liste ou selectionne une option (handleClick gere tout, y compris le clic en dehors qui referme)
-    for (auto& select : m_selects) {
-        if (!select || !select->input) continue;
-        bool wasOpen = select->input->isOpen();
-        select->input->handleClick(mouseX, mouseY);
-        if (wasOpen || select->input->isOpen()) {
-            playClickSound();
-            return true;
-        }
-    }
-
-    // Range : un simple clic (sans drag) positionne aussi la valeur - le drag continu passe par updateDrag()
-    for (auto& range : m_ranges) {
-        if (!range || !range->input) continue;
-        if (range->input->isPointInside(mouseX, mouseY)) {
-            range->input->update(mouseX, mouseY, true);
+    // Widgets fermes : checkbox (toggle), select (ouverture), range (clic =
+    // position de la valeur). Chaque handleClick() retourne true si le clic a
+    // ete consomme ; le slider ne joue pas de son (playsInteractionSound).
+    for (auto& w : m_inputs) {
+        if (!w) continue;
+        if (w->handleClick(mouseX, mouseY)) {
+            if (w->playsInteractionSound()) playClickSound();
             return true;
         }
     }
@@ -251,20 +194,10 @@ void Menu::rebuildFocusTargets() {
         m_focusTargets.push_back({ FocusType::Item, static_cast<int>(i),
             m_items[i].y + m_items[i].height / 2.0f });
     }
-    for (size_t i = 0; i < m_checkboxes.size(); ++i) {
-        if (!m_checkboxes[i] || !m_checkboxes[i]->input) continue;
-        m_focusTargets.push_back({ FocusType::Checkbox, static_cast<int>(i),
-            m_checkboxes[i]->input->getPosition().y });
-    }
-    for (size_t i = 0; i < m_selects.size(); ++i) {
-        if (!m_selects[i] || !m_selects[i]->input) continue;
-        m_focusTargets.push_back({ FocusType::Select, static_cast<int>(i),
-            m_selects[i]->input->getPosition().y });
-    }
-    for (size_t i = 0; i < m_ranges.size(); ++i) {
-        if (!m_ranges[i] || !m_ranges[i]->input) continue;
-        m_focusTargets.push_back({ FocusType::Range, static_cast<int>(i),
-            m_ranges[i]->input->getPosition().y });
+    for (size_t i = 0; i < m_inputs.size(); ++i) {
+        if (!m_inputs[i]) continue;
+        m_focusTargets.push_back({ FocusType::Input, static_cast<int>(i),
+            m_inputs[i]->getPosition().y });
     }
 
     std::sort(m_focusTargets.begin(), m_focusTargets.end(),
@@ -279,19 +212,16 @@ void Menu::rebuildFocusTargets() {
 void Menu::applyFocusHighlight() {
     // Retire tout survol/focus existant (souris comme manette)
     for (auto& item : m_items) item.isHovered = false;
-    for (auto& cb : m_checkboxes) if (cb && cb->input) cb->input->setFocused(false);
-    for (auto& sel : m_selects) if (sel && sel->input) sel->input->setFocused(false);
-    for (auto& rg : m_ranges) if (rg && rg->input) rg->input->setFocused(false);
+    for (auto& w : m_inputs) if (w) w->setFocused(false);
 
     if (m_focusDirty) rebuildFocusTargets();
     if (m_focusIndex < 0 || m_focusIndex >= static_cast<int>(m_focusTargets.size())) return;
 
     const FocusTarget& t = m_focusTargets[m_focusIndex];
-    switch (t.type) {
-    case FocusType::Item:     m_items[t.index].isHovered = true; break;
-    case FocusType::Checkbox: m_checkboxes[t.index]->input->setFocused(true); break;
-    case FocusType::Select:   m_selects[t.index]->input->setFocused(true); break;
-    case FocusType::Range:    m_ranges[t.index]->input->setFocused(true); break;
+    if (t.type == FocusType::Item) {
+        m_items[t.index].isHovered = true;
+    } else {
+        m_inputs[t.index]->setFocused(true);
     }
 }
 
@@ -308,32 +238,15 @@ void Menu::activateSelected() {
     if (m_focusIndex < 0 || m_focusIndex >= static_cast<int>(m_focusTargets.size())) return;
 
     const FocusTarget& t = m_focusTargets[m_focusIndex];
-    switch (t.type) {
-    case FocusType::Item: {
+    if (t.type == FocusType::Item) {
         auto& item = m_items[t.index];
         if (item.callback) {
             playClickSound();
             item.callback();
         }
-        break;
-    }
-    case FocusType::Checkbox: {
-        m_checkboxes[t.index]->input->toggle();
-        playClickSound();
-        break;
-    }
-    case FocusType::Select: {
-        // Ouvre/ferme la liste ; l'option se change via adjustSelected (gauche/droite)
-        SelectInput* sel = m_selects[t.index]->input;
-        if (sel->isOpen()) sel->close(); else sel->open();
-        playClickSound();
-        break;
-    }
-    case FocusType::Range: {
-        // Le slider se règle via gauche/droite ; A le pousse d'un cran à droite.
-        m_ranges[t.index]->input->nudge(1.0f);
-        break;
-    }
+    } else {
+        m_inputs[t.index]->activate();
+        if (m_inputs[t.index]->playsInteractionSound()) playClickSound();
     }
 }
 
@@ -342,11 +255,8 @@ void Menu::adjustSelected(int direction) {
     if (m_focusIndex < 0 || m_focusIndex >= static_cast<int>(m_focusTargets.size())) return;
 
     const FocusTarget& t = m_focusTargets[m_focusIndex];
-    if (t.type == FocusType::Range) {
-        m_ranges[t.index]->input->nudge(static_cast<float>(direction));
-    }
-    else if (t.type == FocusType::Select) {
-        m_selects[t.index]->input->cycleOption(direction);
+    if (t.type == FocusType::Input) {
+        m_inputs[t.index]->adjust(direction);
     }
 }
 
@@ -374,3 +284,122 @@ void Menu::playClickSound() {
         clickSound->play();
     }
 }
+
+// ── Implémentations MenuInput ────────────────────────────────────────────────
+// Chaque sous-classe dessine son widget + ses libellés/valeurs via les helpers
+// de rendu texte de Menu, et délègue les interactions au widget sous-jacent.
+
+void MenuRange::draw(Menu& menu) {
+    glm::vec2 pos = input->getPosition();
+    glm::vec2 size = input->getSize();
+    if (!label.empty()) {
+        float labelX = pos.x - size.x / 2.0f - 20.0f;
+        float valueX = pos.x + size.x / 2.0f + 20.0f;
+        menu.drawTextRightAligned(label, labelX, pos.y - size.y / 2.0f, 0, Constants::Color::LINEN);
+
+        // Formatage léger (snprintf sur buffer stack) au lieu d'un
+        // std::stringstream alloué + ss.str() à chaque frame.
+        char valueBuf[32];
+        snprintf(valueBuf, sizeof(valueBuf), "%.2f", input->getValue());
+        menu.drawTextLeftAligned(valueBuf, valueX, pos.y - size.y / 2.0f, 0, Constants::Color::LINEN);
+    }
+    input->draw();
+}
+
+bool MenuRange::handleClick(double mouseX, double mouseY) {
+    if (!input->isPointInside(mouseX, mouseY)) return false;
+    input->update(mouseX, mouseY, true);
+    return true;
+}
+
+bool MenuRange::isPointInside(double mouseX, double mouseY) const {
+    return input->isPointInside(mouseX, mouseY);
+}
+
+glm::vec2 MenuRange::getPosition() const { return input->getPosition(); }
+
+void MenuRange::setFocused(bool focused) { input->setFocused(focused); }
+
+void MenuRange::updateDrag(double mouseX, double mouseY, bool pressed) {
+    input->update(mouseX, mouseY, pressed);
+}
+
+void MenuRange::activate() { input->nudge(1.0f); }
+
+void MenuRange::adjust(int direction) { input->nudge(static_cast<float>(direction)); }
+
+void MenuCheckbox::draw(Menu& menu) {
+    glm::vec2 pos = input->getPosition();
+    float size = input->getSize();
+    if (!label.empty()) {
+        float labelX = pos.x - size / 2.0f - 20.0f;
+        menu.drawTextRightAligned(label, labelX, pos.y - size / 2.0f, 0, Constants::Color::LINEN);
+    }
+    input->draw();
+}
+
+bool MenuCheckbox::handleClick(double mouseX, double mouseY) {
+    if (!input->isPointInside(mouseX, mouseY)) return false;
+    input->toggle();
+    return true;
+}
+
+bool MenuCheckbox::isPointInside(double mouseX, double mouseY) const {
+    return input->isPointInside(mouseX, mouseY);
+}
+
+glm::vec2 MenuCheckbox::getPosition() const { return input->getPosition(); }
+
+void MenuCheckbox::setFocused(bool focused) { input->setFocused(focused); }
+
+void MenuCheckbox::activate() { input->toggle(); }
+
+void MenuSelect::draw(Menu& menu) {
+    glm::vec2 pos = input->getPosition();
+    if (!label.empty()) {
+        float labelX = pos.x - 20.0f;
+        menu.drawTextRightAligned(label, labelX, pos.y - 30.0f, 0, Constants::Color::LINEN, 0.4f);
+    }
+    input->draw();
+
+    // Valeur selectionnee, toujours visible sur la case fermee
+    menu.drawTextCentered(input->getSelectedLabel(), pos.x, pos.y, 0, Constants::Color::LINEN, 0.4f);
+
+    // Libelles des options, seulement si la liste est ouverte
+    if (input->isOpen()) {
+        const int hovered = input->getHoveredIndex();
+        for (size_t i = 0; i < input->getOptionCount(); ++i) {
+            glm::vec2 optPos = input->getOptionPosition(i);
+            // Libelle sombre sur la rangee survolee (accent TOMATO_JAM)
+            const glm::vec3 labelColor = (static_cast<int>(i) == hovered)
+                ? Constants::Color::SHADOW_GREY : Constants::Color::LINEN;
+            menu.drawTextCentered(input->getOptionLabel(i), optPos.x, optPos.y, 0, labelColor, 0.4f);
+        }
+    }
+}
+
+bool MenuSelect::handleClick(double mouseX, double mouseY) {
+    const bool wasOpen = input->isOpen();
+    input->handleClick(mouseX, mouseY);
+    return wasOpen || input->isOpen();
+}
+
+bool MenuSelect::isPointInside(double mouseX, double mouseY) const {
+    return input->isPointInside(mouseX, mouseY);
+}
+
+glm::vec2 MenuSelect::getPosition() const { return input->getPosition(); }
+
+void MenuSelect::setFocused(bool focused) { input->setFocused(focused); }
+
+void MenuSelect::updateHover(double mouseX, double mouseY) {
+    input->updateHover(mouseX, mouseY);
+}
+
+void MenuSelect::activate() {
+    if (input->isOpen()) input->close(); else input->open();
+}
+
+void MenuSelect::adjust(int direction) { input->cycleOption(direction); }
+
+bool MenuSelect::isOpen() const { return input->isOpen(); }

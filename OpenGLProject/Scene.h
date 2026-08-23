@@ -94,4 +94,9 @@ private:
     bool      m_backpackDirty = true;
     glm::mat4 m_lastFropyMatrix{ 1.0f };
     bool      m_fropyDirty = true;
+
+    // Etat no-clip de la frame precedente : sert a detecter la TRANSITION
+    // (entree/sortie) pour forcer l'idle une seule fois a l'entree et
+    // reinitialiser la machine a animations a la sortie.
+    bool m_wasNoClip = false;
 };

@@ -127,6 +127,14 @@ public:
     // animations embarquées du modèle occupent les index [0, getNumAnimations()-externes[.
     size_t getNumExternalAnimations() const { return m_externalAnimations.size(); }
 
+    // Transforme en place l'animation externe `externalIndex` en son miroir
+    // lateral (plan x=0) : echange des canaux Left/Right, positions x -> -x,
+    // rotations (w,x,y,z) -> (w,x,-y,-z). Utilise pour fabriquer le strafe
+    // droit a partir du strafe gauche : les clips "right strafe" de Mixamo
+    // ne sont pas des miroirs exacts des "left strafe" (pied/cheville qui
+    // pivotent de ~115° a travers la direction de marche -> pose anormale).
+    void mirrorExternalAnimation(size_t externalIndex);
+
 private:
     std::string m_sourcePath;
     std::string m_directory;

@@ -9,6 +9,7 @@
 #include "ShaderManager.h"
 #include "Player.h"
 #include "Log.h"
+#include "constants/resource.h"
 
 #include <cstring>
 #include <algorithm>
@@ -151,7 +152,7 @@ void MultiplayerManager::ensureRemotePlayer(uint64_t steamID) {
     LOG_INFO("[Multiplayer] Creation du modele du joueur distant (SteamID %llu)...", steamID);
 
     auto entity = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
-                                                "./res/rigging/mixamo/models/Megan.fbx",
+                                                Constants::Resource::MODEL_MEGAN,
                                                 m_textureManager);
     ModelLoader::configureHumanCharacter(entity.get());
 

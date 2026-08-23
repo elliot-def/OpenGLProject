@@ -80,10 +80,25 @@ void Image::draw() {
     m_shader->setMat4(m_uniformLocations.projection, projection);
     m_shader->setFloat(m_uniformLocations.opacity, m_opacity);
 
+    // UI overlay : pas de depth test (sinon l'image est occultee par la
+    // geometrie 3D, ex. le panneau du chat en vue 3P). On sauvegarde/restaure
+    // l'etat pour ne pas impacter le rendu qui suit.
+    const GLboolean depthEnabled = glIsEnabled(GL_DEPTH_TEST);
+    glDisable(GL_DEPTH_TEST);
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+    // Lier la texture de l'image (perdue lors du refactor SharedQuad : le quad
+    // partage ne lie pas la texture, contrairement a l'ancien Mesh). Sans cela,
+    // on echantillonne la texture encore liee (ex. celle du modele 3D).
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_textureID);
+    m_shader->setInt(m_uniformLocations.image, 0);
+
     SharedQuad::draw();
 
+    glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_BLEND);
+    if (depthEnabled) glEnable(GL_DEPTH_TEST);
 }

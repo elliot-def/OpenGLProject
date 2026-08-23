@@ -24,6 +24,7 @@ class TextureManager;   // Déclaration anticipée
 class Shader;           // Déclaration anticipée
 class Sound;           // Déclaration anticipée
 class Game;             // Déclaration anticipée
+class Menu;             // Déclaration anticipée (utilisée par MenuInput)
 
 // Structure pour un élément de menu
 struct MenuText {
@@ -56,31 +57,96 @@ struct MenuShape {
     }
 };
 
-// Wrapper d'un RangeInput avec son libellé (le texte est dessiné par Menu::draw via TextRenderer)
-struct MenuRange {
+// ─────────────────────────────────────────────────────────────────────────────
+// MenuInput : interface commune des widgets d'entrée (slider, case, liste).
+// Les trois familles (m_ranges/m_checkboxes/m_selects) sont remplacées par un
+// seul std::vector<std::unique_ptr<MenuInput>> : draw(), handleClick() et la
+// navigation manette n'appliquent plus la même logique trois fois.
+// ─────────────────────────────────────────────────────────────────────────────
+class MenuInput {
+public:
+    virtual ~MenuInput() = default;
+
+    // Dessine le widget ET ses libellés/valeurs (texte via Menu::drawText*).
+    virtual void draw(Menu& menu) = 0;
+
+    // Gère le clic souris. Retourne true si le clic a été consommé (le menu
+    // arrête alors la propagation et joue éventuellement le son de clic).
+    virtual bool handleClick(double mouseX, double mouseY) = 0;
+
+    // Test de survol du widget (sans effet de bord).
+    virtual bool isPointInside(double mouseX, double mouseY) const = 0;
+
+    // Centre du widget : sert au tri vertical de la navigation manette.
+    virtual glm::vec2 getPosition() const = 0;
+
+    // Focus manette (surlignage).
+    virtual void setFocused(bool focused) = 0;
+
+    // Hooks optionnels (no-op par défaut) :
+    virtual void updateHover(double /*mouseX*/, double /*mouseY*/) {}
+    virtual void updateDrag(double /*mouseX*/, double /*mouseY*/, bool /*pressed*/) {}
+    virtual void activate() {}                    // Bouton A manette
+    virtual void adjust(int /*direction*/) {}     // Gauche/droite manette
+    virtual bool isOpen() const { return false; } // Liste ouverte : capture clic prioritaire
+    virtual bool playsInteractionSound() const { return true; } // false pour le slider
+};
+
+// Wrapper d'un RangeInput (slider) avec son libellé
+class MenuRange : public MenuInput {
+public:
     std::string label;
     RangeInput* input;
 
     MenuRange(const std::string& l, RangeInput* i) : label(l), input(i) {}
-    ~MenuRange() { delete input; }
+    ~MenuRange() override { delete input; }
+
+    void draw(Menu& menu) override;
+    bool handleClick(double mouseX, double mouseY) override;
+    bool isPointInside(double mouseX, double mouseY) const override;
+    glm::vec2 getPosition() const override;
+    void setFocused(bool focused) override;
+    void updateDrag(double mouseX, double mouseY, bool pressed) override;
+    void activate() override;
+    void adjust(int direction) override;
+    bool playsInteractionSound() const override { return false; }
 };
 
-// Wrapper d'un CheckboxInput avec son libellé
-struct MenuCheckbox {
+// Wrapper d'un CheckboxInput (case à cocher) avec son libellé
+class MenuCheckbox : public MenuInput {
+public:
     std::string label;
     CheckboxInput* input;
 
     MenuCheckbox(const std::string& l, CheckboxInput* i) : label(l), input(i) {}
-    ~MenuCheckbox() { delete input; }
+    ~MenuCheckbox() override { delete input; }
+
+    void draw(Menu& menu) override;
+    bool handleClick(double mouseX, double mouseY) override;
+    bool isPointInside(double mouseX, double mouseY) const override;
+    glm::vec2 getPosition() const override;
+    void setFocused(bool focused) override;
+    void activate() override;
 };
 
-// Wrapper d'un SelectInput avec son libellé
-struct MenuSelect {
+// Wrapper d'un SelectInput (liste déroulante) avec son libellé
+class MenuSelect : public MenuInput {
+public:
     std::string label;
     SelectInput* input;
 
     MenuSelect(const std::string& l, SelectInput* i) : label(l), input(i) {}
-    ~MenuSelect() { delete input; }
+    ~MenuSelect() override { delete input; }
+
+    void draw(Menu& menu) override;
+    bool handleClick(double mouseX, double mouseY) override;
+    bool isPointInside(double mouseX, double mouseY) const override;
+    glm::vec2 getPosition() const override;
+    void setFocused(bool focused) override;
+    void updateHover(double mouseX, double mouseY) override;
+    void activate() override;
+    void adjust(int direction) override;
+    bool isOpen() const override;
 };
 
 // Classe Menu
@@ -91,7 +157,7 @@ protected:
     // (items, cases à cocher, listes, sliders), A valide, gauche/droite ajuste.
     // m_focusTargets est reconstruit à la demande (m_focusDirty) et trié du
     // haut vers le bas selon centerY.
-    enum class FocusType { Item, Checkbox, Select, Range };
+    enum class FocusType { Item, Input };
     struct FocusTarget {
         FocusType type;
         int index;
@@ -114,9 +180,7 @@ protected:
     // Shapes de premier plan (déjà possédés par m_shapes) : dessinés APRÈS
     // le flush du texte pour passer devant lui.
     std::vector<Shape*> m_overlayShapes;
-    std::vector<std::unique_ptr<MenuRange>> m_ranges;
-    std::vector<std::unique_ptr<MenuCheckbox>> m_checkboxes;
-    std::vector<std::unique_ptr<MenuSelect>> m_selects;
+    std::vector<std::unique_ptr<MenuInput>> m_inputs;
     std::string m_title;
     float m_titleX, m_titleY, m_titleWidth, m_titleHeight;
     bool m_drawBackground;
@@ -127,11 +191,13 @@ protected:
     // `std::unique_ptr<Rectangle>` résout vers la FONCTION -> C2923.
     std::unique_ptr<class Rectangle> m_background; // Rectangle du fond, créé une fois
 
+
+public:
+    // Helpers de rendu texte (utilisés aussi par les sous-classes MenuInput
+    // pour dessiner leurs libellés/valeurs).
     void drawTextCentered(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);
     void drawTextRightAligned(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);
     void drawTextLeftAligned(const std::string& text, float centerX, float centerY, int textRendererIndex = 0, glm::vec3 color = glm::vec3(1.0f, 1.0f, 1.0f), float scale = 0.5f);
-
-public:
     Menu(Game* game, SoundManager* soundManager, std::vector<std::unique_ptr<TextRenderer>>* textRenderers = nullptr, ShaderManager* shaderManager = nullptr, CursorManager* cursorManager = nullptr, const std::string& t = "", bool bg = true)
         : m_game(game), m_soundManager(soundManager), m_textRenderers(textRenderers), m_shaderManager(shaderManager), m_cursorManager(cursorManager), m_title(t), m_titleX(Constants::Menu::MENU_TITLE_X), m_titleY(Constants::Menu::MENU_TITLE_Y), m_titleWidth(Constants::Menu::MENU_TITLE_W), m_titleHeight(Constants::Menu::MENU_TITLE_H), m_drawBackground(bg) {
     }
@@ -179,9 +245,7 @@ public:
         m_items.clear();
         m_shapes.clear();
         m_overlayShapes.clear(); // pointeurs obsolètes : les shapes viennent d'être détruits
-        m_ranges.clear();
-        m_checkboxes.clear();
-        m_selects.clear();
+        m_inputs.clear();
         m_focusDirty = true;
     }
 
@@ -226,9 +290,9 @@ public:
         }
         // La souris reprend la main : on retire aussi le focus manette des
         // widgets (cases, listes, sliders) pour eviter un double surlignage.
-        for (auto& cb : m_checkboxes) if (cb && cb->input) cb->input->setFocused(false);
-        for (auto& sel : m_selects) if (sel && sel->input) sel->input->setFocused(false);
-        for (auto& rg : m_ranges) if (rg && rg->input) rg->input->setFocused(false);
+        for (auto& w : m_inputs) if (w) w->setFocused(false);
+        // Survol d'option dans les listes ouvertes (surbrillance du dropdown)
+        for (auto& w : m_inputs) if (w) w->updateHover(mouseX, mouseY);
         for (auto& item : m_items) {
             item.isHovered = item.contains(mouseX, mouseY);
 
@@ -241,8 +305,8 @@ public:
     // A appeler chaque frame (independamment du clic) avec la position souris et l'etat du bouton gauche.
     // Necessaire pour que les sliders (RangeInput) puissent etre glisses (drag).
     void updateDrag(double mouseX, double mouseY, bool mousePressed) {
-        for (auto& range : m_ranges) {
-            if (range && range->input) range->input->update(mouseX, mouseY, mousePressed);
+        for (auto& w : m_inputs) {
+            if (w) w->updateDrag(mouseX, mouseY, mousePressed);
         }
     }
 

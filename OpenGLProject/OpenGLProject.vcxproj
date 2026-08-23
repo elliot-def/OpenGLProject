@@ -247,6 +247,7 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="constants\physics.h" />
     <ClInclude Include="constants\player.h" />
     <ClInclude Include="constants\renderer.h" />
+    <ClInclude Include="constants\resource.h" />
     <ClInclude Include="constants\shader.h" />
     <ClInclude Include="constants\window.h" />
     <ClInclude Include="Controller.h" />
@@ -299,6 +300,7 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Grab.h" />
     <ClInclude Include="ReceiveBuffer.h" />
     <ClInclude Include="Rectangle.h" />
+    <ClInclude Include="ResourceTree.h" />
     <ClInclude Include="SelectInput.h" />
     <ClInclude Include="Shape.h" />
     <ClInclude Include="SharedQuad.h" />

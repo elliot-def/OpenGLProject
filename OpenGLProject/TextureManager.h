@@ -4,11 +4,10 @@
 #include <string>
 #include <iostream>
 #include <filesystem>
-#include <sstream>
-#include <unordered_map>
 #include <nlohmann/json.hpp>
 
 #include "constants/Texture.h"
+#include "ResourceTree.h"
 
 using json = nlohmann::json;
 
@@ -24,11 +23,7 @@ struct  TextureInfo {
     bool hasShininess;
 };
 
-// Structure représentant un noeud de l'arborescence des textures
-struct TextureNode {
-    std::unordered_map<std::string, TextureNode*> children; // sous-dossiers
-    Texture* texture = nullptr; // pointeur vers la texture si c'est une feuille
-};
+// L'arborescence des textures est désormais générique : voir ResourceTree<T>.
 
 /**
  * @class TextureManager
@@ -40,8 +35,8 @@ struct TextureNode {
  * 3. Permet d'accéder à une texture facilement via son chemin relatif.
  *
  * Notes importantes :
- * - Les textures sont stockées en pointeurs bruts (Texture*). Le destructeur supprime
- *   ces pointeurs pour éviter les fuites mémoire.
+ * - Les textures sont détenues par l'arborescence (ResourceTree<Texture>) via
+ *   std::unique_ptr : libérées automatiquement, sans delete manuel.
  * - L'utilisation de std::filesystem (C++17) facilite le parcours des dossiers.
  */
 class TextureManager {
@@ -94,7 +89,7 @@ public:
      */
     void printTextureTree() const;
 private:
-    TextureNode m_root; ///< Racine de l'arborescence des textures
+    ResourceTree<Texture> m_textures; ///< Arborescence des textures (propriétaire)
     unsigned int m_defaultSpecularID = Constants::Texture::BLACK_TEXTURE_ID;  // Texture par défaut
     // Placeholder (écrasé par createDefaultTextures() via glGenTextures) :
     // l'ID réel de la texture blanche 1x1 par défaut (diffuse).
@@ -114,18 +109,12 @@ private:
     void createDefaultTextures();
 
     /**
-     * @brief Supprime récursivement tous les noeuds et textures de l'arborescence
-     * @param node Pointeur vers le noeud à supprimer
-     */
-    void deleteNode(TextureNode* node);
-
-    /**
      * @brief Fonction récursive pour afficher l'arborescence
      * @param node Noeud actuel à afficher
      * @param prefix Préfixe pour l'indentation
      * @param isLast Indique si c'est le dernier enfant
      */
-    void printNode(const TextureNode* node, const std::string& prefix, bool isLast, std::ostringstream& out) const;
+    void printNode(const ResourceTree<Texture>::Node* node, const std::string& prefix, bool isLast, std::ostringstream& out) const;
 
     // Fonctions privées pour décomposer la logique
     float loadTextureProperties(const std::filesystem::path& jsonPath);

@@ -13,6 +13,33 @@ CharacterAnimationController::CharacterAnimationController(ModelEntity* entity, 
     // m_lastYaw sera initialise au premier update (evite un faux turn)
 }
 
+void CharacterAnimationController::resetState(const glm::vec3& currentPos, float currentYaw) {
+    // Re-synchronise le suivi position/cap : evite que le delta du premier
+    // update() apres un no-clip (joueur deplace librement) soit interprete
+    // comme un saut / une chute / un turn.
+    m_lastPos = currentPos;
+    m_lastYaw = currentYaw;
+    m_yawInit = true;
+
+    // Retombe tous les one-shots et flags de mouvement : le modele repart
+    // proprement sur idle/walk au lieu de reprendre un etat interrompu.
+    m_isMoving = false;
+    m_isStrafing = false;
+    m_punching = false;
+    m_jumping = false;
+    m_turning = false;
+    m_falling = false;
+    m_landing = false;
+    m_prevRDown = false;
+    m_animChangeTimer = 0.0f;
+    m_restTimer = 0.0f;
+    m_lastAnimIdx = -1;
+    m_modelYawOffsetDeg = 0.0f;
+    m_postLandTimer = 0.0f;
+    m_postLandSpeedFactor = 1.0f;
+    m_landingAnimTimer = 0.0f;
+}
+
 void CharacterAnimationController::startPostLandSlowdown(float speedFactor, float duration) {
     m_postLandSpeedFactor = 1.0f;  // debut du fondu a partir de 1.0
     m_postLandTargetFactor = speedFactor;  // facteur cible (ex: 0.35 pour chute)

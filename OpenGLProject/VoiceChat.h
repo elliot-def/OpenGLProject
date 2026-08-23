@@ -62,6 +62,10 @@ public:
     // Premier element : "Defaut (systeme)".
     static std::vector<std::string> getCaptureDevices();
 
+    // Retire le prefixe "OpenAL Soft on " d'un nom de device pour l'affichage
+    // (ex: "Virtual Input (Rode Connect)" au lieu de "OpenAL Soft on ...").
+    static std::string cleanDeviceName(const std::string& raw);
+
     // Paquet voix recu d'un pair (transmis par MultiplayerManager).
     void onVoicePacket(uint64_t senderID, const uint8_t* data, uint32_t size);
 

@@ -7,6 +7,7 @@
 #include "constants/file.h"
 
 #include <fstream>
+#include <memory>
 #include <glad/glad.h>
 
 TextureManager::TextureManager() {
@@ -16,29 +17,12 @@ TextureManager::TextureManager() {
 }
 
 TextureManager::~TextureManager() {
-    deleteNode(&m_root);
     glDeleteTextures(1, &m_defaultSpecularID);
     glDeleteTextures(1, &m_defaultDiffuseID);
 };
 
 Texture* TextureManager::getTexture(const std::string& path) {
-    std::stringstream ss(path);
-    std::string part;
-    TextureNode* current = &m_root;
-
-    char sep = static_cast<char>(Constants::File::PREFERED_SEPARATOR_PATH);
-    while (std::getline(ss, part, sep)) {
-        auto it = current->children.find(part);
-        if (it == current->children.end()) {
-            throw std::out_of_range("Path not found: " + path);
-        }
-        current = it->second;
-    }
-
-    if (!current->texture) {
-        throw std::out_of_range("No texture at path: " + path);
-    }
-    return current->texture;
+    return m_textures.find(path);
 }
 
 // Fonction pour charger les propriétés depuis le JSON
@@ -82,33 +66,16 @@ TextureInfo TextureManager::getTextureInfoFromFolder(const std::filesystem::path
 
 // Fonction pour créer un noeud dans l'arborescence
 void TextureManager::createTextureNode(const std::string& relativePath, const TextureInfo& info, int& textureIDCounter) {
-    TextureNode* current = &m_root;
-    std::stringstream ss(relativePath);
-    std::string part;
-    char sep = static_cast<char>(std::filesystem::path::preferred_separator);
+    ResourceTree<Texture>::Node& leaf = m_textures.getOrCreateNode(relativePath);
+    leaf.value = std::make_unique<Texture>(
+        info.texturePath,
+        textureIDCounter,
+        info.shininess,
+        info.hasSpecular
+    );
 
-    while (std::getline(ss, part, sep)) {
-        if (ss.peek() == EOF) {
-            // Dernier segment : créer la texture
-            current->children[part] = new TextureNode();
-            current->children[part]->texture = new Texture(
-                info.texturePath,
-                textureIDCounter,
-                info.shininess,
-                info.hasSpecular
-            );
-
-            textureIDCounter++;
-            if (info.hasSpecular) textureIDCounter++;
-        }
-        else {
-            // Segment intermédiaire : créer un noeud
-            if (current->children.find(part) == current->children.end()) {
-                current->children[part] = new TextureNode();
-            }
-            current = current->children[part];
-        }
-    }
+    textureIDCounter++;
+    if (info.hasSpecular) textureIDCounter++;
 }
 
 // Fonction pour charger une texture depuis un dossier
@@ -167,37 +134,27 @@ void TextureManager::loadTextures(std::span<const char* const> texturesFolderPat
     }
 }
 
-void TextureManager::deleteNode(TextureNode* node) {
-    for (auto& pair : node->children) {
-        deleteNode(pair.second);
-        delete pair.second;
-    }
-    if (node->texture) {
-        delete node->texture;
-    }
-}
-
 void TextureManager::printTextureTree() const {
     std::ostringstream out;
     out << "\n=== Arborescence des Textures ===" << std::endl;
-    if (m_root.children.empty()) {
+    if (m_textures.root().children.empty()) {
         out << "(Aucune texture chargee)" << std::endl;
         logRaw(out.str());
         return;
     }
 
     size_t count = 0;
-    size_t total = m_root.children.size();
+    size_t total = m_textures.root().children.size();
 
-    for (const auto& pair : m_root.children) {
+    for (const auto& pair : m_textures.root().children) {
         bool isLast = (++count == total);   
         // Remplacement ici
         out << pair.first;
 
-        if (pair.second->texture) {
-            out << " [ID: " << pair.second->texture->getID()
-                << ", shininess: " << pair.second->texture->getShininess();
-            if (pair.second->texture->hasSpecular()) {
+        if (pair.second->value) {
+            out << " [ID: " << pair.second->value->getID()
+                << ", shininess: " << pair.second->value->getShininess();
+            if (pair.second->value->hasSpecular()) {
                 out << ", specular";
             }
             out << "]";
@@ -209,14 +166,14 @@ void TextureManager::printTextureTree() const {
 
         if (!pair.second->children.empty()) {
             std::string newPrefix = isLast ? "    " : "\xE2\x94\x82   ";
-            printNode(pair.second, newPrefix, false, out);
+            printNode(pair.second.get(), newPrefix, false, out);
         }
     }
     out << "================================\n" << std::endl;
     logRaw(out.str());
 }
 
-void TextureManager::printNode(const TextureNode* node, const std::string& prefix, bool isLast, std::ostringstream& out) const {
+void TextureManager::printNode(const ResourceTree<Texture>::Node* node, const std::string& prefix, bool isLast, std::ostringstream& out) const {
     if (!node || node->children.empty()) return;
 
     size_t count = 0;
@@ -228,10 +185,10 @@ void TextureManager::printNode(const TextureNode* node, const std::string& prefi
         // Remplacement ici
         out << prefix << (isLastChild ? "\xE2\x94\x94\xE2\x94\x80\xE2\x94\x80 " : "\xE2\x94\x9C\xE2\x94\x80\xE2\x94\x80 ") << pair.first;
 
-        if (pair.second->texture) {
-            out << " [ID: " << pair.second->texture->getID()
-                << ", shininess: " << pair.second->texture->getShininess();
-            if (pair.second->texture->hasSpecular()) {
+        if (pair.second->value) {
+            out << " [ID: " << pair.second->value->getID()
+                << ", shininess: " << pair.second->value->getShininess();
+            if (pair.second->value->hasSpecular()) {
                 out << ", specular";
             }
             out << "]";
@@ -243,7 +200,7 @@ void TextureManager::printNode(const TextureNode* node, const std::string& prefi
 
         if (!pair.second->children.empty()) {
             std::string newPrefix = prefix + (isLastChild ? "    " : "\xE2\x94\x82   ");
-            printNode(pair.second, newPrefix, false, out);
+            printNode(pair.second.get(), newPrefix, false, out);
         }
     }
 }

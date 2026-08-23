@@ -321,28 +321,22 @@ glm::vec3 CollisionManager::sweepSphere(glm::vec3 start,
                 break;
             }
 
-            // 1. On recule immédiatement la sphère hors du cube (Dépénétration stricte)
-            // L'ajout d'un tout petit EPSILON évite que la virgule flottante ne la laisse "coller" au plan
+            // Dépénétration stricte : on recule la sphère à la surface du cube
+            // + un petit epsilon anti-collage. `target` = pos + remainingMove
+            // contient déjà TOUT le mouvement de ce substep : la composante
+            // normale (qui rentre dans le mur) est annulée par la dépénétration,
+            // et la composante tangentielle (le glissement le long du mur) est
+            // donc déjà appliquée ici.
+            //
+            // FIX (bug d'accélération) : l'ancien code recalculait la composante
+            // tangentielle dans `remainingMove` puis la ré-appliquait à
+            // l'itération suivante → le glissement était compté DEUX FOIS et le
+            // joueur accélérait en longeant un mur. On consomme donc tout le
+            // mouvement restant (break) : les coins sont de toute façon résolus
+            // par les passes de dépénétration de resolvePlayerMovement juste
+            // après cet appel.
             pos = target + col.normal * (col.penetration + 1e-3f);
-
-            // 2. Glissement : On retire la partie du mouvement qui fonce dans le mur
-            float project = glm::dot(remainingMove, col.normal);
-
-            // Sauvegarde la longueur maximale autorisée avant la projection
-            float maxAllowedLength = glm::length(remainingMove);
-
-            remainingMove = remainingMove - project * col.normal;
-
-            // CORRECTION : On s'assure que le glissement ne fait PAS accélérer le joueur
-            float newLength = glm::length(remainingMove);
-            if (newLength > maxAllowedLength && newLength > 1e-6f) {
-                remainingMove = (remainingMove / newLength) * maxAllowedLength;
-            }
-
-            // Sécurité anti-rebond infini dans les coins étroits
-            if (project < 0.0f && glm::length2(remainingMove) < 1e-6f) {
-                break;
-            }
+            break;
         }
     }
 

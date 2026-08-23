@@ -5,6 +5,7 @@
 #include "Log.h"
 #include "SoundManager.h"
 #include "constants/window.h"
+#include "constants/resource.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -115,7 +116,7 @@ bool Window::init() {
     //efface le bouton de la souris et permet de capturer la souris
     glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
 
-    setWindowIcon("./res/textures/logo.jpeg");
+    setWindowIcon(Constants::Resource::TEXTURE_LOGO);
 
     return true;
 }

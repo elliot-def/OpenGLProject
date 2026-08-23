@@ -7,6 +7,7 @@
 #include "Log.h"
 #include "InputManager.h"
 #include "Animator.h"
+#include "constants/resource.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -67,24 +68,24 @@ void ModelLoader::load(GLFWwindow* loaderWindow) {
 void ModelLoader::loadDecorModels() {
     LOG_INFO("[ModelLoader]   -> Chargement du backpack...");
     m_modelEntity = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
-                                                  "./res/models/backpack/backpack.obj", m_textureManager);
+                                                  Constants::Resource::MODEL_BACKPACK, m_textureManager);
 
     LOG_INFO("[ModelLoader]   -> Chargement de fropy (low poly)...");
     m_fropyEntity = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
-                                                  "./res/models/fropy/fropy_low_poly.obj", m_textureManager);
+                                                  Constants::Resource::MODEL_FROPY, m_textureManager);
     m_fropyEntity->setPosition(glm::vec3(3.0f, 5.0f, 0.0f));
     m_fropyEntity->setSpin(20.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 
     LOG_INFO("[ModelLoader]   -> Chargement des bras (rigges)...");
     m_firstPersonArms = std::make_unique<FirstPersonArms>(m_camera, m_lightManager,
-                                                          "./res/rigging/arm/arms_rig.glb", m_textureManager);
+                                                          Constants::Resource::MODEL_ARMS_RIG, m_textureManager);
     m_inputManager->setFirstPersonArms(m_firstPersonArms.get());
 }
 
 void ModelLoader::loadHumanCharacter() {
     LOG_INFO("[ModelLoader]   -> Chargement de Megan (rigge)...");
     m_humanEntity = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
-                                                  "./res/rigging/mixamo/models/Megan.fbx", m_textureManager);
+                                                  Constants::Resource::MODEL_MEGAN, m_textureManager);
 
     Model* model = m_humanEntity->getModel();
     const aiScene* scene = model->getScene();
@@ -141,14 +142,14 @@ void ModelLoader::configureHumanCharacter(ModelEntity* entity) {
 
     // Charger les animations externes (FBX separes Mixamo)
     {
-        const std::string animDir = "./res/rigging/mixamo/animation/";
+        const std::string animDir = Constants::Resource::MIXAMO_ANIM_DIR;
         std::vector<std::string> animPaths = {
             animDir + "idle.fbx",
             animDir + "walking.fbx",
             animDir + "standard run.fbx",
             animDir + "jump.fbx",
             animDir + "left strafe.fbx",
-            animDir + "right strafe.fbx",
+            animDir + "left strafe.fbx",  // strafe droit = miroir du gauche (voir plus bas)
             animDir + "left strafe walking.fbx",
             animDir + "right strafe walking.fbx",
             animDir + "left turn 90.fbx",
@@ -174,9 +175,20 @@ void ModelLoader::configureHumanCharacter(ModelEntity* entity) {
         entity->setRunAnimIndex(static_cast<int>(base + 2));        // standard run.fbx
         entity->setJumpIdx(static_cast<int>(base + 3));             // jump.fbx
         entity->setStrafeLeftIdx(static_cast<int>(base + 4));       // left strafe.fbx
-        entity->setStrafeRightIdx(static_cast<int>(base + 5));      // right strafe.fbx
+        entity->setStrafeRightIdx(static_cast<int>(base + 5));      // left strafe.fbx MIRROIR (voir plus bas)
         entity->setStrafeWalkLeftIdx(static_cast<int>(base + 6));   // left strafe walking.fbx
         entity->setStrafeWalkRightIdx(static_cast<int>(base + 7));  // right strafe walking.fbx
+
+        // ── Strafe droit = miroir du strafe gauche ─────────────────────
+        // Les clips "right strafe.fbx" de Mixamo ne sont pas des miroirs
+        // exacts des "left strafe.fbx" : le pied/la cheville droits y
+        // pivotent ~115° a travers la direction de marche (le pied pointe
+        // vers l'avant puis vers l'arriere pendant le cycle) alors que le
+        // strafe gauche garde les pieds dans le plan lateral. On charge donc
+        // le clip gauche DEUX fois et on miroirise la 2e copie : le strafe
+        // droit devient l'exact miroir du gauche (meme comportement visuel,
+        // symetrique). L'externe #5 correspond a l'index base+5 ci-dessus.
+        model->mirrorExternalAnimation(5);
         entity->setTurnLeftIdx(static_cast<int>(base + 8));         // left turn 90.fbx
         entity->setTurnRightIdx(static_cast<int>(base + 9));        // right turn 90.fbx
         entity->setRunJumpIdx(static_cast<int>(base + 10));         // Running Jump.fbx

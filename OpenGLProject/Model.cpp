@@ -239,6 +239,54 @@ void Model::loadExternalAnimations(const std::vector<std::string>& paths) {
     }
 }
 
+void Model::mirrorExternalAnimation(size_t externalIndex) {
+    if (externalIndex >= m_externalAnimations.size()) return;
+    // Les scenes Assimp sont deja mutees en place par le reparateur de cles
+    // (Animator::repairRotationKeys) : le const ici est contractuel, pas reel.
+    aiAnimation* anim = const_cast<aiAnimation*>(m_externalAnimations[externalIndex]);
+    if (!anim) return;
+
+    // Miroir lateral (plan x=0) de l'animation : le strafe droit doit etre
+    // l'exact miroir du strafe gauche pour que pieds/chevilles se comportent
+    // de facon symetrique. Les clips "right strafe" de Mixamo ne sont pas des
+    // miroirs (le pied droit y pivote ~115° a travers l'axe de marche).
+    for (unsigned int c = 0; c < anim->mNumChannels; c++) {
+        aiNodeAnim* ch = anim->mChannels[c];
+        if (!ch) continue;
+
+        // Les bones apparies (jambe/pied/bras/doigts...) portent "Left" ou
+        // "Right" dans leur nom : on echange. Les canaux centraux (Hips,
+        // Spine, Head...) sont inchanges.
+        std::string name(ch->mNodeName.C_Str());
+        const size_t left = name.find("Left");
+        const size_t right = name.find("Right");
+        if (left != std::string::npos) {
+            name.replace(left, 4, "Right");
+        } else if (right != std::string::npos) {
+            name.replace(right, 5, "Left");
+        }
+        ch->mNodeName.Set(name.c_str());
+
+        // Positions : miroir sur X (la gauche/droite du rig est l'axe X).
+        for (unsigned int i = 0; i < ch->mNumPositionKeys; i++) {
+            ch->mPositionKeys[i].mValue.x = -ch->mPositionKeys[i].mValue.x;
+        }
+        // Rotations : (w,x,y,z) -> (w, x, -y, -z). Le miroir inverse le cap
+        // (rotation autour de Y) et le roulis (autour de Z), conserve le
+        // tangage (autour de X, axe du miroir).
+        for (unsigned int i = 0; i < ch->mNumRotationKeys; i++) {
+            ch->mRotationKeys[i].mValue.y = -ch->mRotationKeys[i].mValue.y;
+            ch->mRotationKeys[i].mValue.z = -ch->mRotationKeys[i].mValue.z;
+        }
+        // Echelles : miroir sur X (rarement anime, par securite).
+        for (unsigned int i = 0; i < ch->mNumScalingKeys; i++) {
+            ch->mScalingKeys[i].mValue.x = -ch->mScalingKeys[i].mValue.x;
+        }
+    }
+    logOut() << "[Model] animation externe #" << externalIndex
+             << " miroirsee (strafe droit fabrique a partir du strafe gauche)" << std::endl;
+}
+
 const aiAnimation* Model::getAnimation(size_t index) const {
     if (!m_scene) return nullptr;
     if (index < m_scene->mNumAnimations)
