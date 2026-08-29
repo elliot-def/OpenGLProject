@@ -100,6 +100,16 @@ private:
     std::string m_openDevice;    // device utilise a l'ouverture (pour detecter
                                  // un changement dans les reglages)
     uint32_t m_seq = 0;          // sequence locale des paquets envoyes
+
+    // Etat IMA ADPCM continu entre les blocs de 20 ms. Remis a zero a
+    // l'ouverture de la capture. Chaque paquet transporte l'etat de DEBUT de
+    // bloc (le recepteur decode toujours independamment), mais l'encodeur ne
+    // repart plus de zero : sinon le 1er echantillon de chaque bloc etait
+    // decode a ~±11 quelle que soit l'amplitude reelle -> clic audible a
+    // chaque frontiere de bloc (gresillement pendant la parole).
+    int16_t m_predictor = 0;     // predicteur ADPCM courant
+    uint8_t m_stepIndex = 0;     // index de pas ADPCM courant
+
     int m_speechHangover = 0;    // maintien de la transmission apres la parole
     bool m_transmitting = false; // etat courant (pour logs/events futurs)
 

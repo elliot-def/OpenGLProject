@@ -132,6 +132,14 @@ private:
     void initialize();     // Window + Renderer + Steam async start (+ ressources si Steam prêt)
     void loadResources();  // Chargement des ressources lourdes (textures, modèles, sons...)
     void update();
+
+    // Simulation du monde (physique/gravité, caméra, lumières, audio 3D,
+    // synchro P2P des joueurs distants). Appelée par update() en jeu ET par
+    // la boucle quand un menu est ouvert : le personnage continue de tomber
+    // et son état reste diffusé aux autres joueurs du lobby (sinon il était
+    // gelé en l'air et disparaissait chez les pairs après ~5 s de silence
+    // P2P, STALE_TIMEOUT).
+    void updateWorld(float dt);
     void draw();
 
     // Notification de bascule clavier/souris <-> manette (icônes kenney).

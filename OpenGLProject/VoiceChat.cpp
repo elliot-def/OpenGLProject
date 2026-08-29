@@ -212,6 +212,10 @@ void VoiceChat::openCapture() {
     m_seq = 0;
     m_speechHangover = 0;
     m_transmitting = false;
+    // Nouvelle session de capture : l'etat ADPCM repart de silence (il sera
+    // porte d'un bloc a l'autre ensuite, voir encodeAndSend).
+    m_predictor = 0;
+    m_stepIndex = 0;
     LOG_INFO("[VoiceChat] Capture ouverte (%u Hz mono16, device='%s').",
              static_cast<unsigned>(SAMPLE_RATE), devName ? devName : "(defaut)");
 }
@@ -247,9 +251,12 @@ void VoiceChat::encodeAndSend(const int16_t* pcm, uint32_t numSamples) {
     std::memcpy(pkt.magic, "MPGV", 4);
     pkt.version = 1;
     pkt.seq = m_seq++;
-    pkt.predictor = 0;   // etat initial du bloc (recode par encodeIma)
-    pkt.stepIndex = 0;
-    encodeIma(pcm, static_cast<int>(numSamples), pkt.predictor, pkt.stepIndex,
+    // Etat ADPCM de DEBUT de bloc (= fin du bloc precedent) : le recepteur
+    // decode chaque bloc independamment depuis cet etat, mais l'encodeur
+    // continue la prediction entre blocs (sinon clic a chaque frontiere).
+    pkt.predictor = m_predictor;
+    pkt.stepIndex = m_stepIndex;
+    encodeIma(pcm, static_cast<int>(numSamples), m_predictor, m_stepIndex,
               pkt.data);
 
     m_steam->broadcastP2PUnreliable(&pkt, sizeof(pkt));

@@ -281,6 +281,7 @@ void Game::loadResources() {
     if (!loadingTick()) return;
 
     m_scene->loadLights();
+    m_scene->loadWall(); // mur brickwall + normal mapping (avant loadCubes : inclus dans le BVH)
 
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
     if (!loadingTick()) return;
@@ -484,6 +485,12 @@ void Game::run() {
             // UPDATE
             m_inputManager->update();
             m_menuManager->update();
+
+            // Le monde continue de simuler derrière le menu : le personnage
+            // retombe (gravité) et son état reste diffusé aux autres joueurs
+            // du lobby. Sans cette diffusion, les pairs effacent notre modèle
+            // après ~5 s de silence P2P (STALE_TIMEOUT).
+            updateWorld(m_renderer->getDeltaTime());
             
             m_renderer->clear();
             // DRAW
@@ -524,8 +531,10 @@ void Game::update() {
         m_inputManager->update();
     }
 
-    // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
-    m_scene->update(m_renderer->getDeltaTime());
+    // Monde 3D (physique/gravité, caméra, lumières) + audio + synchro P2P.
+    // En jeu uniquement ; dans les menus, Game::run() appelle updateWorld()
+    // pour que la simulation continue.
+    updateWorld(m_renderer->getDeltaTime());
 
     // Suivre l'os de tete du modele anime (1P ET 3P) : la lampe torche est
     // attachee a la tete, avec le meme decalage avant que la camera 1P
@@ -621,15 +630,6 @@ void Game::update() {
         }
     }
 
-    m_soundManager->setListenerTransform(m_camera->getPosition(), m_camera->getFront(), m_camera->getUp());
-    m_soundManager->update();
-
-    // Joueurs distants : diffuser l'état local + recevoir/appliquer les états
-    // distants (création paresseuse de leur modèle Megan).
-    if (m_multiplayerManager) {
-        m_multiplayerManager->update(m_renderer->getDeltaTime());
-    }
-
     // Chat du lobby (saisie Entree/Echap + messages entrants).
     if (m_lobbyChat && m_steamManager && m_steamManager->isInLobby()) {
         m_lobbyChat->update(m_renderer->getDeltaTime());
@@ -638,6 +638,27 @@ void Game::update() {
     // Chat vocal : capture micro, VAD/PTT, envoi et lecture des voix distantes.
     if (m_voiceChat) {
         m_voiceChat->update(m_renderer->getDeltaTime());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Simulation du monde, commune au jeu et aux menus ouverts : physique
+// (gravité, chute, collisions), caméra, lumières, audio 3D et synchro P2P.
+// Appelée quand un menu est ouvert pour que le personnage continue de tomber
+// et reste visible des autres joueurs du lobby (sans diffusion de son état,
+// les pairs effacent son modèle après ~5 s de silence, STALE_TIMEOUT).
+// ---------------------------------------------------------------------------
+void Game::updateWorld(float dt) {
+    // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
+    m_scene->update(dt);
+
+    m_soundManager->setListenerTransform(m_camera->getPosition(), m_camera->getFront(), m_camera->getUp());
+    m_soundManager->update();
+
+    // Joueurs distants : diffuser l'état local + recevoir/appliquer les états
+    // distants (création paresseuse de leur modèle Megan).
+    if (m_multiplayerManager) {
+        m_multiplayerManager->update(dt);
     }
 }
 

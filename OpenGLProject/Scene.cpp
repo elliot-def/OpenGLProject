@@ -18,6 +18,9 @@
 #include "Renderer.h"
 #include "Log.h"
 
+#include "constants/texture.h"
+#include "constants/material.h"
+
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -57,6 +60,65 @@ void Scene::loadLights() {
         glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
         glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
         glm::vec3(0.0f, 5.0f, 0.0f)));
+
+    // Lumière blanche dédiée au mur brickwall : placée devant le centre du
+    // mur (z=-1.2, le mur est à z=-3) pour que le relief du normal mapping
+    // soit bien visible. Sans lumière frappant le mur en angle, le relief
+    // reste invisible : les deux autres lumières sont derrière le joueur ou
+    // à l'extrémité du mur, et la lampe torche est éteinte par défaut.
+    m_lightManager->addPointLight(new LightSource(
+        glm::vec3(-1.5f, 2.2f, -1.2f), lightShader,
+        glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(0.5f, 0.5f, 0.5f), 1.0f, 0.09f, 0.032f,
+        glm::vec3(1.0f, 1.0f, 1.0f)));
+}
+
+void Scene::loadWall() {
+    m_wallShader = m_shaderManager->getShader("cube/wall");
+
+    // Textures brickwall en .jpg : chargées directement via stb_image car le
+    // TextureManager ne parcourt que les .png (dossier/fichier.png).
+    m_wallDiffuse = std::make_unique<Texture>("./res/textures/brickwall/brickwall.jpg",
+        Constants::Texture::FIRST_TEXTURE_ID + 100, Constants::Material::STONE, false);
+    m_wallNormal  = std::make_unique<Texture>("./res/textures/brickwall/brickwall_normal.jpg",
+        Constants::Texture::FIRST_TEXTURE_ID + 101, Constants::Material::STONE, false);
+
+    // Quad double face de 8 x 3 m (épaisseur 2 cm pour la collision), face
+    // avant +Z. UV en mètres : la texture brickwall se répète chaque mètre.
+    const float wallW = 8.0f;
+    const float wallH = 3.0f;
+    const float wallT = 0.02f;
+    const float hw = wallW * 0.5f;
+    const float hh = wallH * 0.5f;
+    const float ht = wallT * 0.5f;
+
+    std::vector<Vertex> vertices = {
+        // Face avant (+Z)
+        Vertex(-hw, -hh,  ht, 0.0f, 0.0f,  1.0f, 0.0f,    0.0f),
+        Vertex( hw, -hh,  ht, 0.0f, 0.0f,  1.0f, wallW,   0.0f),
+        Vertex( hw,  hh,  ht, 0.0f, 0.0f,  1.0f, wallW,   wallH),
+        Vertex(-hw,  hh,  ht, 0.0f, 0.0f,  1.0f, 0.0f,    wallH),
+        // Face arrière (-Z), winding inversé
+        Vertex(-hw,  hh, -ht, 0.0f, 0.0f, -1.0f, 0.0f,    0.0f),
+        Vertex( hw,  hh, -ht, 0.0f, 0.0f, -1.0f, wallW,   0.0f),
+        Vertex( hw, -hh, -ht, 0.0f, 0.0f, -1.0f, wallW,   wallH),
+        Vertex(-hw, -hh, -ht, 0.0f, 0.0f, -1.0f, 0.0f,    wallH),
+    };
+    std::vector<unsigned int> indices = {
+        0, 1, 2,   2, 3, 0,
+        4, 5, 6,   6, 7, 4,
+    };
+
+    m_wallMesh = std::make_unique<Mesh>(vertices, indices,
+        (unsigned int)VertexAttribute::POSITION |
+        (unsigned int)VertexAttribute::NORMAL |
+        (unsigned int)VertexAttribute::TEXCOORD);
+
+    m_wallModel = glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 1.5f, -3.0f));
+
+    // Collision statique : enregistrée AVANT loadCubes() (qui appelle
+    // buildBVH) pour que le mur fasse partie du BVH.
+    m_collisionManager->addStaticMesh(m_wallMesh.get(), m_wallModel, "wall");
 }
 
 void Scene::loadCubes() {
@@ -199,6 +261,29 @@ void Scene::draw() {
                                light->getLightColor());
     }
     m_cubeRenderer->draw(m_camera, m_lightManager);
+
+    // 2. Mur brickwall + normal mapping : shader dédié (TBN reconstruit par
+    // dérivées dans le fragment shader). Mêmes uniforms de lumière que
+    // severallights, donc LightManager::applyToShader fonctionne tel quel.
+    if (m_wallShader && m_wallMesh && m_wallDiffuse && m_wallNormal) {
+        m_wallShader->use();
+        m_wallShader->setMat4("view", m_camera->getViewMatrix());
+        m_wallShader->setMat4("projection", m_wallShader->getProjection());
+        m_wallShader->setMat4("model", m_wallModel);
+        m_wallShader->setVec3("viewPos", m_camera->getPosition());
+        m_lightManager->applyToShader(m_wallShader);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_wallDiffuse->getID());
+        m_wallShader->setInt("material.diffuse", 0);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, m_wallNormal->getID());
+        m_wallShader->setInt("material.normal", 1);
+        m_wallShader->setFloat("material.shininess", m_wallDiffuse->getShininess());
+
+        m_wallMesh->draw();
+    }
 
     if (m_modelShader) {
         if (m_modelEntity) m_modelEntity->draw(m_modelShader);
