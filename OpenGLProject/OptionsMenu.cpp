@@ -1,7 +1,9 @@
+#include "Log.h"
 #include "OptionsMenu.h"
 #include "Game.h"
 #include "MenuManager.h"
 #include "CursorManager.h"
+#include "VoiceChat.h"
 #include "File.h"
 
 #include "constants/window.h"
@@ -12,8 +14,8 @@
 
 using json = nlohmann::json;
 
-OptionsMenu::OptionsMenu(Game* game, SoundManager* soundManager, GameState& previousState, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager)
-    : Menu(game, soundManager, textRenderers, shaderManager, cursorManager, "Options", false), m_previousState(previousState)
+OptionsMenu::OptionsMenu(Game* game, SoundManager* soundManager, GameState& previousState, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager, VoiceChat* voiceChat)
+    : Menu(game, soundManager, textRenderers, shaderManager, cursorManager, "Options", false), m_previousState(previousState), m_voiceChat(voiceChat)
 {
     // On charge les options enregistrées avant de créer les éléments visuels
     loadJSON();
@@ -35,19 +37,24 @@ void OptionsMenu::createOptions(bool isMuted, float volume, float musicVolume) {
         m_game->getMenuManager()->showControllerBindings();
         });
 
-    addCheckbox("Son", Constants::Window::WINDOW_WIDTH / 2, 760, 40, !isMuted, [this](bool isChecked) {
+    // Sous-menu Audio : chat vocal (micro, VAD/PTT, volume des voix)
+    addItem("Audio", Constants::Window::WINDOW_WIDTH / 2, 750, 200, 50, [this]() {
+        m_game->getMenuManager()->showAudioSettings();
+        });
+
+    addCheckbox("Son", Constants::Window::WINDOW_WIDTH / 2, 810, 40, !isMuted, [this](bool isChecked) {
         m_soundManager->setMute(!isChecked);
         });
 
-    addRange("Volume", Constants::Window::WINDOW_WIDTH / 2, 820, 300, 25, 0, 2, volume, [this](float volume) {
+    addRange("Volume", Constants::Window::WINDOW_WIDTH / 2, 870, 300, 25, 0, 2, volume, [this](float volume) {
         m_soundManager->setMasterVolume(volume);
         });
 
-    addRange("Volume musique", Constants::Window::WINDOW_WIDTH / 2, 880, 300, 25, 0, 2, musicVolume, [this](float musicVolume) {
+    addRange("Volume musique", Constants::Window::WINDOW_WIDTH / 2, 930, 300, 25, 0, 2, musicVolume, [this](float musicVolume) {
         m_soundManager->setMusicVolume(musicVolume);
         });
 
-    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 950, 200, 50, [this]() {
+    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 990, 200, 50, [this]() {
         // Retour vers le menu precedent : on restaure sa selection manette.
         m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU, true);
         exportJSON();
@@ -59,7 +66,7 @@ void OptionsMenu::loadJSON() {
 
     // On vérifie directement si le fichier existe
     if (!optionFile.exists()) {
-        std::cout << "[Options] Aucun fichier de sauvegarde trouve. Utilisation des valeurs par defaut.\n";
+        logOut() << "[Options] Aucun fichier de sauvegarde trouve. Utilisation des valeurs par defaut.\n";
         createOptions(false, 1.0f, 0.5f);
         return;
     }
@@ -76,6 +83,18 @@ void OptionsMenu::loadJSON() {
         float volume = j.value("volume", 1.0f);
         float musicVolume = j.value("musicVolume", 0.5f);
 
+        // Chat vocal (section "voice" de res/options.json)
+        if (m_voiceChat) {
+            const json& v = j.contains("voice") ? j["voice"] : json::object();
+            VoiceChat::Settings& s = m_voiceChat->settings();
+            s.enabled         = v.value("enabled", false);
+            s.micMuted        = v.value("micMuted", false);
+            s.voiceActivation = v.value("voiceActivation", true);
+            s.sensitivity     = v.value("sensitivity", 0.15f);
+            s.volume          = v.value("volume", 1.0f);
+            s.device          = v.value("device", std::string());
+        }
+
         createOptions(isMuted, volume, musicVolume);
 
         // Application des parametres au SoundManager
@@ -87,11 +106,11 @@ void OptionsMenu::loadJSON() {
         // Les bindings et les sensibilites sont charges par l'InputManager
         // depuis res/keys.json (voir InputManager::loadKeyBindings).
 
-        std::cout << "[Options] Parametres charges avec succes.\n";
+        logOut() << "[Options] Parametres charges avec succes.\n";
     }
     catch (const json::parse_error& e) {
         createOptions(false, 1.0f, 0.5f);
-        std::cerr << "[Options] Erreur lors de la lecture du JSON : " << e.what() << "\n";
+        logErr() << "[Options] Erreur lors de la lecture du JSON : " << e.what() << "\n";
     }
 }
 
@@ -111,14 +130,27 @@ void OptionsMenu::exportJSON() {
             throw std::runtime_error("SoundManager non initialise, impossible d'exporter les parametres.");
         }
 
+        // Chat vocal (reglages du VoiceChat)
+        if (m_voiceChat) {
+            const VoiceChat::Settings& s = m_voiceChat->settings();
+            json v;
+            v["enabled"]         = s.enabled;
+            v["micMuted"]        = s.micMuted;
+            v["voiceActivation"] = s.voiceActivation;
+            v["sensitivity"]     = s.sensitivity;
+            v["volume"]          = s.volume;
+            v["device"]          = s.device;
+            j["voice"] = v;
+        }
+
         // On génère la string JSON et on l'écrit d'un coup avec writeText()
         if (!optionFile.writeText(j.dump(4))) {
             throw std::runtime_error("Impossible d'ecrire dans le fichier d'options.");
         }
 
-        std::cout << "[Options] Parametres exportes avec succes.\n";
+        logOut() << "[Options] Parametres exportes avec succes.\n";
     }
     catch (const std::exception& e) {
-        std::cerr << "[Options] Erreur lors de l'export JSON : " << e.what() << "\n";
+        logErr() << "[Options] Erreur lors de l'export JSON : " << e.what() << "\n";
     }
 }

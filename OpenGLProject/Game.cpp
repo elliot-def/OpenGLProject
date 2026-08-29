@@ -5,6 +5,9 @@
 #include "LoadingScreen.h"
 #include "SteamManager.h"
 #include "ModelLoader.h"
+#include "MultiplayerManager.h"
+#include "LobbyChat.h"
+#include "VoiceChat.h"
 #include "TextRenderer.h"
 #include "FirstPersonArms.h"
 #include "Animator.h"
@@ -14,6 +17,7 @@
 #include "ShaderManager.h"
 #include "constants/camera.h"
 #include "constants/file.h"
+#include "constants/resource.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -25,6 +29,12 @@
 #include <cstring>
 #include <vector>
 
+namespace {
+// Pointeur vers l'unique Game, pour le char callback GLFW. Le user pointer de
+// la fenetre est deja utilise par le SoundManager (focus callback) qui
+// l'ecrase des sa construction dans loadResources().
+Game* g_activeGame = nullptr;
+} // namespace
 
 Game::Game() : m_argc(0), m_argv(nullptr) {
     if (!glfwInit()) {
@@ -48,6 +58,11 @@ Game::~Game() {
     // seraient libérées lors de la destruction des membres, APRÈS glfwTerminate().
     m_modelLoader.reset();
 
+    // Le chat vocal utilise des sources/buffers OpenAL : on le detruit avant
+    // le SoundManager (qui possede le device/contexte AL), sinon les sources
+    // seraient supprimees sur un contexte AL deja detruit.
+    m_voiceChat.reset();
+
     // La Scene possède les cubes et le skybox (ressources GPU) : même raison,
     // on la détruit avant glfwTerminate().
     m_scene.reset();
@@ -67,6 +82,8 @@ Game::~Game() {
     m_loadingScreen.reset();
 
     glfwTerminate();
+
+    g_activeGame = nullptr;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,6 +145,22 @@ void Game::initialize() {
     m_renderer = std::make_unique<Renderer>();
     m_loadingScreen = std::make_unique<LoadingScreen>();
 
+    // ── Saisie texte du chat du lobby ──
+    // Le char callback GLFW alimente LobbyChat (cree plus tard dans
+    // loadResources, d'ou le null-check).
+    // NB : le user pointer de la fenetre est ECRASE par le SoundManager (focus
+    // callback) des sa construction dans loadResources(), donc on ne peut pas
+    // relire glfwGetWindowUserPointer ici (il ne renvoie plus le Game). On
+    // passe par un pointeur statique : un lambda capturant ne peut pas devenir
+    // un pointeur de fonction GLFW.
+    g_activeGame = this;
+    glfwSetCharCallback(m_window->getGLFWwindow(),
+        [](GLFWwindow* /*window*/, unsigned int codepoint) {
+            if (g_activeGame && g_activeGame->m_lobbyChat) {
+                g_activeGame->m_lobbyChat->onChar(codepoint);
+            }
+        });
+
     loadResources();  // passe en LOADING ou READY en interne
 }
 
@@ -165,7 +198,14 @@ void Game::loadResources() {
     m_camera->setRenderer(m_renderer.get());
     m_lightManager      = std::make_unique<LightManager>(m_renderer.get(), m_player.get());
     m_textRenderers     = std::make_unique<std::vector<std::unique_ptr<TextRenderer>>>();
-    m_menuManager       = std::make_unique<MenuManager>(this, m_soundManager.get(), m_renderer.get(), m_textRenderers.get(), m_textureManager.get(), m_shaderManager.get(), m_cursorManager.get());
+
+    // Chat vocal du lobby (capture micro + lecture des voix). Cree AVANT les
+    // menus : le menu Audio et les Options lisent/ecrivent ses reglages, et
+    // OptionsMenu::loadJSON (constructeur) applique res/options.json dessus.
+    m_voiceChat = std::make_unique<VoiceChat>(m_steamManager.get(),
+                                              m_window->getGLFWwindow());
+
+    m_menuManager       = std::make_unique<MenuManager>(this, m_soundManager.get(), m_renderer.get(), m_textRenderers.get(), m_textureManager.get(), m_shaderManager.get(), m_cursorManager.get(), m_voiceChat.get());
     m_inputManager      = std::make_unique<InputManager>(this, m_menuManager.get(), m_window.get(), m_player.get());
 
     m_menuManager->setInputManager(m_inputManager.get());
@@ -176,6 +216,14 @@ void Game::loadResources() {
                                       m_collisionManager.get(), m_lightManager.get(),
                                       m_renderer.get(), m_shaderManager.get(),
                                       m_textureManager.get(), m_inputManager.get());
+
+    // Joueurs distants du lobby Steam (synchronisés en P2P). Le modèle local
+    // (humanEntity) n'est pas encore chargé : setLocalHuman() sera appelé dans
+    // adoptLoadedEntities().
+    m_multiplayerManager = std::make_unique<MultiplayerManager>(
+        m_steamManager.get(), m_camera.get(), m_lightManager.get(),
+        m_renderer.get(), m_textureManager.get(), m_shaderManager.get(),
+        m_player.get(), nullptr);
 
     // 0 : Amarna (texte des menus + notification), 1 : Gnocchi (titres),
     // 2 : icones manette kenney, 3 : icones clavier/souris kenney
@@ -190,12 +238,37 @@ void Game::loadResources() {
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
 
     // Charger les polices avant le tick pour que le label s'affiche
-	m_textRenderers->at(0)->loadFont("res/fonts/armana/Amarna-Bold.ttf", 96.0f);
-    m_textRenderers->at(1)->loadFont("res/fonts/Gnocchi.ttf", 282.0f);
+	m_textRenderers->at(0)->loadFont(Constants::Resource::FONT_ARMANA, 96.0f);
+    m_textRenderers->at(1)->loadFont(Constants::Resource::FONT_GNOCCHI, 282.0f);
     // Icônes kenney (zone privee U+E000..) : manette Xbox + clavier/souris,
     // utilisees par la notification de bascule de source d'entree.
-    m_textRenderers->at(2)->loadFontRange("res/fonts/kenney/kenney_input_steam_controller.ttf", 48.0f, 0xE000, 67);
-    m_textRenderers->at(3)->loadFontRange("res/fonts/kenney/kenney_input_keyboard_&_mouse.ttf", 48.0f, 0xE000, 243);
+    m_textRenderers->at(2)->loadFontRange(Constants::Resource::FONT_KENNEY_STEAM, 48.0f, 0xE000, 67);
+    m_textRenderers->at(3)->loadFontRange(Constants::Resource::FONT_KENNEY_KB_MOUSE, 48.0f, 0xE000, 243);
+
+    // ── Chat du lobby : logs systeme + messages des joueurs (saisie Entree) ──
+    m_lobbyChat = std::make_unique<LobbyChat>(m_shaderManager.get(),
+                                              m_window->getGLFWwindow(),
+                                              m_textRenderers.get());
+    if (m_steamManager && m_steamManager->isInitialized()) {
+        m_lobbyChat->setLocalName(m_steamManager->getLocalPersonaName());
+    }
+    // Envoi des messages : diffusion P2P a tous les membres du lobby.
+    m_lobbyChat->setOnSend([this](const std::string& text) {
+        if (m_multiplayerManager) m_multiplayerManager->sendChatMessage(text);
+    });
+    // Reception des messages des pairs -> historique du chat.
+    if (m_multiplayerManager) {
+        m_multiplayerManager->setOnChatMessage(
+            [this](uint64_t /*senderID*/, const std::string& senderName,
+                   const std::string& text) {
+                if (m_lobbyChat) m_lobbyChat->addUserMessage(senderName, text);
+            });
+        // Reception des paquets voix -> chat vocal (lecture OpenAL).
+        m_multiplayerManager->setOnVoicePacket(
+            [this](uint64_t senderID, const uint8_t* data, uint32_t size) {
+                if (m_voiceChat) m_voiceChat->onVoicePacket(senderID, data, size);
+            });
+    }
 
     if (!loadingTick()) return;
 
@@ -208,6 +281,7 @@ void Game::loadResources() {
     if (!loadingTick()) return;
 
     m_scene->loadLights();
+    m_scene->loadWall(); // mur brickwall + normal mapping (avant loadCubes : inclus dans le BVH)
 
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
     if (!loadingTick()) return;
@@ -226,19 +300,66 @@ void Game::loadResources() {
 
         m_steamManager->setOnLobbyCreated([this](CSteamID lobbyID) {
             LOG_INFO("[Game] Lobby cree avec succes, ouverture de l'invitation...");
+            // Debut d'une nouvelle session : le chat repart d'un historique
+            // vide (on peut arriver ici depuis le menu apres une session en
+            // lobby, ou d'un premier lancement).
+            if (m_lobbyChat) {
+                m_lobbyChat->clear();
+                m_lobbyChat->addSystemMessage("Lobby cree - invite tes amis !");
+            }
+            if (m_multiplayerManager) m_multiplayerManager->onLobbyChanged();
+            if (m_voiceChat) m_voiceChat->onLobbyChanged();
             m_steamManager->openInviteDialog();
         });
 
         m_steamManager->setOnLobbyEntered([this](CSteamID lobbyID) {
             LOG_INFO("[Game] Connecte au lobby %llu !", lobbyID.ConvertToUint64());
-            if (m_socket) {
-                // TODO: utiliser le lobby pour établir la connexion réseau
+            if (m_lobbyChat) {
+                // Nouvelle session : on efface l'historique de la session
+                // precedente AVANT le message de bienvenue. C'est aussi ce
+                // clear qui neutralise le callback LobbyLeft en retard de
+                // l'ancien lobby (voir setOnLobbyLeft).
+                m_lobbyChat->clear();
+                m_lobbyChat->addSystemMessage("Vous avez rejoint le lobby");
+            }
+            if (m_multiplayerManager) m_multiplayerManager->onLobbyChanged();
+            if (m_voiceChat) m_voiceChat->onLobbyChanged();
+            // Invitation acceptée depuis le menu : entrer directement en jeu
+            // pour rejoindre les autres joueurs.
+            if (m_menuManager->getCurrentState() == STATE_MENU) {
+                changeState(STATE_PLAYING);
             }
         });
 
         m_steamManager->setOnLobbyLeft([this]() {
             LOG_INFO("[Game] Quitte le lobby.");
+            // Pas de clear/message de chat ici : le callback LobbyLeft d'un
+            // ANCIEN lobby peut arriver APRES l'entree dans le nouveau
+            // (leave+rejoin — voir SteamManager::onGameLobbyJoinRequested) et
+            // effacerait le message de bienvenue de la session en cours. Le
+            // chat est reinitialise au DEBUT de chaque session
+            // (setOnLobbyCreated / setOnLobbyEntered) et au retour au menu
+            // (Game::changeState STATE_MENU).
+            if (m_multiplayerManager) m_multiplayerManager->onLobbyLeft();
+            if (m_voiceChat) m_voiceChat->onLobbyLeft();
         });
+
+        // Logs systeme : un joueur (autre que le local) rejoint/quitte le
+        // lobby (y compris un joueur qui revient apres etre parti : le flag
+        // Entered se declenche a nouveau).
+        m_steamManager->setOnLobbyMemberUpdate(
+            [this](CSteamID /*lobbyID*/, CSteamID memberID, uint32_t flags) {
+                if (!m_lobbyChat || !m_steamManager) return;
+                const std::string name = m_steamManager->getPersonaName(memberID);
+                if (flags & k_EChatMemberStateChangeEntered) {
+                    m_lobbyChat->addSystemMessage(name + " a rejoint le lobby");
+                }
+                if (flags & (k_EChatMemberStateChangeLeft |
+                             k_EChatMemberStateChangeDisconnected |
+                             k_EChatMemberStateChangeKicked)) {
+                    m_lobbyChat->addSystemMessage(name + " a quitte le lobby");
+                }
+            });
 
         if (m_argc > 0 && m_argv != nullptr) {
             m_steamManager->parseCommandLine(m_argc, m_argv);
@@ -263,7 +384,7 @@ void Game::loadResources() {
     // Seul le fichier compressé (~quelques Mo) est lu ici : le décodage PCM se
     // fait par petits morceaux dans SoundManager::update(), donc plus de freeze
     // au premier "Jouer" (contrairement à l'ancien chargement du .wav complet).
-    m_soundManager->loadMusic("res/sounds/on&on.ogg");
+    m_soundManager->loadMusic(Constants::Resource::SOUND_MUSIC_ON_AND_ON);
 
     // ── Partie asynchrone : modèles 3D sur un thread separe ──
     m_modelLoader = std::make_unique<ModelLoader>(m_camera.get(), m_lightManager.get(), m_renderer.get(),
@@ -364,6 +485,12 @@ void Game::run() {
             // UPDATE
             m_inputManager->update();
             m_menuManager->update();
+
+            // Le monde continue de simuler derrière le menu : le personnage
+            // retombe (gravité) et son état reste diffusé aux autres joueurs
+            // du lobby. Sans cette diffusion, les pairs effacent notre modèle
+            // après ~5 s de silence P2P (STALE_TIMEOUT).
+            updateWorld(m_renderer->getDeltaTime());
             
             m_renderer->clear();
             // DRAW
@@ -396,10 +523,18 @@ void Game::update() {
         LOG_INFO("%s", socketEvent.data.c_str());
     }
 
-    m_inputManager->update();
+    // Chat du lobby : quand la saisie est active, les touches du jeu
+    // (WASD, Echap...) sont neutralisees et alimentent le chat a la place.
+    const bool chatCapturesInput = m_lobbyChat && m_lobbyChat->isInputActive()
+                                   && m_steamManager && m_steamManager->isInLobby();
+    if (!chatCapturesInput) {
+        m_inputManager->update();
+    }
 
-    // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
-    m_scene->update(m_renderer->getDeltaTime());
+    // Monde 3D (physique/gravité, caméra, lumières) + audio + synchro P2P.
+    // En jeu uniquement ; dans les menus, Game::run() appelle updateWorld()
+    // pour que la simulation continue.
+    updateWorld(m_renderer->getDeltaTime());
 
     // Suivre l'os de tete du modele anime (1P ET 3P) : la lampe torche est
     // attachee a la tete, avec le meme decalage avant que la camera 1P
@@ -429,6 +564,24 @@ void Game::update() {
                 // Meme decalage avant que la camera 1P : la source sort du
                 // crane (plus de lumiere projetee a l'interieur du corps).
                 glm::vec3 lookOffset = frontFlat * Constants::Camera::CAMERA_FP_LOOK_OFFSET;
+
+                // ── Limite du lean avant de la tete ──────────────────────
+                // L'animation de marche/sprint penche la tete vers l'avant.
+                // Contre une hitbox, le corps s'arrete (collision) mais la
+                // tete continue d'avancer -> la camera 1P traverse le mur. On
+                // borne la composante AVANT de la tete par rapport au corps
+                // (strafe et recul inchanges).
+                {
+                    const glm::vec3 playerPos = m_player->getPosition();
+                    const glm::vec3 headRelXZ(worldHead.x - playerPos.x, 0.0f,
+                                              worldHead.z - playerPos.z);
+                    const float forwardRel = glm::dot(headRelXZ, frontFlat);
+                    const float clampedForward = glm::min(forwardRel,
+                        Constants::Camera::CAMERA_FP_HEAD_FORWARD_LIMIT);
+                    const glm::vec3 lateralXZ = headRelXZ - frontFlat * forwardRel;
+                    worldHead.x = playerPos.x + frontFlat.x * clampedForward + lateralXZ.x;
+                    worldHead.z = playerPos.z + frontFlat.z * clampedForward + lateralXZ.z;
+                }
 
                 // ── Lampe torche attachee a la tete (1P et 3P) ──────────
                 // update() (Scene) vient de la recaler sur les yeux ; on la
@@ -477,8 +630,36 @@ void Game::update() {
         }
     }
 
+    // Chat du lobby (saisie Entree/Echap + messages entrants).
+    if (m_lobbyChat && m_steamManager && m_steamManager->isInLobby()) {
+        m_lobbyChat->update(m_renderer->getDeltaTime());
+    }
+
+    // Chat vocal : capture micro, VAD/PTT, envoi et lecture des voix distantes.
+    if (m_voiceChat) {
+        m_voiceChat->update(m_renderer->getDeltaTime());
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Simulation du monde, commune au jeu et aux menus ouverts : physique
+// (gravité, chute, collisions), caméra, lumières, audio 3D et synchro P2P.
+// Appelée quand un menu est ouvert pour que le personnage continue de tomber
+// et reste visible des autres joueurs du lobby (sans diffusion de son état,
+// les pairs effacent son modèle après ~5 s de silence, STALE_TIMEOUT).
+// ---------------------------------------------------------------------------
+void Game::updateWorld(float dt) {
+    // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
+    m_scene->update(dt);
+
     m_soundManager->setListenerTransform(m_camera->getPosition(), m_camera->getFront(), m_camera->getUp());
     m_soundManager->update();
+
+    // Joueurs distants : diffuser l'état local + recevoir/appliquer les états
+    // distants (création paresseuse de leur modèle Megan).
+    if (m_multiplayerManager) {
+        m_multiplayerManager->update(dt);
+    }
 }
 
 void Game::draw() {
@@ -486,6 +667,11 @@ void Game::draw() {
 
     // Monde 3D : skybox, opaques, transparences.
     m_scene->draw();
+
+    // Joueurs distants du lobby (Megan, skinned) : rendus au-dessus du monde.
+    if (m_multiplayerManager) {
+        m_multiplayerManager->draw();
+    }
 
     // ── HUD debug (personnage 3P) : liste des animations du modele ────────
     // Désactivé par défaut ; bascule avec F3 (InputManager -> toggleDebugHUD).
@@ -496,6 +682,11 @@ void Game::draw() {
 
     // Notification de bascule clavier/souris <-> manette (icones kenney)
     drawInputNotification();
+
+    // Chat du lobby : panneau + logs systeme + messages des joueurs.
+    if (m_lobbyChat && m_steamManager && m_steamManager->isInLobby()) {
+        m_lobbyChat->draw();
+    }
 
     // Tout le texte de la frame (HUD, menus...) est dessiné en UN SEUL draw
     // call batche, au-dessus du reste de la scène.
@@ -533,6 +724,14 @@ void Game::changeState(GameState newState, bool restoreFocus) {
     switch (newState) {
     case STATE_MENU:
     case STATE_OPTIONS:
+        // Retour au menu = fin de session : le chat repart vide au prochain
+        // jeu (solo depuis "Jouer", ou nouveau lobby via "Multijoueur"/
+        // invitation). Le lobby Steam persiste, seul l'historique est vide.
+        if (m_lobbyChat) m_lobbyChat->clear();
+        // Fermer la saisie du chat (les touches redeviennent celles du menu).
+        if (m_lobbyChat) m_lobbyChat->closeInput();
+        // Chat vocal coupe hors jeu (micro ferme, voix coupees).
+        if (m_voiceChat) m_voiceChat->shutdown();
         m_inputManager->setContext(InputContext::MENU);
 		m_window->setCursorCaptured(false);
 		m_soundManager->applyReverbToAll(ReverbPreset::UNDERWATER);
@@ -547,6 +746,10 @@ void Game::changeState(GameState newState, bool restoreFocus) {
         m_soundManager->playMusic();
         break;
     case STATE_PAUSED:
+        // Fermer la saisie du chat (Echap du jeu ne doit pas rester capture).
+        if (m_lobbyChat) m_lobbyChat->closeInput();
+        // Chat vocal coupe en pause (micro ferme, voix coupees).
+        if (m_voiceChat) m_voiceChat->shutdown();
         m_inputManager->setContext(InputContext::PAUSED);
         m_window->setCursorCaptured(false);
         m_soundManager->applyReverbToAll(ReverbPreset::UNDERWATER);
@@ -570,6 +773,11 @@ void Game::adoptLoadedEntities() {
     // Transmet les vues à la Scene (qui les utilise pour update/draw).
     m_scene->adoptEntities(m_modelEntity, m_fropyEntity, m_humanEntity,
                            m_modelLoader->getCharacterAnim());
+
+    // Le MultiplayerManager lit l'animation du modèle local pour la diffuser.
+    if (m_multiplayerManager) {
+        m_multiplayerManager->setLocalHuman(m_humanEntity);
+    }
 }
 
 void Game::stop() {

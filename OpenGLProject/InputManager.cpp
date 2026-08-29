@@ -1,3 +1,4 @@
+#include "Log.h"
 #include "InputManager.h"
 #include "MenuManager.h"
 #include "Game.h"
@@ -51,13 +52,13 @@ InputManager::InputManager(Game* game, MenuManager* menuManager, Window* window,
         m_steamController = std::make_unique<SteamInputController>();
         if (m_steamController->isAvailable()) {
             m_controller = m_steamController.get();
-            std::cout << "[Input] Mode manette : Steam Input (Steam connecte).\n";
+            logOut() << "[Input] Mode manette : Steam Input (Steam connecte).\n";
         } else {
-            std::cout << "[Input] Steam Input indisponible, repli sur XInput (GLFW).\n";
+            logOut() << "[Input] Steam Input indisponible, repli sur XInput (GLFW).\n";
             m_steamController.reset();
         }
     } else {
-        std::cout << "[Input] Mode manette : XInput (GLFW).\n";
+        logOut() << "[Input] Mode manette : XInput (GLFW).\n";
     }
 
     // Bindings depuis res/keys.json (fallback sur les defauts de ConfigKeys)
@@ -159,7 +160,7 @@ void InputManager::loadKeyBindings() {
 
 	File keysFile(Constants::File::JSON_KEYS_PATH);
 	if (!keysFile.exists()) {
-	    std::cout << "[Input] Aucun fichier " << Constants::File::JSON_KEYS_PATH
+	    logOut() << "[Input] Aucun fichier " << Constants::File::JSON_KEYS_PATH
 	              << ", utilisation des touches par defaut.\n";
 	    return;
 	}
@@ -186,10 +187,10 @@ void InputManager::loadKeyBindings() {
 	        m_controllerLookSensitivity = j["controller_sensitivity"].get<float>();
 	    }
 
-	    std::cout << "[Input] Touches chargees depuis " << Constants::File::JSON_KEYS_PATH << ".\n";
+	    logOut() << "[Input] Touches chargees depuis " << Constants::File::JSON_KEYS_PATH << ".\n";
 	}
 	catch (const json::parse_error& e) {
-	    std::cerr << "[Input] Erreur dans " << Constants::File::JSON_KEYS_PATH
+	    logErr() << "[Input] Erreur dans " << Constants::File::JSON_KEYS_PATH
 	              << " : " << e.what() << " (touches par defaut conservees)\n";
 	}
 }
@@ -221,10 +222,10 @@ void InputManager::loadControllerBindings() {
 	        if (code < 0 || code > GLFW_GAMEPAD_BUTTON_LAST) continue;
 	        m_controllerBindings[action] = code;
 	    }
-	    std::cout << "[Input] Boutons manette charges depuis " << Constants::File::JSON_KEYS_PATH << ".\n";
+	    logOut() << "[Input] Boutons manette charges depuis " << Constants::File::JSON_KEYS_PATH << ".\n";
 	}
 	catch (const json::parse_error& e) {
-	    std::cerr << "[Input] Erreur dans " << Constants::File::JSON_KEYS_PATH
+	    logErr() << "[Input] Erreur dans " << Constants::File::JSON_KEYS_PATH
 	              << " : " << e.what() << " (boutons manette par defaut conserves)\n";
 	}
 }
@@ -248,14 +249,14 @@ void InputManager::saveBindings() {
 
 	File keysFile(Constants::File::JSON_KEYS_PATH);
 	if (!keysFile.writeText(j.dump(2))) {
-	    std::cerr << "[Input] Impossible d'ecrire " << Constants::File::JSON_KEYS_PATH << ".\n";
+	    logErr() << "[Input] Impossible d'ecrire " << Constants::File::JSON_KEYS_PATH << ".\n";
 	}
 }
 
 void InputManager::setKeyBinding(const std::string& action, int keyCode) {
 	auto it = m_keys.find(action);
 	if (it == m_keys.end()) {
-	    std::cerr << "[Input] Action inconnue pour le rebinding : " << action << "\n";
+	    logErr() << "[Input] Action inconnue pour le rebinding : " << action << "\n";
 	    return;
 	}
 	// Met a jour la touche vivante + le binding persiste, puis sauvegarde
@@ -267,7 +268,7 @@ void InputManager::setKeyBinding(const std::string& action, int keyCode) {
 void InputManager::setControllerBinding(const std::string& action, int button) {
 	auto it = m_controllerKeys.find(action);
 	if (it == m_controllerKeys.end()) {
-	    std::cerr << "[Input] Action manette inconnue pour le rebinding : " << action << "\n";
+	    logErr() << "[Input] Action manette inconnue pour le rebinding : " << action << "\n";
 	    return;
 	}
 	it->second->setKey(button);
@@ -561,7 +562,7 @@ void InputManager::update() {
 	    for (auto& pair : m_controllerKeys) {
 	        pair.second->setController(m_controller);
 	    }
-	    std::cout << "[Input] Source manette active : "
+	    logOut() << "[Input] Source manette active : "
 	              << (m_controller == m_steamController.get() ? "Steam Input" : "XInput (GLFW)")
 	              << "\n";
 	}

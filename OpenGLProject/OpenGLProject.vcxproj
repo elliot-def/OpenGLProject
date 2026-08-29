@@ -124,7 +124,8 @@
       <IgnoreSpecificDefaultLibraries>LIBCMT;LIBCPMT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y /D "$(ProjectDir)dependencies\bin\*.dll" "$(OutDir)"</Command>
+      <Command>xcopy /Y /D "$(ProjectDir)dependencies\bin\*.dll" "$(OutDir)"
+xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -144,6 +145,9 @@
       <AdditionalDependencies>glfw3.lib;steam_api64.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>LIBCMT;LIBCPMT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy /Y /D "$(ProjectDir)dependencies\bin\*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AABB.h" />
@@ -172,6 +176,9 @@
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImageLoader.cpp" />
     <ClCompile Include="InputManager.cpp" />
+    <ClCompile Include="LobbyChat.cpp" />
+    <ClCompile Include="AudioSettingsMenu.cpp" />
+    <ClCompile Include="VoiceChat.cpp" />
     <ClCompile Include="InputNotification.cpp" />
     <ClCompile Include="KeyBindingsMenu.cpp" />
     <ClCompile Include="ControllerBindingsMenu.cpp" />
@@ -193,6 +200,7 @@
     <ClCompile Include="ModelEntity.h" />
     <ClCompile Include="ModelLoader.cpp" />
     <ClCompile Include="Mouse.cpp" />
+    <ClCompile Include="MultiplayerManager.cpp" />
     <ClCompile Include="MusicStream.cpp" />
     <ClCompile Include="OptionsMenu.cpp" />
     <ClCompile Include="Packet.cpp" />
@@ -239,6 +247,7 @@
     <ClInclude Include="constants\physics.h" />
     <ClInclude Include="constants\player.h" />
     <ClInclude Include="constants\renderer.h" />
+    <ClInclude Include="constants\resource.h" />
     <ClInclude Include="constants\shader.h" />
     <ClInclude Include="constants\window.h" />
     <ClInclude Include="Controller.h" />
@@ -259,6 +268,9 @@
     <ClInclude Include="Image.h" />
     <ClInclude Include="ImageLoader.h" />
     <ClInclude Include="InputManager.h" />
+    <ClInclude Include="LobbyChat.h" />
+    <ClInclude Include="AudioSettingsMenu.h" />
+    <ClInclude Include="VoiceChat.h" />
     <ClInclude Include="InputNotification.h" />
     <ClInclude Include="KeyBindingsMenu.h" />
     <ClInclude Include="ControllerBindingsMenu.h" />
@@ -276,6 +288,7 @@
     <ClInclude Include="Model.h" />
     <ClInclude Include="ModelLoader.h" />
     <ClInclude Include="Mouse.h" />
+    <ClInclude Include="MultiplayerManager.h" />
     <ClInclude Include="MusicStream.h" />
     <ClInclude Include="OptionsMenu.h" />
     <ClInclude Include="Packet.h" />
@@ -287,6 +300,7 @@
     <ClInclude Include="Grab.h" />
     <ClInclude Include="ReceiveBuffer.h" />
     <ClInclude Include="Rectangle.h" />
+    <ClInclude Include="ResourceTree.h" />
     <ClInclude Include="SelectInput.h" />
     <ClInclude Include="Shape.h" />
     <ClInclude Include="SharedQuad.h" />

@@ -19,6 +19,16 @@ namespace Constants {
 		// (horizontal). Applique en permanence, meme a l'arret.
 		inline constexpr float CAMERA_FP_LOOK_OFFSET = 0.20f;
 
+		// Limite du deplacement AVANT de la tete (head bone) par rapport au
+		// corps du joueur, en 1P. Pendant la marche/le sprint, l'animation
+		// penche le torse et la tete vers l'avant : quand le joueur pousse
+		// contre une hitbox, le corps s'arrete (collision) mais la tete
+		// continue d'avancer -> la camera traverse le mur. On borne donc la
+		// composante avant de la tete (la composante laterale/strafe et le
+		// recul ne sont pas affectes). Reglable : augmenter pour plus de
+		// "lean" de sprint, reduire pour empecher tout clipping.
+		inline constexpr float CAMERA_FP_HEAD_FORWARD_LIMIT = 0.15f;
+
 		// Decalage de la camera 1P dans la direction de deplacement du joueur.
 		// Valeur positive = camera avance vers l'avant quand le joueur marche.
 		inline constexpr float CAMERA_FP_MOVEMENT_OFFSET = 0.f;

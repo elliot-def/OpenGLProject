@@ -39,6 +39,10 @@ public:
     // Vérifie si une animation est en cours
     bool isPlaying() const { return m_currentAnimation != nullptr; }
 
+    // Vrai si l'animation en cours boucle (les one-shots jump/turn/punch
+    // ne bouclent pas). Utilisé pour la synchro réseau des joueurs distants.
+    bool isLooping() const { return m_loop; }
+
     // Vérifie si une animation NON-loop est arrivée à son terme (pour
     // enchaîner sur l'idle après un tir, par exemple)
     bool isFinished() const {
@@ -52,6 +56,11 @@ public:
     // Retourne l'animation en cours (pointeur, pour comparaison sans
     // relancer playAnimation quand l'animation n'a pas changé)
     const aiAnimation* getCurrentAnimation() const { return m_currentAnimation; }
+
+    // Index de l'animation en cours (tel que passé à playAnimation(index)).
+    // -1 si l'animation a été lancée par pointeur (playAnimation(aiAnimation*))
+    // ou si aucune animation n'est active. Utile pour la synchro réseau.
+    int getCurrentAnimationIndex() const { return m_currentAnimIndex; }
 
     // Applique un offset local supplémentaire à un bone par son nom (ex:
     // décaler un bras). L'offset est composé avec la transformation du bone
@@ -71,10 +80,29 @@ public:
         return it != m_globalNodeTransforms.end() ? it->second : glm::mat4(1.0f);
     }
 
+    // Retourne la position monde (translation de la transformee globale) d'un
+    // noeud dont le nom (prefixe Mixamo "mixamorigN:" retire) vaut
+    // `strippedName`. (0,0,0) si absent. Utilise pour le diagnostic de skinning
+    // (verifier que les jambes sont SOUS les hanches, pas au centre/vers le haut).
+    glm::vec3 getBoneWorldPosition(const std::string& strippedName) const;
+
+    // Active/desactive la compensation des clips de strafe. Les strafes Mixamo
+    // sont exportees avec le bassin tourne ~72-84° vers le sens du strafe et
+    // les pieds marchant avant/arriere dans CE repere → en monde, les pieds
+    // glissent lateralement BECAUSE du yaw du bassin. Le jeu zero cette
+    // rotation Y (bassin face camera, cap fourni par getModelMatrix), ce qui
+    // fait alors marcher les pieds avant/arriere en monde ("strafe vers
+    // l'avant") et laisse le contre-yaw de la chaine spine faire regarder la
+    // tete dans la direction OPPOSEE au strafe. La compensation : (1) reporte
+    // le yaw retire sur les racines de jambes pour que les pieds continuent de
+    // glisser lateralement, (2) zero le yaw de la chaine spine (tete face avant).
+    void setStrafeCompensation(bool enable) { m_strafeCompensation = enable; }
+
 private:
     Model* m_model = nullptr;
     const aiScene* m_scene = nullptr;
     const aiAnimation* m_currentAnimation = nullptr;
+    int m_currentAnimIndex = -1;   // index lancé via playAnimation(index), -1 sinon
     std::string m_currentAnimName;
     float m_currentTime = 0.0f;
     float m_ticksPerSecond = 30.0f;
@@ -108,6 +136,7 @@ private:
     // est nécessaire une seule fois par aiAnimation après son import.
     std::unordered_set<const aiAnimation*> m_repairedAnimations;
     std::unordered_set<const aiAnimation*> m_debugPrintedAnimations;
+    bool m_debugPrintedFrozen = false;  // diagnostic "bones sans canal" (1x par Animator)
 
     // ── Crossfade (fondu entre deux animations) ──────────────────────────────
     // Principe : chaque frame, computeBoneTransform() stocke la transformée
@@ -130,6 +159,12 @@ private:
     float m_fade = 1.0f;                               // facteur de blend courant (0→1)
     float m_fadeTimer = 0.0f;                          // progression du fondu (s)
     bool m_crossfading = false;                        // fondu en cours ?
+
+    // Compensation des clips de strafe (voir setStrafeCompensation).
+    // m_strafeLegComp : rotation Y retiree au Hips (reported sur les racines de
+    // jambes pour que les pieds gardent leur glissement lateral en monde).
+    bool m_strafeCompensation = false;
+    glm::quat m_strafeLegComp = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
 
     // Filtre les clés dont le temps ou le quaternion sont manifestement
     // invalides, garde les rotations non normalisées valides en les normalisant,

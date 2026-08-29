@@ -5,6 +5,7 @@
 #include "Log.h"
 #include "SoundManager.h"
 #include "constants/window.h"
+#include "constants/resource.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -12,7 +13,7 @@
 
 Window::Window() : m_width(Constants::Window::WINDOW_WIDTH), m_height(Constants::Window::WINDOW_HEIGHT), m_title(Constants::Window::WINDOW_TITLE), m_window(nullptr) {
     if (!init()) {
-        std::cerr << "Failed to initialize Window\n";
+        logErr() << "Failed to initialize Window\n";
         std::exit(EXIT_FAILURE);
     }
 }
@@ -70,7 +71,7 @@ bool Window::init() {
         monitor = glfwGetPrimaryMonitor();
         mode = glfwGetVideoMode(monitor);
         if (!mode) {
-            std::cerr << "Failed to get video mode for fullscreen\n";
+            logErr() << "Failed to get video mode for fullscreen\n";
             return false;
         }
 
@@ -92,7 +93,7 @@ bool Window::init() {
     );
 
     if (!m_window) {
-        std::cerr << "Failed to create GLFW window\n";
+        logErr() << "Failed to create GLFW window\n";
         glfwTerminate();
         return false;
     }
@@ -100,7 +101,7 @@ bool Window::init() {
     glfwMakeContextCurrent(m_window);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cerr << "Failed to initialize GLAD\n";
+        logErr() << "Failed to initialize GLAD\n";
         return false;
     }
 
@@ -115,7 +116,7 @@ bool Window::init() {
     //efface le bouton de la souris et permet de capturer la souris
     glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_CAPTURED);
 
-    setWindowIcon("./res/textures/logo.jpeg");
+    setWindowIcon(Constants::Resource::TEXTURE_LOGO);
 
     return true;
 }

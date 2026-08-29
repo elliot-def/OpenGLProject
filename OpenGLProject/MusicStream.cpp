@@ -1,3 +1,4 @@
+#include "Log.h"
 #include "MusicStream.h"
 
 #include <AL/al.h>
@@ -19,13 +20,13 @@ MusicStream::MusicStream(const std::string& filePath, float gain)
     // (contre ~35 Mo de PCM pour le .wav), donc c'est rapide et non bloquant.
     std::ifstream file(filePath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
-        std::cerr << "[MusicStream] Impossible d'ouvrir : " << filePath << std::endl;
+        logErr() << "[MusicStream] Impossible d'ouvrir : " << filePath << std::endl;
         return;
     }
     std::streamsize size = file.tellg();
     file.seekg(0, std::ios::beg);
     if (size <= 0) {
-        std::cerr << "[MusicStream] Fichier vide : " << filePath << std::endl;
+        logErr() << "[MusicStream] Fichier vide : " << filePath << std::endl;
         return;
     }
     m_data.resize(static_cast<size_t>(size));
@@ -35,7 +36,7 @@ MusicStream::MusicStream(const std::string& filePath, float gain)
     m_stream = stb_vorbis_open_memory(m_data.data(), static_cast<int>(m_data.size()),
                                       &error, nullptr);
     if (!m_stream) {
-        std::cerr << "[MusicStream] Decodage Vorbis impossible (erreur " << error
+        logErr() << "[MusicStream] Decodage Vorbis impossible (erreur " << error
                   << ") : " << filePath << std::endl;
         return;
     }
@@ -58,7 +59,7 @@ MusicStream::MusicStream(const std::string& filePath, float gain)
 
     m_ready = true;
 
-    std::cout << "[MusicStream] Flux audio pret : " << filePath
+    logOut() << "[MusicStream] Flux audio pret : " << filePath
               << " (" << m_sampleRate << " Hz, " << m_channels << " canal(aux))"
               << std::endl;
 }

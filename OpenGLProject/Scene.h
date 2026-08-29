@@ -16,6 +16,8 @@ class TextureManager;
 class InputManager;
 class Cube;
 class CubeRenderer;
+class Mesh;
+class Texture;
 class ModelEntity;
 class Skybox;
 class CharacterAnimationController;
@@ -41,6 +43,7 @@ public:
     // ── Construction du monde (appelé pendant loadResources) ─────────────
     // Séparés pour conserver la progression visuelle du loading screen.
     void loadLights();   // lumières ponctuelles (point lights)
+    void loadWall();     // mur brickwall + normal mapping (+ collision statique)
     void loadCubes();    // cubes + collisions statiques + BVH
 
     // Skybox (contexte GL principal — à appeler après le thread de chargement).
@@ -80,6 +83,18 @@ private:
     std::unique_ptr<CubeRenderer> m_cubeRenderer; // rendu instancié : cube unitaire + lots par shader
     std::unique_ptr<Skybox> m_skybox;
 
+    // ── Mur en briques (normal mapping) ──────────────────────────────────
+    // Géométrie (quad 8x3 m double face) + textures brickwall (.jpg chargées
+    // directement, le TextureManager ne parcourt que les .png). Shader dédié
+    // "cube/wall" : TBN reconstruit par dérivées dans le fragment shader
+    // (pas de tangentes dans Vertex), mêmes uniforms de lumière que
+    // severallights (LightManager::applyToShader).
+    Shader*                  m_wallShader   = nullptr;
+    std::unique_ptr<Texture> m_wallDiffuse;   // brickwall.jpg
+    std::unique_ptr<Texture> m_wallNormal;    // brickwall_normal.jpg
+    std::unique_ptr<Mesh>    m_wallMesh;      // quad double-face
+    glm::mat4                m_wallModel = glm::mat4(1.0f);
+
     // Entités 3D (vues non-propriétaires, possédées par ModelLoader)
     ModelEntity*                m_modelEntity = nullptr;
     ModelEntity*                m_fropyEntity = nullptr;
@@ -94,4 +109,9 @@ private:
     bool      m_backpackDirty = true;
     glm::mat4 m_lastFropyMatrix{ 1.0f };
     bool      m_fropyDirty = true;
+
+    // Etat no-clip de la frame precedente : sert a detecter la TRANSITION
+    // (entree/sortie) pour forcer l'idle une seule fois a l'entree et
+    // reinitialiser la machine a animations a la sortie.
+    bool m_wasNoClip = false;
 };

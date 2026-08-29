@@ -77,6 +77,7 @@ void Animator::playAnimation(unsigned int animIndex, bool loop, bool crossfade) 
         return;
     }
     playAnimation(anim, loop, crossfade);
+    m_currentAnimIndex = static_cast<int>(animIndex);
 }
 
 void Animator::playAnimation(const aiAnimation* newAnim, bool loop, bool crossfade) {
@@ -99,6 +100,7 @@ void Animator::playAnimation(const aiAnimation* newAnim, bool loop, bool crossfa
     }
 
     m_currentAnimation = newAnim;
+    m_currentAnimIndex = -1;  // lancé par pointeur : l'index n'est pas connu ici
     m_currentAnimName = m_currentAnimation->mName.C_Str();
     m_currentTime = 0.0f;
 
@@ -134,23 +136,36 @@ void Animator::playAnimation(const aiAnimation* newAnim, bool loop, bool crossfa
 
     m_loop = loop;
 
-    // Diagnostic one-shot au premier play (uniquement si aucun channel ne matche)
-    if (m_debugPrintedAnimations.insert(m_currentAnimation).second) {
+    // ── Diagnostic one-shot (par Animator) : bones SANS canal d'animation ──
+    // Un bone sans canal correspondant reste fige en bind pose (membres
+    // "figes"). On liste une seule fois par modele les bones du squelette dont
+    // le nom normalise (prefixe Mixamo + suffixe Assimp FBX retires) ne
+    // correspond a aucun canal de l'animation courante. Utile pour identifier
+    // les rigs qui "ne recoivent pas la bonne animation".
+    if (!m_debugPrintedFrozen) {
+        m_debugPrintedFrozen = true;
         const auto& boneMap = m_model->getBoneInfoMap();
-        // Un canal matche si son nom NORMALISE (prefixe Mixamo + suffixe
-        // Assimp FBX retires) correspond a celui d'un bone du modele.
-        unsigned int matched = 0;
+        std::unordered_set<std::string> channelNorms;
         for (unsigned int i = 0; i < m_currentAnimation->mNumChannels; i++) {
             const aiNodeAnim* ch = m_currentAnimation->mChannels[i];
             if (!ch) continue;
-            const std::string norm = normalizeNodeName(ch->mNodeName.C_Str());
-            for (const auto& pair : boneMap) {
-                if (normalizeNodeName(pair.first) == norm) { matched++; break; }
+            channelNorms.insert(normalizeNodeName(ch->mNodeName.C_Str()));
+        }
+        std::vector<std::string> frozen;
+        for (const auto& pair : boneMap) {
+            if (channelNorms.find(normalizeNodeName(pair.first)) == channelNorms.end()) {
+                frozen.push_back(pair.first);
             }
         }
-        if (matched == 0 && m_currentAnimation->mNumChannels > 0) {
-            LOG_WARN("[Animator] %s: 0/%u channels matchent !",
-                     m_currentAnimName.c_str(), m_currentAnimation->mNumChannels);
+        if (!frozen.empty()) {
+            LOG_WARN("[Animator] '%s' : %zu/%zu bones SANS canal (figes) :",
+                     m_currentAnimName.c_str(), frozen.size(), boneMap.size());
+            for (size_t i = 0; i < frozen.size() && i < 30; i++) {
+                LOG_WARN("[Animator]    - '%s'", frozen[i].c_str());
+            }
+        } else {
+            LOG_INFO("[Animator] '%s' : tous les %zu bones ont un canal.",
+                     m_currentAnimName.c_str(), boneMap.size());
         }
     }
 }
@@ -168,33 +183,74 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
         const unsigned int n = ch->mNumRotationKeys;
         if (n == 0) continue;
 
-        // Assimp peut fournir les clés GLB dans un ordre non monotone. Sans
-        // tri, une clé tardive fait monter lastTime et toutes les clés
-        // suivantes sont rejetées, ce qui explique par exemple 15 clés au
-        // lieu de 60 pour upper_arm.R. Les temps non finis sont envoyés à la
-        // fin et seront rejetés par timeOk.
-        std::sort(ch->mRotationKeys, ch->mRotationKeys + n,
-            [](const aiQuatKey& a, const aiQuatKey& b) {
-                const bool aFinite = std::isfinite(a.mTime);
-                const bool bFinite = std::isfinite(b.mTime);
-                if (aFinite != bFinite) return aFinite;
-                if (!aFinite) return false;
-                return a.mTime < b.mTime;
-            });
+        // ── PAS de tri : on parcourt les clés dans l'ORDRE du fichier ─────
+        // Assimp 5.4.x corrompt les courbes de rotation des FBX Mixamo :
+        // chaque vraie clé (temps réel croissant) est suivie de 3 clés
+        // parasites (pivots/tangentes lues comme des clés). Un tri (même
+        // stable) mélange ces temps parasites et fait choisir une clé ~180°
+        // comme première clé → jambes/mains/tête retournées à t=0.
+        //
+        // L'ordre du fichier est lui exploitable : les vraies clés sont aux
+        // indices 0, 4, 8, 12... (toujours finies, dans [0,durée] et
+        // croissantes — vérifié sur les 14 clips). Les clés parasites sont
+        // aux indices 1, 2, 3, 5, 6, 7... : leur TEMPS est de la mémoire non
+        // initialisée (garbage variable d'un process à l'autre, parfois
+        // > 0.1 tick), donc tout filtre temporel est non-déterministe et peut
+        // laisser passer une clé ~180° qui retourne le corps (jambes en l'air,
+        // tête sous les hanches → "marche sur la tête").
+        //
+        // Détection : la clé à l'index 1 d'un canal corrompu porte la
+        // signature du parasite (w ≈ 0 et norme ≈ 2, marqueur de frame-index).
+        // Si elle est présente, on garde UNIQUEMENT les indices i%4==0.
+        // Les GLB réparés par GlbAnimationRepair (clés denses, index 1 réel)
+        // ne matchent pas cette signature et passent par le filtre temporel
+        // ci-dessous : comportement inchangé.
+        bool fbxPhantomPattern = false;
+        if (n >= 4) {
+            const aiQuatKey& k1 = ch->mRotationKeys[1];
+            const glm::quat q1(k1.mValue.w, k1.mValue.x, k1.mValue.y, k1.mValue.z);
+            const float len1 = glm::length(q1);
+            fbxPhantomPattern = std::isfinite(len1) &&
+                                std::abs(k1.mValue.w) < 1e-6f &&
+                                len1 > 1.5f && len1 < 4.0f;
+        }
 
-        // Conserver les clés valides : temps fini dans [0, durée], quaternion
-        // non nul et fini. Les clés corrompues sont écartées et les bonnes
-        // compactées en tête du tableau.
+        if (fbxPhantomPattern) {
+            unsigned int kept = 0;
+            for (unsigned int i = 0; i < n; i++) {
+                if (i % 4 != 0) continue;  // écarter les clés parasites
+                aiQuatKey& k = ch->mRotationKeys[i];
+                const glm::quat q(k.mValue.w, k.mValue.x, k.mValue.y, k.mValue.z);
+                const float len = glm::length(q);
+                const bool quatOk = std::isfinite(len) && len > 0.0001f && len < 10.0f;
+                if (!quatOk) continue;
+                if (kept != i) ch->mRotationKeys[kept] = k;
+                aiQuatKey& keptKey = ch->mRotationKeys[kept];
+                keptKey.mValue.w /= len;
+                keptKey.mValue.x /= len;
+                keptKey.mValue.y /= len;
+                keptKey.mValue.z /= len;
+                kept++;
+            }
+            ch->mNumRotationKeys = kept;
+            continue;
+        }
+
+        // ── Chemin temporel (canaux denses : GLB réparés, exports propres) ──
+        // On garde la première clé + toutes les clés à temps réel (> 0.1 tick),
+        // en exigeant des temps croissants. Les temps ≈0 (clés parasites
+        // résiduelles) sont écartés.
         unsigned int kept = 0;
-        unsigned int rejectedTime = 0;
-        unsigned int rejectedQuaternion = 0;
         float lastTime = -FLT_MAX;
         for (unsigned int i = 0; i < n; i++) {
             aiQuatKey& k = ch->mRotationKeys[i];
             const float t = static_cast<float>(k.mTime);
             const glm::quat q(k.mValue.w, k.mValue.x, k.mValue.y, k.mValue.z);
             const float len = glm::length(q);
-            const bool timeOk = std::isfinite(t) && t >= 0.0f && t <= duration + 1.0f && t >= lastTime;
+            // Temps fini dans [0, durée], croissant, et soit la première clé
+            // (vraie frame t=0, temps ≈ 0) soit une clé à temps réel (> 0.1).
+            const bool timeOk = std::isfinite(t) && t >= 0.0f && t <= duration + 1.0f &&
+                                t >= lastTime && (kept == 0 || t > 0.1f);
             // Ne pas exiger une norme comprise entre 0.9 et 1.1 : certains
             // exports fournissent des quaternions valides mais non normalisés.
             // Les supprimer réduit fortement la fréquence des poses et rend
@@ -321,17 +377,69 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
             const glm::vec3 bindTrans = aiMatrixToGlm(node->mTransformation)[3];
             nodeTransform[3] = glm::vec4(bindTrans, 1.0f);
 
-            if (!m_loop) {
-                // One-shot : zero la rotation Y (turn 90° integre)
-                glm::quat q = glm::quat_cast(glm::mat3(nodeTransform));
-                q.y = 0.0f;
-                float len = glm::length(q);
-                q = (len > 0.0001f) ? glm::normalize(q)
-                                    : glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-                glm::vec3 trans(nodeTransform[3]);
-                nodeTransform = glm::mat4_cast(q);
-                nodeTransform[3] = glm::vec4(trans, 1.0f);
+            // Strafe : capturer la rotation Y qui va etre retiree pour la
+            // reporter sur les racines de jambes (les pieds gardent alors leur
+            // glissement lateral en monde — voir setStrafeCompensation).
+            if (m_strafeCompensation) {
+                const glm::quat qOrig = glm::quat_cast(glm::mat3(nodeTransform));
+                glm::quat qZeroed = qOrig;
+                qZeroed.y = 0.0f;
+                const float lz = glm::length(qZeroed);
+                qZeroed = (lz > 0.0001f) ? glm::normalize(qZeroed)
+                                         : glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+                m_strafeLegComp = glm::inverse(qZeroed) * qOrig;
             }
+
+            // Zero la rotation Y du Hips dans TOUTES les animations : le cap
+            // du modele est fourni par getModelMatrix() (yaw camera + offset de
+            // marche). La rotation Y de l'anim s'y ajouterait en double (turn
+            // 90° pour les one-shots, derive de cap des clips de marche/run en
+            // boucle) et provoquerait des rotations brusques / snaps au point
+            // de boucle. On conserve X/Z (lean du corps en marche/sprint).
+            glm::quat q = glm::quat_cast(glm::mat3(nodeTransform));
+            q.y = 0.0f;
+            float len = glm::length(q);
+            q = (len > 0.0001f) ? glm::normalize(q)
+                                : glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            glm::vec3 trans(nodeTransform[3]);
+            nodeTransform = glm::mat4_cast(q);
+            nodeTransform[3] = glm::vec4(trans, 1.0f);
+        }
+    }
+
+    // ── Strafe : compensation de pose (appliquee aussi aux noeuds SANS canal ──
+    // Les clips de strafe Mixamo portent un yaw Hips bake (~72-84° : le bassin
+    // est tourne vers le sens du strafe et les pieds marchent avant/arriere dans
+    // CE repere → en monde les pieds glissent lateralement BECAUSE du yaw). On a
+    // zero ce yaw plus haut (bassin face camera) ; ici on :
+    //   1) le reporte sur les racines de jambes (LeftUpLeg/RightUpLeg, y compris
+    //      leurs wrappers RrTt "_$AssimpFbx$_Translation" qui n'ont PAS de
+    //      canal) pour que les pieds gardent leur glissement lateral en monde ;
+    //   2) zero le yaw de la chaine spine (Spine/Spine1/Spine2/Neck/Head) pour
+    //      que la tete regarde DEVANT (le contre-yaw bake des strafes faisait
+    //      regarder la tete dans la direction OPPOSEE au strafe une fois le
+    //      bassin remis face camera). X/Z (lean naturel) sont conserves.
+    if (m_strafeCompensation) {
+        const std::string stripped = stripMixamoPrefix(nodeName);
+        bool isLegRoot = false;
+        if (m_usesFbxRrTtHelpers) {
+            isLegRoot = (stripped == "LeftUpLeg_$AssimpFbx$_Translation" ||
+                         stripped == "RightUpLeg_$AssimpFbx$_Translation");
+        } else {
+            isLegRoot = (stripped == "LeftUpLeg" || stripped == "RightUpLeg");
+        }
+        if (isLegRoot) {
+            nodeTransform = glm::mat4_cast(m_strafeLegComp) * nodeTransform;
+        } else if (stripped == "Spine" || stripped == "Spine1" || stripped == "Spine2" ||
+                   stripped == "Neck" || stripped == "Head") {
+            glm::quat q = glm::quat_cast(glm::mat3(nodeTransform));
+            q.y = 0.0f;
+            const float len = glm::length(q);
+            q = (len > 0.0001f) ? glm::normalize(q)
+                                : glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            glm::vec3 tr(nodeTransform[3]);
+            nodeTransform = glm::mat4_cast(q);
+            nodeTransform[3] = glm::vec4(tr, 1.0f);
         }
     }
 
@@ -351,6 +459,18 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
         if (prevIt != m_prevLocalTransforms.end()) {
             nodeTransform = blendLocalTransforms(prevIt->second, nodeTransform, m_fade);
         }
+    }
+
+    // ── RrTt : sauter la rotation du wrapper "_$AssimpFbx$_PreRotation" ──
+    // Ce wrapper porte la pre-rotation du bind (le flip 180° Mixamo sur les
+    // jambes). L'animation externe NON decomposee fournit deja la rotation
+    // ABSOLUE (pre-rotation incluse) : l'appliquer en plus l'annule
+    // (180°+180°=360°) et retourne les jambes vers le haut. On garde sa
+    // translation (nulle ici) et on retire la rotation — l'offsetMatrix du
+    // mesh gere deja la pre-rotation pour le bind, donc rien n'est perdu.
+    if (nodeName.find("_$AssimpFbx$_PreRotation") != std::string::npos) {
+        const glm::vec3 preTrans(nodeTransform[3]);
+        nodeTransform = glm::translate(glm::mat4(1.0f), preTrans);
     }
 
     glm::mat4 globalTransform = parentTransform * nodeTransform;
@@ -684,4 +804,13 @@ unsigned int Animator::findKeyIndex(float animTime, const aiQuatKey* keys, unsig
         }
     }
     return numKeys - 1;
+}
+
+glm::vec3 Animator::getBoneWorldPosition(const std::string& strippedName) const {
+    for (const auto& [name, transform] : m_globalNodeTransforms) {
+        if (stripMixamoPrefix(name) == strippedName) {
+            return glm::vec3(transform[3]);
+        }
+    }
+    return glm::vec3(0.0f);
 }

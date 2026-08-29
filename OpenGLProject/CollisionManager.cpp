@@ -1,4 +1,5 @@
 #define GLM_ENABLE_EXPERIMENTAL
+#include "Log.h"
 #include "CollisionManager.h"
 #include "Mesh.h"
 
@@ -320,28 +321,22 @@ glm::vec3 CollisionManager::sweepSphere(glm::vec3 start,
                 break;
             }
 
-            // 1. On recule immédiatement la sphère hors du cube (Dépénétration stricte)
-            // L'ajout d'un tout petit EPSILON évite que la virgule flottante ne la laisse "coller" au plan
+            // Dépénétration stricte : on recule la sphère à la surface du cube
+            // + un petit epsilon anti-collage. `target` = pos + remainingMove
+            // contient déjà TOUT le mouvement de ce substep : la composante
+            // normale (qui rentre dans le mur) est annulée par la dépénétration,
+            // et la composante tangentielle (le glissement le long du mur) est
+            // donc déjà appliquée ici.
+            //
+            // FIX (bug d'accélération) : l'ancien code recalculait la composante
+            // tangentielle dans `remainingMove` puis la ré-appliquait à
+            // l'itération suivante → le glissement était compté DEUX FOIS et le
+            // joueur accélérait en longeant un mur. On consomme donc tout le
+            // mouvement restant (break) : les coins sont de toute façon résolus
+            // par les passes de dépénétration de resolvePlayerMovement juste
+            // après cet appel.
             pos = target + col.normal * (col.penetration + 1e-3f);
-
-            // 2. Glissement : On retire la partie du mouvement qui fonce dans le mur
-            float project = glm::dot(remainingMove, col.normal);
-
-            // Sauvegarde la longueur maximale autorisée avant la projection
-            float maxAllowedLength = glm::length(remainingMove);
-
-            remainingMove = remainingMove - project * col.normal;
-
-            // CORRECTION : On s'assure que le glissement ne fait PAS accélérer le joueur
-            float newLength = glm::length(remainingMove);
-            if (newLength > maxAllowedLength && newLength > 1e-6f) {
-                remainingMove = (remainingMove / newLength) * maxAllowedLength;
-            }
-
-            // Sécurité anti-rebond infini dans les coins étroits
-            if (project < 0.0f && glm::length2(remainingMove) < 1e-6f) {
-                break;
-            }
+            break;
         }
     }
 
@@ -398,7 +393,7 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
     float     height)
 {
     if (std::isnan(currentPos.x) || std::isinf(currentPos.x)) {
-        std::cerr << "[Collision] Position NaN/Inf detectee !" << std::endl;
+        logErr() << "[Collision] Position NaN/Inf detectee !" << std::endl;
         return currentPos;
     }
 
@@ -516,17 +511,17 @@ bool CollisionManager::tryJump(float jumpVelocity) {
 // Debug
 // ─────────────────────────────────────────────────────────────────────────────
 void CollisionManager::printInfo() const {
-    std::cout << "=== CollisionManager (AABB) ===" << std::endl;
-    std::cout << "  Statiques  : " << m_staticBoxes.size() << " boite(s)" << std::endl;
+    logOut() << "=== CollisionManager (AABB) ===" << std::endl;
+    logOut() << "  Statiques  : " << m_staticBoxes.size() << " boite(s)" << std::endl;
     for (const auto& sb : m_staticBoxes) {
-        std::cout << "    [" << sb.name << "] "
+        logOut() << "    [" << sb.name << "] "
             << "min(" << sb.aabb.min.x << "," << sb.aabb.min.y << "," << sb.aabb.min.z << ") "
             << "max(" << sb.aabb.max.x << "," << sb.aabb.max.y << "," << sb.aabb.max.z << ")"
             << std::endl;
     }
-    std::cout << "  Dynamiques : " << m_dynamicBoxes.size() << " boite(s)" << std::endl;
+    logOut() << "  Dynamiques : " << m_dynamicBoxes.size() << " boite(s)" << std::endl;
     for (const auto& [key, db] : m_dynamicBoxes) {
-        std::cout << "    [" << key << "] "
+        logOut() << "    [" << key << "] "
             << "min(" << db.aabb.min.x << "," << db.aabb.min.y << "," << db.aabb.min.z << ") "
             << "max(" << db.aabb.max.x << "," << db.aabb.max.y << "," << db.aabb.max.z << ")"
             << std::endl;

@@ -1,3 +1,4 @@
+#include "Log.h"
 #include "Sound.h"
 
 #include <AL/al.h>
@@ -15,7 +16,7 @@
 static void alCheckError(const char* context) {
     ALenum err = alGetError();
     if (err != AL_NO_ERROR) {
-        std::cerr << "[OpenAL] Erreur dans " << context
+        logErr() << "[OpenAL] Erreur dans " << context
             << " : 0x" << std::hex << err << std::dec << std::endl;
     }
 }
@@ -33,7 +34,7 @@ static bool loadWavFile(const std::string& path,
 {
     std::ifstream file(path, std::ios::binary);
     if (!file.is_open()) {
-        std::cerr << "[Sound] Impossible d'ouvrir : " << path << std::endl;
+        logErr() << "[Sound] Impossible d'ouvrir : " << path << std::endl;
         return false;
     }
 
@@ -41,14 +42,14 @@ static bool loadWavFile(const std::string& path,
     char riff[4];
     file.read(riff, 4);
     if (std::strncmp(riff, "RIFF", 4) != 0) {
-        std::cerr << "[Sound] Pas un fichier RIFF : " << path << std::endl;
+        logErr() << "[Sound] Pas un fichier RIFF : " << path << std::endl;
         return false;
     }
 
     uint32_t chunkSize;   file.read(reinterpret_cast<char*>(&chunkSize), 4);
     char wave[4];         file.read(wave, 4);
     if (std::strncmp(wave, "WAVE", 4) != 0) {
-        std::cerr << "[Sound] Pas un fichier WAVE : " << path << std::endl;
+        logErr() << "[Sound] Pas un fichier WAVE : " << path << std::endl;
         return false;
     }
 
@@ -72,7 +73,7 @@ static bool loadWavFile(const std::string& path,
     else if (channels == 2 && bitsPerSample == 8)  outFormat = AL_FORMAT_STEREO8;
     else if (channels == 2 && bitsPerSample == 16) outFormat = AL_FORMAT_STEREO16;
     else {
-        std::cerr << "[Sound] Format non supporte (ch=" << channels
+        logErr() << "[Sound] Format non supporte (ch=" << channels
             << " bits=" << bitsPerSample << ") : " << path << std::endl;
         return false;
     }
@@ -93,7 +94,7 @@ static bool loadWavFile(const std::string& path,
     }
 
     if (dataSize == 0) {
-        std::cerr << "[Sound] Chunk 'data' introuvable : " << path << std::endl;
+        logErr() << "[Sound] Chunk 'data' introuvable : " << path << std::endl;
         return false;
     }
 
@@ -260,7 +261,7 @@ void Sound::setLowPassFilter(float gainLF, float gainHF) {
     auto alFilterf = reinterpret_cast<LPALFILTERF>(alGetProcAddress("alFilterf"));
 
     if (!alGenFilters || !alFilteri || !alFilterf) {
-        std::cerr << "[Sound] Extension EFX absente, filtre passe-bas ignore." << std::endl;
+        logErr() << "[Sound] Extension EFX absente, filtre passe-bas ignore." << std::endl;
         return;
     }
 
@@ -279,7 +280,7 @@ void Sound::setReverbEffect(unsigned int effectSlot) {
     // AL_AUXILIARY_SEND_FILTER : (slot, send index, filter)
     auto alSource3i = reinterpret_cast<LPALSOURCE3I>(alGetProcAddress("alSource3i"));
     if (!alSource3i) {
-        std::cerr << "[Sound] alSource3i introuvable, effet de reverb ignore." << std::endl;
+        logErr() << "[Sound] alSource3i introuvable, effet de reverb ignore." << std::endl;
         return;
     }
     alSource3i(m_source,

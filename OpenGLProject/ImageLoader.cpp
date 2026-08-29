@@ -1,3 +1,4 @@
+#include "Log.h"
 #include "ImageLoader.h"
 
 #include <stb/stb_image.h>
@@ -66,7 +67,7 @@ void ImageLoader::load(const std::string& imagePath, bool flipVertically, bool g
     glBindTexture(GL_TEXTURE_2D, 0);
     stbi_image_free(data);
 
-    std::cout << "[ImageLoader] Texture chargee : " << imagePath
+    logOut() << "[ImageLoader] Texture chargee : " << imagePath
         << " (" << m_width << "x" << m_height << ", " << m_channels << " canaux, ID=" << m_textureID << ")" << std::endl;
 }
 

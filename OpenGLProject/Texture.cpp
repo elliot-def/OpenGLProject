@@ -49,7 +49,7 @@ Texture::~Texture() {
 void Texture::loadTexture(std::string& filePath, unsigned int& id) {
     // Vérifier si le fichier existe (comportement conservé : on log et on abandonne, sans exception fatale)
     if (!std::filesystem::exists(filePath)) {
-        std::cerr << "File path does not exist: " << filePath << std::endl;
+        logErr() << "File path does not exist: " << filePath << std::endl;
         return;
     }
 
@@ -64,7 +64,7 @@ void Texture::loadTexture(std::string& filePath, unsigned int& id) {
         m_nrChannels = 4;
     }
     catch (const std::exception& e) {
-        std::cerr << "Failed to load texture: " << filePath << " (" << e.what() << ")" << std::endl;
+        logErr() << "Failed to load texture: " << filePath << " (" << e.what() << ")" << std::endl;
     }
 }
 

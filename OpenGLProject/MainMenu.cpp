@@ -5,14 +5,28 @@
 #include "SoundManager.h"
 #include "Sound.h"
 #include "Renderer.h"
+#include "SteamManager.h"
+#include "Log.h"
 
 #include "constants/window.h"
 #include "constants/menu.h"
+#include "constants/resource.h"
 
 MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager, const std::string& t, bool bg) :
         Menu(game, soundManager, textRenderers, shaderManager, cursorManager, t, bg), m_renderer(renderer), m_colorDVDLogo(glm::vec3(1.0f, 1.0f, 1.0f)) {
     addItem("Jouer", Constants::Window::WINDOW_WIDTH / 2, 700, 200, 50, [this]() {
         m_game->changeState(STATE_PLAYING);
+        });
+    addItem("Multijoueur", Constants::Window::WINDOW_WIDTH / 2, 750, 200, 50, [this]() {
+        // Crée un lobby friends-only et ouvre l'overlay d'invitation Steam.
+        // L'entrée en jeu se fait via l'invitation acceptée (callback
+        // onLobbyEntered -> changeState(STATE_PLAYING)) ou via "Jouer".
+        SteamManager* steam = m_game->getSteamManager();
+        if (steam && steam->isInitialized()) {
+            steam->createLobby();
+        } else {
+            LOG_WARN("[MainMenu] Steam indisponible : multijoueur desactive.");
+        }
         });
     addItem("Options", Constants::Window::WINDOW_WIDTH / 2, 800, 200, 50, [this]() {
         m_game->changeState(STATE_OPTIONS);
@@ -24,15 +38,15 @@ MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, s
     auto* dvd = new DVDShape(m_shaderManager->getShader("image/mask"), m_renderer, 100.0f, 100.0f, 330.0f, 195.0f, 200.0f, 180.0f);
     // Musique du menu. Remplace le chemin si tu préfères l'atmosphère horror :
     // "./res/sounds/menu/atmo-horror-ghost-birds-03.wav".
-    Sound* menuMusic = m_soundManager->load("menu_music", "./res/sounds/menu/industry-garage-ventilation-system-01.wav", true, 1.0f, 1.0f);
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound1", "./res/sounds/menu/atmo-horror-ghost-birds-03.wav", false, 2.0f, 1.0f));
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound2", "./res/sounds/menu/atmo-horror-ghost-birds-02.wav", false, 2.0f, 1.0f));
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound3", "./res/sounds/menu/atmo-horror-ghost-birds-01.wav", false, 2.0f, 1.0f));
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound4", "./res/sounds/menu/musical-horror-swelling-dungeon-01.wav", false, 2.0f, 1.0f));
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound5", "./res/sounds/menu/musical-horror-silence-investigation-01.wav", false, 2.0f, 1.0f));
-    m_weirdSounds.push_back(m_soundManager->load("weird_sound6", "./res/sounds/menu/creature-humanoid-fishman-grunt-02.wav", false, 2.0f, 1.0f));
+    Sound* menuMusic = m_soundManager->load("menu_music", Constants::Resource::SOUND_MENU_MUSIC, true, 1.0f, 1.0f);
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound1", Constants::Resource::SOUND_MENU_GHOST_BIRDS_03, false, 2.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound2", Constants::Resource::SOUND_MENU_GHOST_BIRDS_02, false, 2.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound3", Constants::Resource::SOUND_MENU_GHOST_BIRDS_01, false, 2.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound4", Constants::Resource::SOUND_MENU_SWELLING_DUNGEON, false, 2.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound5", Constants::Resource::SOUND_MENU_SILENCE_INVESTIGATION, false, 2.0f, 1.0f));
+    m_weirdSounds.push_back(m_soundManager->load("weird_sound6", Constants::Resource::SOUND_MENU_FISHMAN_GRUNT, false, 2.0f, 1.0f));
 
-    m_clickSound = m_soundManager->load("menu_click_sound", "./res/sounds/menu/ui-click-generic-plastic-01.wav", false, 6.0f, 1.0f);
+    m_clickSound = m_soundManager->load("menu_click_sound", Constants::Resource::SOUND_MENU_CLICK, false, 6.0f, 1.0f);
     //m_clickSound = m_soundManager->load("menu_click_sound", "./res/sounds/menu/Pokemon (A Button) - Sound Effect (HD).wav", false, 6.0f, 1.0f);
 
     addShape(0, dvd);

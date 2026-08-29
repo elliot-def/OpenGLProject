@@ -1,5 +1,6 @@
 #pragma comment(lib, "OpenAL32.lib")
 
+#include "Log.h"
 #include "SoundManager.h"
 #include "Sound.h"
 #include "MusicStream.h"
@@ -43,7 +44,7 @@ static void GLFWWindowFocusCallback(GLFWwindow* window, int focused)
 static void alcCheckError(ALCdevice* device, const char* context) {
     ALCenum err = alcGetError(device);
     if (err != ALC_NO_ERROR) {
-        std::cerr << "[OpenAL ALC] Erreur dans " << context
+        logErr() << "[OpenAL ALC] Erreur dans " << context
             << " : 0x" << std::hex << err << std::dec << std::endl;
     }
 }
@@ -97,14 +98,14 @@ void SoundManager::initOpenAL() {
     m_efxAvailable = alcIsExtensionPresent(m_device, "ALC_EXT_EFX") == ALC_TRUE;
 
     if (m_efxAvailable)
-        std::cout << "[SoundManager] Extension EFX disponible (reverb, filtres actifs)." << std::endl;
+        logOut() << "[SoundManager] Extension EFX disponible (reverb, filtres actifs)." << std::endl;
     else
-        std::cout << "[SoundManager] Extension EFX absente (reverb/filtres desactives)." << std::endl;
+        logOut() << "[SoundManager] Extension EFX absente (reverb/filtres desactives)." << std::endl;
 
     // Modèle d'atténuation par défaut : distance inverse clampée (réaliste)
     alDistanceModel(AL_INVERSE_DISTANCE_CLAMPED);
 
-    std::cout << "[SoundManager] OpenAL initialise. Vendor : "
+    logOut() << "[SoundManager] OpenAL initialise. Vendor : "
         << alGetString(AL_VENDOR) << std::endl;
 }
 
@@ -135,7 +136,7 @@ Sound* SoundManager::load(const std::string& name,
     Sound* ptr = sound.get();
     m_sounds.emplace(name, std::move(sound));
 
-    std::cout << "[SoundManager] Son charge : \"" << name << "\" <- " << filePath << std::endl;
+    logOut() << "[SoundManager] Son charge : \"" << name << "\" <- " << filePath << std::endl;
     return ptr;
 }
 
@@ -266,7 +267,7 @@ void SoundManager::setSpeedOfSound(float speed) {
 
 unsigned int SoundManager::createReverbEffect(ReverbPreset preset) {
     if (!m_efxAvailable) {
-        std::cerr << "[SoundManager] EFX non disponible, reverb ignoree." << std::endl;
+        logErr() << "[SoundManager] EFX non disponible, reverb ignoree." << std::endl;
         return 0;
     }
 
@@ -279,7 +280,7 @@ unsigned int SoundManager::createReverbEffect(ReverbPreset preset) {
         alGetProcAddress("alAuxiliaryEffectSloti"));
 
     if (!alGenEffects || !alEffecti || !alGenAuxiliaryEffectSlots || !alAuxiliaryEffectSloti) {
-        std::cerr << "[SoundManager] Fonctions EFX introuvables." << std::endl;
+        logErr() << "[SoundManager] Fonctions EFX introuvables." << std::endl;
         return 0;
     }
 
@@ -303,7 +304,7 @@ unsigned int SoundManager::createReverbEffect(ReverbPreset preset) {
     m_effectSlots.push_back(slot);
     m_currentReverbSlot = slot;
 
-    std::cout << "[SoundManager] Reverb slot cree (id=" << slot << ")." << std::endl;
+    logOut() << "[SoundManager] Reverb slot cree (id=" << slot << ")." << std::endl;
     return slot;
 }
 
@@ -431,9 +432,9 @@ void SoundManager::update() {
 // ─── Debug ────────────────────────────────────────────────────────────────────
 
 void SoundManager::printSoundList() const {
-    std::cout << "=== Sons charges (" << m_sounds.size() << ") ===" << std::endl;
+    logOut() << "=== Sons charges (" << m_sounds.size() << ") ===" << std::endl;
     for (const auto& [name, sound] : m_sounds) {
-        std::cout << "  [" << name << "] "
+        logOut() << "  [" << name << "] "
             << sound->getFilePath()
             << " | gain=" << sound->getGain()
             << " pitch=" << sound->getPitch()

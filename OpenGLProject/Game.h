@@ -31,6 +31,9 @@ class SteamManager;
 class LoadingScreen;
 class ModelLoader;
 class Scene;
+class MultiplayerManager;
+class LobbyChat;
+class VoiceChat;
 
 class Game {
 public:
@@ -84,6 +87,14 @@ private:
     FirstPersonArms* m_firstPersonArms = nullptr;
     std::unique_ptr<SteamManager> m_steamManager;
     std::unique_ptr<ModelLoader> m_modelLoader;  // possède les entités 3D chargées
+    // Joueurs distants du lobby Steam (possède leurs ModelEntity, les dessine).
+    std::unique_ptr<MultiplayerManager> m_multiplayerManager;
+
+    // Chat du lobby Steam (logs systeme + messages des joueurs, saisie Entree).
+    std::unique_ptr<LobbyChat> m_lobbyChat;
+
+    // Chat vocal du lobby Steam (capture micro + lecture des voix distantes).
+    std::unique_ptr<VoiceChat> m_voiceChat;
 
     bool m_isRunning = true;
 
@@ -121,6 +132,14 @@ private:
     void initialize();     // Window + Renderer + Steam async start (+ ressources si Steam prêt)
     void loadResources();  // Chargement des ressources lourdes (textures, modèles, sons...)
     void update();
+
+    // Simulation du monde (physique/gravité, caméra, lumières, audio 3D,
+    // synchro P2P des joueurs distants). Appelée par update() en jeu ET par
+    // la boucle quand un menu est ouvert : le personnage continue de tomber
+    // et son état reste diffusé aux autres joueurs du lobby (sinon il était
+    // gelé en l'air et disparaissait chez les pairs après ~5 s de silence
+    // P2P, STALE_TIMEOUT).
+    void updateWorld(float dt);
     void draw();
 
     // Notification de bascule clavier/souris <-> manette (icônes kenney).

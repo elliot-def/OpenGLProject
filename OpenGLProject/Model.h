@@ -19,7 +19,15 @@ class TextureManager;
 class Camera;
 class LightManager;
 
+// Debug -> assimp debug (mtd) ; Release -> assimp release (mt).
+// Ne PAS linker la version debug d'Assimp en Release : sa DLL depend du
+// runtime C++ debug (VCRUNTIME140D.dll, MSVCP140D.dll, ucrtbased.dll) qui
+// n'est pas redistribuable et absent des machines sans Visual Studio.
+#ifdef _DEBUG
 #pragma comment(lib, "assimp-vc143-mtd.lib")
+#else
+#pragma comment(lib, "assimp-vc143-mt.lib")
+#endif
 
 // Structure pour représenter une bounding box
 struct BoundingBox {
@@ -118,6 +126,14 @@ public:
     // Nombre de clips externes (chargés via loadExternalAnimations). Les
     // animations embarquées du modèle occupent les index [0, getNumAnimations()-externes[.
     size_t getNumExternalAnimations() const { return m_externalAnimations.size(); }
+
+    // Transforme en place l'animation externe `externalIndex` en son miroir
+    // lateral (plan x=0) : echange des canaux Left/Right, positions x -> -x,
+    // rotations (w,x,y,z) -> (w,x,-y,-z). Utilise pour fabriquer le strafe
+    // droit a partir du strafe gauche : les clips "right strafe" de Mixamo
+    // ne sont pas des miroirs exacts des "left strafe" (pied/cheville qui
+    // pivotent de ~115° a travers la direction de marche -> pose anormale).
+    void mirrorExternalAnimation(size_t externalIndex);
 
 private:
     std::string m_sourcePath;

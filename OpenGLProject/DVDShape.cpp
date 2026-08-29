@@ -3,6 +3,7 @@
 
 #include "MaskImage.h"
 #include "Renderer.h"
+#include "constants/resource.h"
 #include <cstdlib>
 #include <ctime>
 
@@ -17,7 +18,7 @@ const std::vector<glm::vec3> DVDShape::s_colors = {
 };
 
 DVDShape::DVDShape(Shader* shader, Renderer* renderer, float startX, float startY, float width, float height, float vx, float vy)
-    : MaskImage(shader, "./res/textures/menu/dvd_logo.png", startX, startY, width, height), m_renderer(renderer), m_vx(vx), m_vy(vy), m_colorIndex(0) {
+    : MaskImage(shader, Constants::Resource::TEXTURE_DVD_LOGO, startX, startY, width, height), m_renderer(renderer), m_vx(vx), m_vy(vy), m_colorIndex(0) {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
     m_color = s_colors[0];
     setIsVisible(false);

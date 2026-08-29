@@ -3,6 +3,7 @@
 // pour eviter qu un header projet pull windows.h en mode non-LEAN.
 #include "win_compat.h"
 
+#include "Log.h"
 #include "CursorManager.h"
 
 #include "Window.h"
@@ -65,13 +66,13 @@ void CursorManager::setCustomCursor(const char* cursorPath) {
             glfwSetCursor(m_window->getGLFWwindow(), m_GLFWcursor);
         }
         else {
-            std::cerr << "Erreur: Impossible de creer le curseur GLFW" << std::endl;
+            logErr() << "Erreur: Impossible de creer le curseur GLFW" << std::endl;
         }
 
         stbi_image_free(cursor_pixels);
     }
     else {
-        std::cerr << "Erreur: Impossible de charger l'image du curseur " << cursorPath << std::endl;
+        logErr() << "Erreur: Impossible de charger l'image du curseur " << cursorPath << std::endl;
     }
 }
 
@@ -103,7 +104,7 @@ void CursorManager::loadWaitFrames() {
     unsigned char* basePixels = stbi_load(m_cursorsAvailable.at("wait").c_str(), &width, &height, &channels, 4);
 
     if (!basePixels) {
-        std::cerr << "Erreur : Impossible de charger l'image du curseur wait." << std::endl;
+        logErr() << "Erreur : Impossible de charger l'image du curseur wait." << std::endl;
         return;
     }
 

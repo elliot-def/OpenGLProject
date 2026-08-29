@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "constants/resource.h"
+
 class Window;
 typedef struct GLFWcursor GLFWcursor;
 
@@ -56,16 +58,16 @@ public:
 
 private:
 	std::map<std::string, std::string> m_cursorsAvailable = {
-		{"default",		"./res/textures/menu/cursor assets/cursor_none.png"},
-		{"wait",		"./res/textures/menu/cursor assets/busy_circle_fade.png"},
-		{"disabled",	"./res/textures/menu/cursor assets/disabled.png"},
-		{"crosshair",	"./res/textures/menu/cursor assets/target_a.png.png"},
-		{"text",		"./res/textures/menu/cursor assets/bracket_a_vertical.png"},
-		{"grab",		"./res/textures/menu/cursor assets/hand_open.png"},
-		{"grabbing",	"./res/textures/menu/cursor assets/hand_closed.png"}
+		{"default",		Constants::Resource::TEXTURE_CURSOR_NONE},
+		{"wait",		Constants::Resource::TEXTURE_CURSOR_BUSY},
+		{"disabled",	Constants::Resource::TEXTURE_CURSOR_DISABLED},
+		{"crosshair",	Constants::Resource::TEXTURE_CURSOR_CROSSHAIR},
+		{"text",		Constants::Resource::TEXTURE_CURSOR_TEXT},
+		{"grab",		Constants::Resource::TEXTURE_CURSOR_GRAB},
+		{"grabbing",	Constants::Resource::TEXTURE_CURSOR_GRABBING}
 	};
 
-	std::pair<std::string, std::string> m_currentCursor = {"default", "./res/textures/menu/cursor assets/cursor_none.png"};
+	std::pair<std::string, std::string> m_currentCursor = {"default", Constants::Resource::TEXTURE_CURSOR_NONE};
 	GLFWcursor* m_GLFWcursor = nullptr;
 	Window* m_window;
 

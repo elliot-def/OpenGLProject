@@ -34,6 +34,14 @@ public:
     // 1.0 = vitesse normale, <1.0 = ralenti apres chute/saut.
     float getPostLandSpeedFactor() const { return m_postLandSpeedFactor; }
 
+    // Reinitialise l'etat de la machine a animations (suivi position/cap,
+    // one-shots, cooldowns). A appeler a la sortie du no-clip : pendant le
+    // no-clip, update() n'est pas appele, donc m_lastPos/m_lastYaw sont
+    // perimes. Sans reset, le premier update calcule un delta geant -> faux
+    // saut/turn/fall qui laisse le modele (et la camera 1P qui suit la tete)
+    // dans une pose incorrecte qui ne se resout pas immediatement.
+    void resetState(const glm::vec3& currentPos, float currentYaw);
+
     // Dessine le HUD de debug listant les animations du modele (3P seulement).
     static void drawDebugHUD(ModelEntity* entity,
                              const std::vector<std::unique_ptr<TextRenderer>>& renderers);

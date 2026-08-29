@@ -34,18 +34,25 @@ public:
     // Gere l'ouverture/fermeture et la selection d'une option
     void handleClick(double mouseX, double mouseY);
 
+    // A appeler chaque frame avec la position souris (propagee par
+    // Menu::updateHover) : memorise l'option survolee pour la surbrillance.
+    void updateHover(double mouseX, double mouseY);
+
     void draw();
 
     bool isOpen() const { return m_isOpen; }
     int getSelectedIndex() const { return m_selectedIndex; }
+    // Index de l'option survolee par la souris (-1 si aucune) : sert au menu
+    // a colorer le libelle de l'option survolee.
+    int getHoveredIndex() const { return m_hoveredIndex; }
 
     // Focus pour la navigation manette : met la case en surbrillance.
     void setFocused(bool focused) { m_focused = focused; }
     bool isFocused() const { return m_focused; }
 
     // Navigation manette : ouvre/ferme la liste, et fait defiler l'option.
-    void open() { m_isOpen = true; }
-    void close() { m_isOpen = false; }
+    void open() { m_isOpen = true; m_hoveredIndex = -1; }
+    void close() { m_isOpen = false; m_hoveredIndex = -1; }
     void cycleOption(int direction);
     const std::string& getSelectedLabel() const { return m_options[m_selectedIndex]; }
     const std::string& getOptionLabel(size_t i) const { return m_options[i]; }
@@ -54,16 +61,22 @@ public:
     glm::vec2 getPosition() const { return m_position; }
     glm::vec2 getOptionPosition(size_t i) const;
 
+    // Test de survol : case fermee + rangees d'options si la liste est ouverte.
+    // Utilise par MenuSelect (interface MenuInput) pour le test de clic generique.
+    bool isPointInside(double px, double py) const;
+
 private:
     bool isPointInsideBox(double px, double py, glm::vec2 center) const;
 
     Shader* m_shader;
     CursorManager* m_cursorManager;
     class Rectangle* m_box;                       // Case affichant la valeur selectionnee
+    class Rectangle* m_backdrop;                  // Fond sombre derriere la liste d'options
     std::vector<class Rectangle*> m_optionBoxes;  // Une rangee par option, visible seulement si m_isOpen
 
     std::vector<std::string> m_options;
     int m_selectedIndex;
+    int m_hoveredIndex = -1; // Option sous la souris (surbrillance), -1 si aucune
 
     glm::vec2 m_position;
     glm::vec2 m_size;

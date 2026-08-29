@@ -3,6 +3,8 @@
 #include <string>
 #include <functional>
 #include <memory>
+#include <vector>
+#include <cstdint>
 
 // Steamworks SDK
 #include "dependencies/steam/steam_api.h"
@@ -80,6 +82,35 @@ public:
     // Ouvre l'overlay Steam pour inviter un ami au lobby courant.
     void openInviteDialog();
 
+    // ── Réseau P2P (Steam Networking Messages) ────────────────────────────
+    // Synchronisation de la position/direction/animation des joueurs du lobby
+    // via ISteamNetworkingMessages (UDP-like, fiable, routé par Steam).
+
+    // Message P2P reçu : expéditeur + charge utile binaire.
+    struct P2PMessage {
+        CSteamID sender;
+        std::vector<uint8_t> data;
+    };
+
+    // Envoie un paquet binaire FIABLE à un pair identifié par son SteamID.
+    // Retourne false si Steam n'est pas prêt ou si l'envoi échoue.
+    bool sendP2P(CSteamID target, const void* data, uint32_t size);
+
+    // Diffuse un paquet à tous les membres du lobby courant (sauf le local).
+    bool broadcastP2P(const void* data, uint32_t size);
+
+    // Variante NON-FIABLE (chat vocal temps reel) : les paquets peuvent se
+    // perdre/arriver en desordre, pas de retransmission.
+    bool sendP2PUnreliable(CSteamID target, const void* data, uint32_t size);
+    bool broadcastP2PUnreliable(const void* data, uint32_t size);
+
+    // Lit les messages P2P en attente sur le canal 0. Retourne le nombre lu
+    // (les sessions entrantes sont acceptées automatiquement via callback).
+    int receiveP2P(std::vector<P2PMessage>& out, int maxMessages = 32);
+
+    // Membres du lobby courant, joueur local exclu. Vide si hors lobby.
+    std::vector<CSteamID> getLobbyMembers() const;
+
     // État du lobby
     bool isInLobby() const { return m_inLobby; }
     CSteamID getCurrentLobbyID() const { return m_currentLobby; }
@@ -95,6 +126,9 @@ public:
 
     using LobbyCallback = std::function<void(CSteamID lobbyID)>;
     using LobbyMemberCallback = std::function<void(CSteamID lobbyID, CSteamID memberID)>;
+    // Changement d'un membre du lobby (autre que le local) : flags bruts
+    // LobbyChatUpdate_t (k_EChatMemberStateChangeEntered/Left/Disconnected/Kicked).
+    using LobbyMemberUpdateCallback = std::function<void(CSteamID lobbyID, CSteamID memberID, uint32_t flags)>;
     using SimpleCallback     = std::function<void()>;
 
     void setOnLobbyCreated(LobbyCallback cb)   { m_onLobbyCreated = std::move(cb); }
@@ -104,6 +138,15 @@ public:
     // Appelé quand une invitation entrante doit être rejointe
     // (soit en jeu via callback, soit via ligne de commande).
     void setOnInviteReceived(LobbyCallback cb)  { m_onInviteReceived = std::move(cb); }
+
+    // Appelé quand un membre du lobby (autre que le local) entre/sort du
+    // lobby (flags LobbyChatUpdate_t). Utilise par le chat pour les logs
+    // systeme "X a rejoint/quitte le lobby".
+    void setOnLobbyMemberUpdate(LobbyMemberUpdateCallback cb) { m_onLobbyMemberUpdate = std::move(cb); }
+
+    // Nom public d'un utilisateur Steam (persona name). Retourne une chaine
+    // vide si Steam n'est pas initialise.
+    const char* getPersonaName(CSteamID steamID) const;
 
 private:
     bool               m_initialized  = false;
@@ -124,6 +167,7 @@ private:
     STEAM_CALLBACK_MANUAL(SteamManager, onGameLobbyJoinRequested, GameLobbyJoinRequested_t, m_cbLobbyJoin);
     STEAM_CALLBACK_MANUAL(SteamManager, onLobbyEnter,             LobbyEnter_t,             m_cbEnter);
     STEAM_CALLBACK_MANUAL(SteamManager, onLobbyChatUpdate,        LobbyChatUpdate_t,        m_cbChatUpdate);
+    STEAM_CALLBACK_MANUAL(SteamManager, onNetworkingSessionRequest, SteamNetworkingMessagesSessionRequest_t, m_cbSessionRequest);
 
     // ---- CallResult pour CreateLobby / JoinLobby ----
     CCallResult<SteamManager, LobbyCreated_t> m_callResultCreated;
@@ -134,6 +178,7 @@ private:
     LobbyCallback       m_onLobbyEntered;
     SimpleCallback      m_onLobbyLeft;
     LobbyCallback       m_onInviteReceived;
+    LobbyMemberUpdateCallback m_onLobbyMemberUpdate;
 
     // ---- Détail interne ----
     void completeInit();   // finalise l'init après SteamAPI_InitEx OK

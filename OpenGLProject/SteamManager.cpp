@@ -1,6 +1,7 @@
 #include "SteamManager.h"
 #include "Log.h"
 #include <cstring>
+#include <cstdlib>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -175,6 +176,7 @@ void SteamManager::completeInit() {
     m_cbLobbyJoin.Register(this, &SteamManager::onGameLobbyJoinRequested);
     m_cbEnter.Register(this, &SteamManager::onLobbyEnter);
     m_cbChatUpdate.Register(this, &SteamManager::onLobbyChatUpdate);
+    m_cbSessionRequest.Register(this, &SteamManager::onNetworkingSessionRequest);
 
     logPrintf("[SteamManager] Initialise avec succes.\n");
     logPrintf("[SteamManager]   AppID       : %u\n", SteamUtils()->GetAppID());
@@ -272,6 +274,133 @@ void SteamManager::openInviteDialog() {
 }
 
 // ---------------------------------------------------------------------------
+// Réseau P2P (Steam Networking Messages)
+// ---------------------------------------------------------------------------
+
+bool SteamManager::sendP2P(CSteamID target, const void* data, uint32_t size) {
+    if (!m_initialized) return false;
+    if (!target.IsValid() || !data || size == 0) return false;
+
+    ISteamNetworkingMessages* net = SteamNetworkingMessages();
+    if (!net) return false;
+
+    SteamNetworkingIdentity identity;
+    identity.SetSteamID(target);
+
+    // AutoRestartBrokenSession : si la session a ete cassee (ex: le pair a
+    // ferme puis relance le jeu), on la retablit automatiquement au lieu de
+    // renvoyer k_EResultNoConnection. Sans ce flag, le chef qui relance le
+    // jeu ne recoit plus l'etat des autres joueurs (session cassee cote pair).
+    EResult result = net->SendMessageToUser(
+        identity, data, size,
+        k_nSteamNetworkingSend_Reliable | k_nSteamNetworkingSend_AutoRestartBrokenSession,
+        0);
+
+    if (result != k_EResultOK) {
+        logPrintf("[SteamManager] sendP2P vers %llu echoue (result=%d)\n",
+               target.ConvertToUint64(), result);
+        return false;
+    }
+    return true;
+}
+
+bool SteamManager::broadcastP2P(const void* data, uint32_t size) {
+    if (!m_initialized || !m_inLobby) return false;
+
+    bool anySent = false;
+    for (CSteamID member : getLobbyMembers()) {
+        if (sendP2P(member, data, size)) anySent = true;
+    }
+    return anySent;
+}
+
+bool SteamManager::sendP2PUnreliable(CSteamID target, const void* data, uint32_t size) {
+    if (!m_initialized) return false;
+    if (!target.IsValid() || !data || size == 0) return false;
+
+    ISteamNetworkingMessages* net = SteamNetworkingMessages();
+    if (!net) return false;
+
+    SteamNetworkingIdentity identity;
+    identity.SetSteamID(target);
+
+    // Meme flag que sendP2P : retablit une session cassee (voix qui reprend
+    // apres un rejoin) au lieu d'echouer silencieusement.
+    EResult result = net->SendMessageToUser(
+        identity, data, size,
+        k_nSteamNetworkingSend_Unreliable | k_nSteamNetworkingSend_AutoRestartBrokenSession,
+        0);
+    return result == k_EResultOK;
+}
+
+bool SteamManager::broadcastP2PUnreliable(const void* data, uint32_t size) {
+    if (!m_initialized || !m_inLobby) return false;
+
+    bool anySent = false;
+    for (CSteamID member : getLobbyMembers()) {
+        if (sendP2PUnreliable(member, data, size)) anySent = true;
+    }
+    return anySent;
+}
+
+int SteamManager::receiveP2P(std::vector<P2PMessage>& out, int maxMessages) {
+    if (!m_initialized || maxMessages <= 0) return 0;
+
+    ISteamNetworkingMessages* net = SteamNetworkingMessages();
+    if (!net) return 0;
+
+    // Tampon fixe : on ne dépasse pas maxMessages par frame.
+    SteamNetworkingMessage_t* messages[64];
+    const int capacity = maxMessages < 64 ? maxMessages : 64;
+    const int count = net->ReceiveMessagesOnChannel(0, messages, capacity);
+
+    for (int i = 0; i < count; ++i) {
+        SteamNetworkingMessage_t* msg = messages[i];
+        if (!msg) continue;
+
+        P2PMessage outMsg;
+        outMsg.sender = msg->m_identityPeer.GetSteamID();
+        const uint8_t* bytes = static_cast<const uint8_t*>(msg->m_pData);
+        outMsg.data.assign(bytes, bytes + msg->m_cbSize);
+        out.push_back(std::move(outMsg));
+
+        msg->Release();
+    }
+    return count;
+}
+
+std::vector<CSteamID> SteamManager::getLobbyMembers() const {
+    std::vector<CSteamID> members;
+    if (!m_initialized || !m_inLobby) return members;
+
+    const int count = SteamMatchmaking()->GetNumLobbyMembers(m_currentLobby);
+    members.reserve(static_cast<size_t>(count > 0 ? count : 0));
+    for (int i = 0; i < count; ++i) {
+        CSteamID member = SteamMatchmaking()->GetLobbyMemberByIndex(m_currentLobby, i);
+        if (member.IsValid() && member != m_localSteamID) {
+            members.push_back(member);
+        }
+    }
+    return members;
+}
+
+// ---------------------------------------------------------------------------
+// Callbacks Steam - Demande de session P2P entrante
+// ---------------------------------------------------------------------------
+
+void SteamManager::onNetworkingSessionRequest(SteamNetworkingMessagesSessionRequest_t* pCallback) {
+    // Les lobbies sont FriendsOnly : on accepte toute session P2P entrante
+    // (l'envoi d'un message vers un pair accepte implicitement sa session,
+    // mais une requête entrante nécessite cet appel explicite).
+    ISteamNetworkingMessages* net = SteamNetworkingMessages();
+    if (net) {
+        net->AcceptSessionWithUser(pCallback->m_identityRemote);
+        logPrintf("[SteamManager] Session P2P acceptee (SteamID %llu)\n",
+               pCallback->m_identityRemote.GetSteamID().ConvertToUint64());
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -306,7 +435,17 @@ void SteamManager::onGameLobbyJoinRequested(GameLobbyJoinRequested_t* pCallback)
     logPrintf("[SteamManager] Invitation lobby recue en jeu : %llu\n",
            pCallback->m_steamIDLobby.ConvertToUint64());
 
-    // Si déjà dans un lobby, on le quitte d'abord
+    // Deja dans ce lobby (ex: "Rejoindre" sur un ami qui est dans le MEME
+    // lobby) : ne rien faire. Un leave+rejoin serait inutile et racerait
+    // (JoinLobby peut arriver avant la fin du LeaveLobby) : le joueur reste
+    // alors hors du lobby et ne voit plus les autres joueurs.
+    if (m_inLobby && m_currentLobby == pCallback->m_steamIDLobby) {
+        logPrintf("[SteamManager] Deja dans le lobby %llu, invitation ignoree.\n",
+               pCallback->m_steamIDLobby.ConvertToUint64());
+        return;
+    }
+
+    // Si déjà dans un AUTRE lobby, on le quitte d'abord
     if (m_inLobby) {
         leaveLobby();
     }
@@ -389,5 +528,13 @@ void SteamManager::onLobbyChatUpdate(LobbyChatUpdate_t* pCallback) {
         const char* name = SteamFriends()->GetFriendPersonaName(userChanged);
         logPrintf("[SteamManager] Changement dans le lobby pour %s (SteamID %llu)\n",
                name, userChanged.ConvertToUint64());
+        if (m_onLobbyMemberUpdate) {
+            m_onLobbyMemberUpdate(lobbyID, userChanged, pCallback->m_rgfChatMemberStateChange);
+        }
     }
+}
+
+const char* SteamManager::getPersonaName(CSteamID steamID) const {
+    if (!m_initialized) return "";
+    return SteamFriends()->GetFriendPersonaName(steamID);
 }

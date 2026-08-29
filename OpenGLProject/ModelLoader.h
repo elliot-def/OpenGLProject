@@ -41,6 +41,12 @@ public:
     FirstPersonArms* getFirstPersonArms() const { return m_firstPersonArms.get(); }
     CharacterAnimationController* getCharacterAnim() const { return m_characterAnim.get(); }
 
+    // Configure un personnage Megan déjà construit (auto-scale à ~1.8m +
+    // chargement des animations externes Mixamo + mapping des index + idle).
+    // Partagée entre le personnage local et les joueurs distants
+    // (MultiplayerManager) pour garantir un mapping d'animations identique.
+    static void configureHumanCharacter(ModelEntity* entity);
+
 private:
     void loadDecorModels();    // backpack + fropy + avant-bras 1P
     void loadHumanCharacter(); // Y Bot + animations Mixamo + contrôleur 3P

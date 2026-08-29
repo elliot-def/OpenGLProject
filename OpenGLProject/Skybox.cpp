@@ -3,6 +3,7 @@
 // lecture seule, comme Image.cpp / ImageLoader.cpp.
 #include <stb/stb_image.h>
 
+#include "Log.h"
 #include "Skybox.h"
 #include "Shader.h"
 #include "Camera.h"
@@ -16,7 +17,7 @@ Skybox::Skybox(const std::string& facesFolder)
     m_cubemapID = loadCubemap(facesFolder);
     setupMesh();
     if (m_cubemapID) {
-        std::cout << "[Skybox] Cubemap charge depuis : " << facesFolder << std::endl;
+        logOut() << "[Skybox] Cubemap charge depuis : " << facesFolder << std::endl;
     }
 }
 
@@ -43,7 +44,7 @@ unsigned int Skybox::loadCubemap(const std::string& facesFolder) {
     for (int i = 0; i < 6; i++) {
         std::string path = facesFolder + "/" + SUFFIXES[i] + ".png";
         if (!std::filesystem::exists(path)) {
-            std::cerr << "[Skybox] Fichier de face introuvable : " << path << std::endl;
+            logErr() << "[Skybox] Fichier de face introuvable : " << path << std::endl;
             continue;
         }
 
@@ -55,7 +56,7 @@ unsigned int Skybox::loadCubemap(const std::string& facesFolder) {
         stbi_set_flip_vertically_on_load(false);
         unsigned char* data = stbi_load(path.c_str(), &w, &h, &nrChannels, 0);
         if (!data) {
-            std::cerr << "[Skybox] Echec du chargement de la face : " << path
+            logErr() << "[Skybox] Echec du chargement de la face : " << path
                       << " (" << stbi_failure_reason() << ")" << std::endl;
             continue;
         }
@@ -71,7 +72,7 @@ unsigned int Skybox::loadCubemap(const std::string& facesFolder) {
         // Cubemap incomplet : les faces manquantes contiennent des donnees
         // indefinies → echantillonnage noir. On signale clairement plutot
         // que de rendre un ciel corrompu silencieusement.
-        std::cerr << "[Skybox] ATTENTION : cubemap incomplet (" << loadedFaces
+        logErr() << "[Skybox] ATTENTION : cubemap incomplet (" << loadedFaces
                   << "/6 faces chargees) — le ciel peut apparaitre noir."
                   << std::endl;
     }

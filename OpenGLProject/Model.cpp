@@ -1,3 +1,4 @@
+#include "Log.h"
 #include "Model.h"
 #include "Mesh.h"
 #include "Shader.h"
@@ -192,7 +193,7 @@ void Model::loadModel(const std::string& path) {
     );
 
     if (!m_scene || m_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !m_scene->mRootNode) {
-        std::cerr << "ERREUR::ASSIMP::" << m_importer.GetErrorString() << std::endl;
+        logErr() << "ERREUR::ASSIMP::" << m_importer.GetErrorString() << std::endl;
         return;
     }
 
@@ -223,7 +224,7 @@ void Model::loadExternalAnimations(const std::vector<std::string>& paths) {
         // Assimp ne traite pas les meshes/textures → gain memoire/perf.
         const aiScene* extScene = importer->ReadFile(path, 0);
         if (!extScene) {
-            std::cerr << "[Model] Echec chargement animation externe: " << path
+            logErr() << "[Model] Echec chargement animation externe: " << path
                       << " - " << importer->GetErrorString() << std::endl;
             continue;
         }
@@ -233,9 +234,57 @@ void Model::loadExternalAnimations(const std::vector<std::string>& paths) {
         m_externalImporters.push_back(std::move(importer));
     }
     if (!m_externalAnimations.empty()) {
-        std::cout << "[Model] " << m_externalAnimations.size()
+        logOut() << "[Model] " << m_externalAnimations.size()
                   << " animations externes chargees" << std::endl;
     }
+}
+
+void Model::mirrorExternalAnimation(size_t externalIndex) {
+    if (externalIndex >= m_externalAnimations.size()) return;
+    // Les scenes Assimp sont deja mutees en place par le reparateur de cles
+    // (Animator::repairRotationKeys) : le const ici est contractuel, pas reel.
+    aiAnimation* anim = const_cast<aiAnimation*>(m_externalAnimations[externalIndex]);
+    if (!anim) return;
+
+    // Miroir lateral (plan x=0) de l'animation : le strafe droit doit etre
+    // l'exact miroir du strafe gauche pour que pieds/chevilles se comportent
+    // de facon symetrique. Les clips "right strafe" de Mixamo ne sont pas des
+    // miroirs (le pied droit y pivote ~115° a travers l'axe de marche).
+    for (unsigned int c = 0; c < anim->mNumChannels; c++) {
+        aiNodeAnim* ch = anim->mChannels[c];
+        if (!ch) continue;
+
+        // Les bones apparies (jambe/pied/bras/doigts...) portent "Left" ou
+        // "Right" dans leur nom : on echange. Les canaux centraux (Hips,
+        // Spine, Head...) sont inchanges.
+        std::string name(ch->mNodeName.C_Str());
+        const size_t left = name.find("Left");
+        const size_t right = name.find("Right");
+        if (left != std::string::npos) {
+            name.replace(left, 4, "Right");
+        } else if (right != std::string::npos) {
+            name.replace(right, 5, "Left");
+        }
+        ch->mNodeName.Set(name.c_str());
+
+        // Positions : miroir sur X (la gauche/droite du rig est l'axe X).
+        for (unsigned int i = 0; i < ch->mNumPositionKeys; i++) {
+            ch->mPositionKeys[i].mValue.x = -ch->mPositionKeys[i].mValue.x;
+        }
+        // Rotations : (w,x,y,z) -> (w, x, -y, -z). Le miroir inverse le cap
+        // (rotation autour de Y) et le roulis (autour de Z), conserve le
+        // tangage (autour de X, axe du miroir).
+        for (unsigned int i = 0; i < ch->mNumRotationKeys; i++) {
+            ch->mRotationKeys[i].mValue.y = -ch->mRotationKeys[i].mValue.y;
+            ch->mRotationKeys[i].mValue.z = -ch->mRotationKeys[i].mValue.z;
+        }
+        // Echelles : miroir sur X (rarement anime, par securite).
+        for (unsigned int i = 0; i < ch->mNumScalingKeys; i++) {
+            ch->mScalingKeys[i].mValue.x = -ch->mScalingKeys[i].mValue.x;
+        }
+    }
+    logOut() << "[Model] animation externe #" << externalIndex
+             << " miroirsee (strafe droit fabrique a partir du strafe gauche)" << std::endl;
 }
 
 const aiAnimation* Model::getAnimation(size_t index) const {
@@ -265,7 +314,7 @@ void Model::buildJointNodes() {
     collectJointNodes(m_scene->mRootNode, claimed);
 
     if (m_boneCounter > 0 && m_jointNodes.empty()) {
-        std::cerr << "[Model] Aucun noeud joint identifie (" << m_boneCounter
+        logErr() << "[Model] Aucun noeud joint identifie (" << m_boneCounter
                   << " bones) : l'Animator retombera sur la recherche par nom." << std::endl;
     }
 }
@@ -295,7 +344,7 @@ void Model::processNode(aiNode* node, const aiScene* scene) {
         // depuis plusieurs nœuds (fréquent avec Mixamo/Blender). Sans ce skip,
         // deux Mesh* identiques sont dessinés à la même position → z-fighting.
         if (m_processedMeshIndices.count(meshIndex)) {
-            std::cout << "[Model] Mesh duplicate ignore (index=" << meshIndex
+            logOut() << "[Model] Mesh duplicate ignore (index=" << meshIndex
                       << ", node=\"" << node->mName.C_Str() << "\")" << std::endl;
             continue;
         }
@@ -343,7 +392,7 @@ Mesh* Model::processMesh(aiMesh* mesh, const aiScene* scene) {
             }
         }
         if (!same) {
-            std::cout << "[Model] Mesh ignore (squelette different) : \""
+            logOut() << "[Model] Mesh ignore (squelette different) : \""
                       << mesh->mName.C_Str() << "\" (bone \"" << boneName << "\")" << std::endl;
             return nullptr;
         }
@@ -600,7 +649,7 @@ std::vector<unsigned int> Model::loadMaterialTextures(aiMaterial* mat, aiTexture
                 textureIDs.push_back(loadEmbeddedTexture(emb, texPath));
             }
             else {
-                std::cerr << "[Model] Texture embarquee introuvable : " << texPath << std::endl;
+                logErr() << "[Model] Texture embarquee introuvable : " << texPath << std::endl;
                 // Fallback : on laisse le caller (processMesh) generer une
                 // texture noire pour le slot specular, mais pour le diffuse on
                 // ne pousse rien -> le caller detectera diffuse.empty() et
@@ -733,11 +782,11 @@ unsigned int Model::loadEmbeddedTexture(const aiTexture* texture, const std::str
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        std::cout << "Texture embarquee chargee: " << cacheKey
+        logOut() << "Texture embarquee chargee: " << cacheKey
                   << " (" << width << "x" << height << ")" << std::endl;
     }
     else {
-        std::cerr << "[Model] Echec decodage texture embarquee: " << cacheKey << std::endl;
+        logErr() << "[Model] Echec decodage texture embarquee: " << cacheKey << std::endl;
         // Texture magenta de debug (cohérent avec loadTextureFromFile).
         unsigned char pink[] = { 255, 0, 255, 255 };
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, pink);
@@ -822,10 +871,10 @@ unsigned int Model::loadTextureFromFile(const std::string& path) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        std::cout << "Texture chargee: " << path << std::endl;
+        logOut() << "Texture chargee: " << path << std::endl;
     }
     else {
-        std::cerr << "Echec chargement: " << path << std::endl;
+        logErr() << "Echec chargement: " << path << std::endl;
         // Texture magenta de debug
         unsigned char pink[] = { 255, 0, 255, 255 };
         glBindTexture(GL_TEXTURE_2D, textureID);

@@ -16,6 +16,8 @@ class PauseMenu;
 class OptionsMenu;
 class KeyBindingsMenu;
 class ControllerBindingsMenu;
+class AudioSettingsMenu;
+class VoiceChat;
 class Renderer;
 
 class MenuManager{
@@ -33,11 +35,14 @@ private:
     OptionsMenu* m_optionsMenu;
     KeyBindingsMenu* m_keyBindingsMenu;
     ControllerBindingsMenu* m_controllerBindingsMenu;
+    AudioSettingsMenu* m_audioSettingsMenu = nullptr;
     GameState m_currentState = STATE_MENU;
     GameState m_previousState;
     // Sous-menus affiches a la place des Options (STATE_OPTIONS)
     bool m_showKeyBindings = false;
     bool m_showControllerBindings = false;
+    bool m_showAudioSettings = false;
+    VoiceChat* m_voiceChat = nullptr;
     // Position manette sauvegardee par menu (clef : pointeur de menu, stable) :
     // restauree au retour dans un menu (sinon premier element).
     std::unordered_map<Menu*, int> m_savedFocus;
@@ -53,7 +58,7 @@ private:
 
     std::string stateToString(GameState state);
 public:
-    MenuManager(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textManagers, TextureManager* textureManager, ShaderManager* shaderManager, CursorManager* cursorManager);
+    MenuManager(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textManagers, TextureManager* textureManager, ShaderManager* shaderManager, CursorManager* cursorManager, VoiceChat* voiceChat);
     ~MenuManager();
 
     Menu* getCurrentMenu();
@@ -63,9 +68,10 @@ public:
     // On sauvegarde toujours la position manette du menu quitte ; l'entree en
     // avant (sous-menu) repart du premier element, le retour aux Options
     // restaure la position sauvegardee.
-    void showKeyBindings() { saveCurrentMenuFocus(); m_showKeyBindings = true; m_showControllerBindings = false; resetCurrentMenuFocus(); };
-    void showControllerBindings() { saveCurrentMenuFocus(); m_showControllerBindings = true; m_showKeyBindings = false; resetCurrentMenuFocus(); };
-    void showOptions() { saveCurrentMenuFocus(); m_showKeyBindings = false; m_showControllerBindings = false; restoreMenuFocus(getCurrentMenu()); };
+    void showKeyBindings() { saveCurrentMenuFocus(); m_showKeyBindings = true; m_showControllerBindings = false; m_showAudioSettings = false; resetCurrentMenuFocus(); };
+    void showControllerBindings() { saveCurrentMenuFocus(); m_showControllerBindings = true; m_showKeyBindings = false; m_showAudioSettings = false; resetCurrentMenuFocus(); };
+    void showAudioSettings() { saveCurrentMenuFocus(); m_showAudioSettings = true; m_showKeyBindings = false; m_showControllerBindings = false; resetCurrentMenuFocus(); };
+    void showOptions() { saveCurrentMenuFocus(); m_showKeyBindings = false; m_showControllerBindings = false; m_showAudioSettings = false; restoreMenuFocus(getCurrentMenu()); };
 
     // ── Navigation manette (discrète) ──
     // Transmet les déplacements/validations du stick gauche au menu courant
