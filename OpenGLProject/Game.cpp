@@ -179,7 +179,7 @@ void Game::loadResources() {
         return !m_window->getShouldClose();
     };
 
-    constexpr int TOTAL_STEPS = 7;
+    constexpr int TOTAL_STEPS = 6;
     int step = 0;
     m_loadingScreen->setStep(0, 0);  // pas d'indicateur au début du chargement
 
@@ -281,12 +281,7 @@ void Game::loadResources() {
     if (!loadingTick()) return;
 
     m_scene->loadLights();
-    m_scene->loadWall(); // mur brickwall + normal mapping (avant loadCubes : inclus dans le BVH)
-
-    m_loadingScreen->setStep(++step, TOTAL_STEPS);
-    if (!loadingTick()) return;
-
-    m_scene->loadCubes();
+    m_scene->loadMap(Constants::Resource::MAP_VILLAGE); // carte JSON composee : sol + 3 maisons (includes de house.json)
 
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
     if (!loadingTick()) return;

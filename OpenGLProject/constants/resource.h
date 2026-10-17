@@ -43,6 +43,10 @@ namespace Resource {
     inline constexpr const char* TEXTURE_CURSOR_GRAB       = "./res/textures/menu/cursor assets/hand_open.png";
     inline constexpr const char* TEXTURE_CURSOR_GRABBING   = "./res/textures/menu/cursor assets/hand_closed.png";
 
+    // ── Cartes ────────────────────────────────────────────────────────────────
+    inline constexpr const char* MAP_HOUSE   = "./res/maps/house.json";
+    inline constexpr const char* MAP_VILLAGE = "./res/maps/village.json";
+
     // ── Polices ───────────────────────────────────────────────────────────
     inline constexpr const char* FONT_ARMANA           = "res/fonts/armana/Amarna-Bold.ttf";
     inline constexpr const char* FONT_GNOCCHI          = "res/fonts/Gnocchi.ttf";

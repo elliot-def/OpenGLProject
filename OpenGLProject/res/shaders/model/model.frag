@@ -33,6 +33,22 @@ struct PointLight {
 uniform PointLight lightSources[MAX_POINT_LIGHTS];
 uniform int numberLightSources;
 
+// Pièces intérieures : chaque lumière est assignée à une pièce par
+// uLightRoom[i] (LightManager) et n'éclaire que les fragments de CETTE
+// pièce — la lumière ne traverse pas les murs. -1 = lumière libre.
+// uRoomCount = nombre de pièces valides (0 = aucune).
+#define MAX_ROOMS 4
+uniform int   uRoomCount;
+uniform vec3  uRoomMin[MAX_ROOMS];
+uniform vec3  uRoomMax[MAX_ROOMS];
+uniform int   uLightRoom[MAX_POINT_LIGHTS];
+
+bool roomAllows(int lightIdx, vec3 fragPos) {
+    int r = uLightRoom[lightIdx];
+    if (r < 0 || r >= uRoomCount) return true;
+    return all(greaterThanEqual(fragPos, uRoomMin[r])) && all(lessThanEqual(fragPos, uRoomMax[r]));
+}
+
 // ===== Spotlight =====
 struct SpotLight {
     vec3 position;
@@ -109,6 +125,7 @@ void main() {
     result += calcDirLight(dirLight, norm, viewDir, diffuseTex, specularTex);
 
     for (int i = 0; i < numberLightSources; i++) {
+        if (!roomAllows(i, FragPos)) continue;
         result += calcPointLight(lightSources[i], norm, FragPos, viewDir, diffuseTex, specularTex);
     }
 

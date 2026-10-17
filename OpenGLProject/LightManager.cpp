@@ -25,9 +25,11 @@ LightManager::~LightManager() {
 
 	delete m_flashlight;
 }
-void LightManager::addPointLight(LightSource* light) {
+size_t LightManager::addPointLight(LightSource* light) {
     if (m_lightSources.size() < MAX_POINT_LIGHTS) {
         m_lightSources.push_back(light);
+        m_lightRoom.push_back(-1);   // no affectée : lumière libre
+        return m_lightSources.size() - 1;
     }
     else {
         throw std::invalid_argument("Light limit reached, please increase it in LightManager.");
@@ -58,8 +60,15 @@ const LightManager::LightLocations& LightManager::ensureLightLocations(Shader* s
     }
     loc.dirDirection = shader->getUniformLocation("dirLight.direction");
     loc.dirAmbient   = shader->getUniformLocation("dirLight.ambient");
-    loc.dirDiffuse   = shader->getUniformLocation("dirLight.diffuse");
-    loc.dirSpecular  = shader->getUniformLocation("dirLight.specular");
+    loc.dirDiffuse   = shader->getUniformLocation("dirLight.diffuse");    loc.dirSpecular = shader->getUniformLocation("dirLight.specular");
+    loc.roomCount = shader->getUniformLocation("uRoomCount");
+    for (int i = 0; i < Constants::Shader::MAX_ROOMS; ++i) {
+        loc.roomMin[i] = shader->getUniformLocation("uRoomMin[" + std::to_string(i) + "]");
+        loc.roomMax[i] = shader->getUniformLocation("uRoomMax[" + std::to_string(i) + "]");
+    }
+    for (int i = 0; i < MAX_POINT_LIGHTS; ++i) {
+        loc.lightRoom[i] = shader->getUniformLocation("uLightRoom[" + std::to_string(i) + "]");
+    }
 
     return m_lightLocations.emplace(programId, loc).first->second;
 }
@@ -90,6 +99,21 @@ void LightManager::applyToShader(Shader* shader) {
     shader->setVec3(loc.dirAmbient,   m_dirLight.ambient);
     shader->setVec3(loc.dirDiffuse,   m_dirLight.diffuse);
     shader->setVec3(loc.dirSpecular,  m_dirLight.specular);
+
+    // Pièces intérieures : uRoomCount = nb de pièces valides ; chaque lumière
+    // assignée (uLightRoom[i] >= 0) n'éclaire que les fragments de SA pièce
+    // (la lumière ne traverse pas les murs) ; -1 = lumière libre (extérieure).
+    shader->setInt(loc.roomCount, static_cast<int>(m_roomMin.size()));
+    for (int i = 0; i < Constants::Shader::MAX_ROOMS; ++i) {
+        shader->setVec3(loc.roomMin[i],
+                        i < static_cast<int>(m_roomMin.size()) ? m_roomMin[i] : glm::vec3(0.0f));
+        shader->setVec3(loc.roomMax[i],
+                        i < static_cast<int>(m_roomMax.size()) ? m_roomMax[i] : glm::vec3(0.0f));
+    }
+    for (int i = 0; i < MAX_POINT_LIGHTS; ++i) {
+        shader->setInt(loc.lightRoom[i],
+                       i < static_cast<int>(m_lightRoom.size()) ? m_lightRoom[i] : -1);
+    }
 }
 
 void LightManager::update() {
@@ -104,5 +128,20 @@ void LightManager::setFlashlightPosition(const glm::vec3& position) {
     // (setBorrowedDirection dans Spotlight::update(Player*)).
     if (m_flashlight) {
         m_flashlight->setPosition(position);
+    }
+}
+
+int LightManager::addRoom(const glm::vec3& roomMin, const glm::vec3& roomMax) {
+    if (m_roomMin.size() >= Constants::Shader::MAX_ROOMS) {
+        throw std::invalid_argument("Room limit reached, please increase Constants::Shader::MAX_ROOMS.");
+    }
+    m_roomMin.push_back(roomMin);
+    m_roomMax.push_back(roomMax);
+    return static_cast<int>(m_roomMin.size()) - 1;
+}
+
+void LightManager::setLightRoom(size_t lightIndex, int roomIndex) {
+    if (lightIndex < m_lightRoom.size()) {
+        m_lightRoom[lightIndex] = roomIndex;
     }
 }

@@ -53,6 +53,22 @@ uniform SpotLight spotLight;
 uniform int numberLightSources;
 uniform PointLight lightSources[MAX_LIGHTS];
 
+// Pièces intérieures : chaque lumière est assignée à une pièce par
+// uLightRoom[i] (LightManager) et n'éclaire que les fragments de CETTE
+// pièce — la lumière ne traverse pas les murs. -1 = lumière libre.
+// uRoomCount = nombre de pièces valides (0 = aucune).
+#define MAX_ROOMS 4
+uniform int   uRoomCount;
+uniform vec3  uRoomMin[MAX_ROOMS];
+uniform vec3  uRoomMax[MAX_ROOMS];
+uniform int   uLightRoom[MAX_LIGHTS];
+
+bool roomAllows(int lightIdx, vec3 fragPos) {
+    int r = uLightRoom[lightIdx];
+    if (r < 0 || r >= uRoomCount) return true;
+    return all(greaterThanEqual(fragPos, uRoomMin[r])) && all(lessThanEqual(fragPos, uRoomMax[r]));
+}
+
 // Alpha fade 1P : fragments trop proches de la camera deviennent transparents.
 // smoothstep(start, end, distance) — voir constants/camera.h.
 uniform float uNearFadeStart = 0.08;
@@ -73,6 +89,7 @@ void main()
     vec3 result = vec3(0.0);
     result += CalcDirLight(dirLight, norm, viewDir, diffTex, specTex);
     for (int i = 0; i < numberLightSources && i < MAX_LIGHTS; i++) {
+        if (!roomAllows(i, FragPos)) continue;
         result += CalcPointLight(lightSources[i], norm, FragPos, viewDir, diffTex, specTex);
     }
     result += CalcSpotLight(spotLight, norm, FragPos, viewDir, diffTex, specTex);

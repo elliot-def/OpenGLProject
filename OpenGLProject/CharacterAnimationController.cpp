@@ -38,6 +38,7 @@ void CharacterAnimationController::resetState(const glm::vec3& currentPos, float
     m_postLandTimer = 0.0f;
     m_postLandSpeedFactor = 1.0f;
     m_landingAnimTimer = 0.0f;
+    m_airTime = 0.0f;
 }
 
 void CharacterAnimationController::startPostLandSlowdown(float speedFactor, float duration) {
@@ -54,8 +55,17 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
     const glm::vec3 delta = playerPos - m_lastPos;
     const glm::vec2 horizDelta(delta.x, delta.z);
     const float horizSpeed = glm::length(horizDelta) / std::max(dt, 1e-5f);
-    const bool isJumpingUp = delta.y > kJumpThreshold;
+    // Saut = montee REELLE en l'air. Sans le garde !isGrounded, monter une
+    // pente (delta.y > 0) declenchait l'anim de saut en boucle, et la chaine
+    // saut -> fin d'anim en l'air -> "Falling Idle" affichait des anims de
+    // chute en courant vite sur le toit.
+    const bool isJumpingUp = !isGrounded && delta.y > kJumpThreshold;
     m_lastPos = playerPos;
+
+    // Temps d'air continu (reset au sol) : filtre les micro-decollages avant
+    // de declencher une animation de chute.
+    if (isGrounded) m_airTime = 0.0f;
+    else            m_airTime += dt;
 
     // Hysterese : on ne change d'etat moving/not-moving qu'avec des
     // seuils decales pour eviter l'oscillation quand on pousse un mur.
@@ -136,7 +146,8 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
     // montante). On divise delta.y par dt pour obtenir la vitesse reelle.
     const float verticalVelocity = (dt > 1e-5f) ? (delta.y / dt) : 0.0f;
     const bool isFallingDown = verticalVelocity < Constants::Player::FALL_VELOCITY_THRESHOLD
-                             && !isGrounded && !m_jumping;
+                             && !isGrounded && !m_jumping
+                             && m_airTime >= kFallMinAirTime;   // vraie chute, pas un micro-decollage
 
     // Memo du sprint au sol : utilise pour choisir running jump / jump (le
     // sprint est coupe en l'air par Player::getIsSprinting).

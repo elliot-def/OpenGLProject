@@ -16,9 +16,11 @@ namespace Constants {
 		inline constexpr float PLAYER_JUMP_VELOCITY = 6.0f;
 
 		// Chute : seuil de vélocité verticale (negatif) pour déclencher
-		// l'animation de chute (Falling Idle). Doit être suffisamment
-		// éloigné de 0 pour ne pas se déclencher lors de petits sauts.
-		inline constexpr float FALL_VELOCITY_THRESHOLD = -1.5f;
+		// l'animation de chute (Falling Idle). Suffisamment bas (negatif) pour
+		// NE PAS se declencher lors des micro-decollages en courant vite sur
+		// une pente (descentes mesurees ~ -2 a -4 m/s) ni des petits sauts :
+		// seules les vraies chutes (> ~1.3 m de hauteur libre) l'affichent.
+		inline constexpr float FALL_VELOCITY_THRESHOLD = -5.0f;
 
 		// Multiplicateur de vitesse post-chute / post-saut.
 		// 1.0 = pas de réduction. 0.5 = demi-vitesse pendant

@@ -195,6 +195,93 @@ CollisionResult CollisionManager::testSphereOBB(glm::vec3   center,
     return result;
 }
 
+// Point d'un triangle le plus proche d'un point P (Real-Time Collision
+// Detection, Christer Ericson) — routine de base du test sphère/triangle.
+static glm::vec3 closestPointOnTriangle(const glm::vec3& p, const glm::vec3& a,
+                                        const glm::vec3& b, const glm::vec3& c)
+{
+    // Région du sommet A
+    const glm::vec3 ab = b - a;
+    const glm::vec3 ac = c - a;
+    const glm::vec3 ap = p - a;
+    const float d1 = glm::dot(ab, ap);
+    const float d2 = glm::dot(ac, ap);
+    if (d1 <= 0.0f && d2 <= 0.0f) return a;
+
+    // Région du sommet B
+    const glm::vec3 bp = p - b;
+    const float d3 = glm::dot(ab, bp);
+    const float d4 = glm::dot(ac, bp);
+    if (d3 >= 0.0f && d4 <= d3) return b;
+
+    // Région de l'arête AB
+    const float vc = d1 * d4 - d3 * d2;
+    if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f) {
+        const float v = d1 / (d1 - d3);
+        return a + v * ab;
+    }
+
+    // Région du sommet C
+    const glm::vec3 cp = p - c;
+    const float d5 = glm::dot(ab, cp);
+    const float d6 = glm::dot(ac, cp);
+    if (d6 >= 0.0f && d5 <= d6) return c;
+
+    // Région de l'arête AC
+    const float vb = d5 * d2 - d1 * d6;
+    if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f) {
+        const float w = d2 / (d2 - d6);
+        return a + w * ac;
+    }
+
+    // Région de l'arête BC
+    const float va = d3 * d6 - d5 * d4;
+    if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f) {
+        const float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+        return b + w * (c - b);
+    }
+
+    // Région intérieure du triangle
+    const float denom = 1.0f / (va + vb + vc);
+    const float v = vb * denom;
+    const float w = vc * denom;
+    return a + ab * v + ac * w;
+}
+
+// Test sphère / triangle (collision précise "mesh")
+// Normale de résultat = direction de dépénétration (vers l'extérieur du
+// solide). Côté interne (tunneling) : on pousse toujours par la normale de
+// face, pour ressortir du solide au lieu de s'y enfoncer.
+CollisionResult CollisionManager::testSphereTriangle(glm::vec3 center, float radius,
+    const glm::vec3& a, const glm::vec3& b, const glm::vec3& c,
+    const glm::vec3& n)
+{
+    CollisionResult result;
+
+    const glm::vec3 closest = closestPointOnTriangle(center, a, b, c);
+    const glm::vec3 diff = center - closest;
+    const float dist2 = glm::length2(diff);
+
+    if (dist2 > radius * radius) return result;
+
+    result.hit = true;
+
+    if (dist2 > 1e-8f) {
+        const float dist = std::sqrt(dist2);
+        glm::vec3 normal = diff / dist;
+        if (glm::dot(normal, n) < 0.0f) normal = n;   // côté interne
+        result.normal = normal;
+        result.penetration = radius - dist;
+    }
+    else {
+        // Centre pile sur la face : normale de face.
+        result.normal = n;
+        result.penetration = radius;
+    }
+
+    return result;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // CollisionManager : enregistrement
 // ─────────────────────────────────────────────────────────────────────────────
@@ -206,6 +293,37 @@ void CollisionManager::addStaticMesh(const Mesh* mesh,
     AABB box = computeWorldAABB({ const_cast<Mesh*>(mesh) }, modelMatrix);
     if (!box.isValid()) return;
     m_staticBoxes.push_back({ name, box });
+}
+
+void CollisionManager::addStaticTriangleMesh(const Mesh* mesh,
+    const glm::mat4& modelMatrix,
+    const std::string& name)
+{
+    StaticTriangleGroup group;
+    group.name = name;
+
+    const std::vector<Vertex> vertices = mesh->getVertices();
+    const std::vector<unsigned int> indices = mesh->getIndices();
+    group.triangles.reserve(indices.size() / 3);
+
+    for (size_t i = 0; i + 2 < indices.size(); i += 3) {
+        const glm::vec3 p0 = glm::vec3(modelMatrix * glm::vec4(vertices[indices[i]].getPositions(), 1.0f));
+        const glm::vec3 p1 = glm::vec3(modelMatrix * glm::vec4(vertices[indices[i + 1]].getPositions(), 1.0f));
+        const glm::vec3 p2 = glm::vec3(modelMatrix * glm::vec4(vertices[indices[i + 2]].getPositions(), 1.0f));
+
+        glm::vec3 normal = glm::cross(p1 - p0, p2 - p0);
+        const float len = glm::length(normal);
+        if (len < 1e-8f) continue;   // triangle dégénéré
+        normal /= len;
+
+        group.triangles.push_back({ p0, p1, p2, normal });
+        group.aabb.expand(p0);
+        group.aabb.expand(p1);
+        group.aabb.expand(p2);
+    }
+
+    if (group.triangles.empty() || !group.aabb.isValid()) return;
+    m_staticTriangleGroups.push_back(std::move(group));
 }
 
 void CollisionManager::addDynamicMesh(const std::string& key,
@@ -276,6 +394,18 @@ CollisionResult CollisionManager::testSphereAll(glm::vec3 center, float radius) 
     for (const auto& [key, db] : m_dynamicBoxes) {
         CollisionResult r = testSphereOBB(center, radius, db.obb);
         if (r.hit && r.penetration > best.penetration) best = r;
+    }
+
+    // 3) Triangles statiques (collision précise "mesh" : pentes du toit...).
+    // Peu nombreux (quelques dizaines) : scan linéaire avec rejet AABB par
+    // groupe avant les tests triangle par triangle.
+    for (const auto& group : m_staticTriangleGroups) {
+        if (!group.aabb.intersectsSphere(center, radius)) continue;
+        for (const auto& tri : group.triangles) {
+            CollisionResult r = testSphereTriangle(center, radius,
+                                                   tri.a, tri.b, tri.c, tri.normal);
+            if (r.hit && r.penetration > best.penetration) best = r;
+        }
     }
 
     return best;
@@ -512,7 +642,8 @@ bool CollisionManager::tryJump(float jumpVelocity) {
 // ─────────────────────────────────────────────────────────────────────────────
 void CollisionManager::printInfo() const {
     logOut() << "=== CollisionManager (AABB) ===" << std::endl;
-    logOut() << "  Statiques  : " << m_staticBoxes.size() << " boite(s)" << std::endl;
+    logOut() << "  Statiques  : " << m_staticBoxes.size() << " boite(s), "
+             << m_staticTriangleGroups.size() << " groupe(s) de triangles" << std::endl;
     for (const auto& sb : m_staticBoxes) {
         logOut() << "    [" << sb.name << "] "
             << "min(" << sb.aabb.min.x << "," << sb.aabb.min.y << "," << sb.aabb.min.z << ") "

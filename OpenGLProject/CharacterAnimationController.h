@@ -75,6 +75,11 @@ private:
     // Position Y au début de la chute (pour calculer la hauteur de chute)
     float m_fallStartY = 0.0f;
 
+    // Temps d'air continu (s depuis le dernier contact au sol) : filtre les
+    // micro-decollages (course rapide sur une pente, aretes de toit...) avant
+    // d'afficher une animation de chute.
+    float m_airTime = 0.0f;
+
     // Post-atterrissage : facteur de vitesse progressif (1.0 -> targetFactor -> 1.0)
     float m_postLandSpeedFactor = 1.0f;  // 1.0 = pas de ralenti
     float m_postLandTargetFactor = Constants::Player::POST_LAND_SPEED_FACTOR; // facteur cible
@@ -101,7 +106,8 @@ private:
 
     static constexpr float kRestToIdleDelay = 2.5f;
     static constexpr float kTurnYawThreshold = 30.0f; // degres pour declencher turn
-    static constexpr float kJumpThreshold = 0.005f;    // delta.y min pour detecter un saut
+    static constexpr float kJumpThreshold = 0.005f;    // delta.y min pour detecter un saut (ET joueur en l'air)
+    static constexpr float kFallMinAirTime = 0.3f;     // s d'air continu avant l'anim de chute
     static constexpr float kMoveStartSpeed = 0.25f;    // seuil haut pour commencer a bouger
     static constexpr float kMoveStopSpeed  = 0.06f;    // seuil bas pour arreter de bouger
     static constexpr float kAnimChangeCooldown = 0.15f; // delai min entre 2 changements

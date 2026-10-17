@@ -61,6 +61,10 @@ public:
     // Transmet les bras au Mouse/LeftClick (tir), Push (R) et Grab (E)
     void setFirstPersonArms(FirstPersonArms* arms);
 
+    // Callback d'interaction monde declenche par E (clavier) / RB (manette) :
+    // ouvrir/fermer une porte proche (enregistre par la Scene).
+    void setInteractCallback(std::function<void()> callback);
+
     // ── Bindings des touches (persistes dans res/keys.json) ──
     // Remplace la touche d'une action (met a jour la Key + sauvegarde JSON)
     void setKeyBinding(const std::string& action, int keyCode);
@@ -114,6 +118,7 @@ private:
 	MenuManager* m_menuManager;     // Pointeur vers le menu manager
     Window* m_window;               // Pointeur vers la fenetre
     FirstPersonArms* m_firstPersonArms = nullptr; // Bras 1P (Push/Grab manette)
+    std::function<void()> m_onInteract;           // Interaction monde (portes, E/RB)
 
     std::unique_ptr<Mouse> m_mouse;
     // Deux sources manette possibles : XInput (hors-connexion / repli) et

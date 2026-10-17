@@ -8,13 +8,19 @@ out vec3 Normal;
 out vec2 TexCoords;
 
 layout (location = 4) in mat4 aInstanceModel;
+uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 
+// 1 = rendu instancie (CubeRenderer : matrice par instance) ; 0 = mesh unique
+// (matrice "model" en uniform, ex. les parties de la carte dans Scene).
+uniform float useInstanceModel;
+
 void main()
 {
-    FragPos = vec3(aInstanceModel * vec4(aPos, 1.0));
-    Normal = mat3(transpose(inverse(aInstanceModel))) * aNormal;  
+    mat4 m = useInstanceModel > 0.5 ? aInstanceModel : model;
+    FragPos = vec3(m * vec4(aPos, 1.0));
+    Normal = mat3(transpose(inverse(m))) * aNormal;  
     TexCoords = aTexCoords;
     
     gl_Position = projection * view * vec4(FragPos, 1.0);

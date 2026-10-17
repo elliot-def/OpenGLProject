@@ -37,6 +37,7 @@ OpenGLProject/
 │   ├── textures/                  ← images + détails.json pour shininess/specular
 │   ├── models/                    ← .obj (Assimp)
 │   ├── sounds/                    ← .wav (OpenAL)
+│   ├── maps/                      ← cartes JSON (MapLoader : boîtes, toit, portes, includes de cartes)
 │   ├── fonts/                     ← .ttf (STB)
 │   └── certificates/, credits.txt, options.json
 ├── dependencies/

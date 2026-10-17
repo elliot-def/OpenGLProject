@@ -99,6 +99,7 @@ void CubeRenderer::draw(Camera* camera, LightManager* lightManager) {
         if (batch.instances.empty()) continue;
 
         shader->use();
+        shader->setFloat("useInstanceModel", 1.0f); // lot instancie : matrices par instance
         shader->setMat4("view", camera->getViewMatrix());
         shader->setMat4("projection", shader->getProjection());
 

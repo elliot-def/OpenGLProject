@@ -24,9 +24,19 @@ public:
     LightManager(Renderer* renderer, Player* player);
     ~LightManager();
 
-    void addPointLight(LightSource* light);
+    // Retourne l'index de la lumière (attendu par setLightRoom).
+    size_t addPointLight(LightSource* light);
     void applyToShader(Shader* shader);
     void update();
+
+    // ── Pièces intérieures (filtrage lumière) ────────────────────────────
+    // addRoom : déclare une pièce (bornes monde de l'intérieur), retourne
+    // son index. setLightRoom : affecte une lumière (index addPointLight) à
+    // une pièce (index addRoom) — cette lumière n'éclaire alors que les
+    // fragments de CETTE pièce (la lumière ne traverse pas les murs).
+    // -1 / non affectée = lumière libre (extérieure). MAX_ROOMS max.
+    int  addRoom(const glm::vec3& roomMin, const glm::vec3& roomMax);
+    void setLightRoom(size_t lightIndex, int roomIndex);
 
     // Attache la lampe torche a une position monde explicite (ex: os de tete
     // du modele anime). La direction reste celle du joueur (borrowed).
@@ -57,6 +67,10 @@ private:
         int dirAmbient = -1;
         int dirDiffuse = -1;
         int dirSpecular = -1;
+        int roomCount = -1;
+        int roomMin[Constants::Shader::MAX_ROOMS] = {};
+        int roomMax[Constants::Shader::MAX_ROOMS] = {};
+        int lightRoom[Constants::Shader::MAX_LIGHTS_SOURCES] = {};
     };
     const LightLocations& ensureLightLocations(Shader* shader);
 
@@ -66,4 +80,10 @@ private:
     Spotlight* m_flashlight;
     Player* m_player;
     struct DirLight m_dirLight;
+
+    // Bornes (monde) des pièces intérieures + affectation lumière → pièce
+    // (-1 = libre), alignée sur m_lightSources (voir addRoom/setLightRoom).
+    std::vector<glm::vec3> m_roomMin;
+    std::vector<glm::vec3> m_roomMax;
+    std::vector<int>       m_lightRoom;
 };

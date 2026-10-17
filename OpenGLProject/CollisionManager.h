@@ -29,6 +29,25 @@ struct CollisionResult {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Triangle statique pour collision PRÉCISE "mesh" : chaque triangle du mesh
+// devient un collider (la collision suit la géométrie réelle — pente d'un toit,
+// prisme... — au lieu du cube englobant). Normale de face world space.
+// ─────────────────────────────────────────────────────────────────────────────
+
+struct StaticTriangle {
+    glm::vec3 a, b, c;
+    glm::vec3 normal;   // normale de face (winding CCW), normalisée
+};
+
+// Groupe de triangles d'un même mesh. Largephase = AABB englobante (rejet
+// rapide avant les tests triangle par triangle).
+struct StaticTriangleGroup {
+    std::string                 name;
+    AABB                        aabb;
+    std::vector<StaticTriangle> triangles;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // CollisionManager
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -68,6 +87,17 @@ public:
      * @param name        Identifiant debug (optionnel)
      */
     void addStaticMesh(const Mesh* mesh,
+        const glm::mat4& modelMatrix,
+        const std::string& name = "");
+
+    /**
+     * Ajoute un mesh statique en COLLISION TRIANGLES (précise) : chaque
+     * triangle du mesh devient un collider, la collision suit la géométrie
+     * réelle (pente d'un toit, prisme...) au lieu du cube englobant.
+     * À réserver aux meshes non-boîtes ; les boîtes restent sur addStaticMesh
+     * (AABB, plus rapide et exacte pour un pavé droit).
+     */
+    void addStaticTriangleMesh(const Mesh* mesh,
         const glm::mat4& modelMatrix,
         const std::string& name = "");
 
@@ -137,6 +167,14 @@ public:
     // Teste une sphère contre tous les colliders (statiques + dynamiques)
     CollisionResult testSphereAll(glm::vec3 center, float radius) const;
 
+    // Teste une sphère contre un triangle (winding CCW, n = normale de face
+    // normalisée). Normale de résultat = direction de dépénétration (vers
+    // l'extérieur du solide). Purement mathématique : exposée publiquement
+    // pour les tests unitaires.
+    static CollisionResult testSphereTriangle(glm::vec3 center, float radius,
+        const glm::vec3& a, const glm::vec3& b, const glm::vec3& c,
+        const glm::vec3& n);
+
     // Déplace une sphère en résolvant itérativement les contacts (sliding)
     glm::vec3 sweepSphere(glm::vec3 start,
         glm::vec3 movement,
@@ -146,6 +184,7 @@ public:
 private:
     std::vector<StaticBox>                     m_staticBoxes;
     std::unordered_map<std::string, DynamicBox> m_dynamicBoxes;
+    std::vector<StaticTriangleGroup>           m_staticTriangleGroups;
 
     BVH m_bvh; // Intégration du BVH
     bool m_useBVH = false;

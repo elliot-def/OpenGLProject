@@ -3,6 +3,7 @@
 #include "Mesh.h"
 #include "Cube.h"
 #include "CubeRenderer.h"
+#include "Door.h"
 #include "Shader.h"
 #include "ShaderManager.h"
 #include "Texture.h"
@@ -12,6 +13,7 @@
 #include "Player.h"
 #include "Camera.h"
 #include "CollisionManager.h"
+#include "InputManager.h"
 #include "ModelEntity.h"
 #include "Skybox.h"
 #include "CharacterAnimationController.h"
@@ -20,6 +22,9 @@
 
 #include "constants/texture.h"
 #include "constants/material.h"
+#include "constants/door.h"
+
+#include <string>
 
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -35,10 +40,13 @@ Scene::Scene(Camera* camera, Player* player, CollisionManager* collisionManager,
     m_skyboxShader  = m_shaderManager->getShader("skybox");
     m_modelShader   = m_shaderManager->getShader("model");
     m_skinnedShader = m_shaderManager->getShader("skinned");
+    m_doorShader    = m_shaderManager->getShader("door");
+    m_outlineShader = m_shaderManager->getShader("outline");
 
-    // Rendu instancié des cubes : cube unitaire partagé (edge=1, origine) +
-    // lots par shader. Le contexte GL est courant ici (loadResources, thread
-    // principal), donc la création du VAO/VBO/EBO du cube unitaire est sûre.
+    // Rendu instancié des cubes de lumière : cube unitaire partagé (edge=1,
+    // origine) + lots par shader. Le contexte GL est courant ici
+    // (loadResources, thread principal), donc la création du VAO/VBO/EBO du
+    // cube unitaire est sûre.
     m_cubeRenderer = std::make_unique<CubeRenderer>();
 }
 
@@ -49,32 +57,89 @@ Scene::~Scene() = default;
 void Scene::loadLights() {
     Shader* lightShader = m_shaderManager->getShader("cube/lightsource");
 
-    m_lightManager->addPointLight(new LightSource(
+    // Indices des lumières (ordre d'ajout) : conservés pour l'affectation
+    // aux pièces plus bas (setLightRoom).
+    const size_t idxRed = m_lightManager->addPointLight(new LightSource(
         glm::vec3(1, 0.5, 2), lightShader,
         glm::vec3(0.2f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f),
         glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
         glm::vec3(5.0f, 0.0f, 0.0f)));
+    (void)idxRed;   // extérieure (devant maison 1) : reste libre
 
-    m_lightManager->addPointLight(new LightSource(
+    const size_t idxGreen = m_lightManager->addPointLight(new LightSource(
         glm::vec3(3, 0.5, -2), lightShader,
         glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
         glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
         glm::vec3(0.0f, 5.0f, 0.0f)));
 
-    // Lumière blanche dédiée au mur brickwall : placée devant le centre du
-    // mur (z=-1.2, le mur est à z=-3) pour que le relief du normal mapping
-    // soit bien visible. Sans lumière frappant le mur en angle, le relief
-    // reste invisible : les deux autres lumières sont derrière le joueur ou
-    // à l'extrémité du mur, et la lampe torche est éteinte par défaut.
-    m_lightManager->addPointLight(new LightSource(
+    // Lumière blanche dédiée aux murs brique : l' incidence rasant rend le
+    // relief du normal mapping bien visible. Bornée à la pièce maison 1
+    // plus bas (la lumière ne traverse pas les murs).
+    const size_t idxWhite = m_lightManager->addPointLight(new LightSource(
         glm::vec3(-1.5f, 2.2f, -1.2f), lightShader,
         glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3(1.0f, 1.0f, 1.0f),
         glm::vec3(0.5f, 0.5f, 0.5f), 1.0f, 0.09f, 0.032f,
         glm::vec3(1.0f, 1.0f, 1.0f)));
+
+    // ── Pièces intérieures : les 3 maisons de village.json ───────────────
+    // Bornes = image du volume intérieur de house.json par la transform de
+    // l'include (position + yaw, cf. village.json). Chaque maison a ses
+    // propres lumières bornées à SON intérieur : la lumière ne traverse
+    // pas les murs ET aucune maison n'est laissée dans le noir.
+    const int room1 = m_lightManager->addRoom(glm::vec3(-3.0f,  0.0f, -5.7f),
+                                               glm::vec3( 3.0f,  2.5f, -0.1f));   // maison 1 : (0,0,0), yaw 0
+    const int room2 = m_lightManager->addRoom(glm::vec3(14.1f,  0.0f, -19.0f),
+                                               glm::vec3(19.7f,  2.5f, -13.0f));  // maison 2 : (14,0,-16), yaw -90
+    const int room3 = m_lightManager->addRoom(glm::vec3(-19.7f, 0.0f, -19.0f),
+                                               glm::vec3(-14.1f, 2.5f, -13.0f));  // maison 3 : (-14,0,-16), yaw 90
+
+    m_lightManager->setLightRoom(idxWhite, room1);
+    m_lightManager->setLightRoom(idxGreen, room1);
+
+    // Lumières intérieures des maisons 2 et 3 : images des lumières blanche
+    // et verte de la maison 1 par la transform de l'include.
+    // maison 2 : (x,z) ↦ (-z, x) + (14,0,-16) ; maison 3 : (x,z) ↦ (z, -x) + (-14,0,-16)
+    const size_t idxWhite2 = m_lightManager->addPointLight(new LightSource(
+        glm::vec3(15.2f, 2.2f, -17.5f), lightShader,
+        glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(0.5f, 0.5f, 0.5f), 1.0f, 0.09f, 0.032f,
+        glm::vec3(1.0f, 1.0f, 1.0f)));
+    const size_t idxGreen2 = m_lightManager->addPointLight(new LightSource(
+        glm::vec3(16.0f, 0.5f, -13.0f), lightShader,
+        glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
+        glm::vec3(0.0f, 5.0f, 0.0f)));
+    const size_t idxWhite3 = m_lightManager->addPointLight(new LightSource(
+        glm::vec3(-15.2f, 2.2f, -14.5f), lightShader,
+        glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(0.5f, 0.5f, 0.5f), 1.0f, 0.09f, 0.032f,
+        glm::vec3(1.0f, 1.0f, 1.0f)));
+    const size_t idxGreen3 = m_lightManager->addPointLight(new LightSource(
+        glm::vec3(-16.0f, 0.5f, -19.0f), lightShader,
+        glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
+        glm::vec3(0.0f, 5.0f, 0.0f)));
+
+    m_lightManager->setLightRoom(idxWhite2, room2);
+    m_lightManager->setLightRoom(idxGreen2, room2);
+    m_lightManager->setLightRoom(idxWhite3, room3);
+    m_lightManager->setLightRoom(idxGreen3, room3);
 }
 
-void Scene::loadWall() {
-    m_wallShader = m_shaderManager->getShader("cube/wall");
+// ── Carte (JSON) ────────────────────────────────────────────────────────────
+// Charge la carte (sol, murs, toit à deux pans, portes) depuis un fichier
+// JSON via le MapLoader : géométrie à taille réelle (UV en mètres), portes
+// interactives (contour + ouverture 90° avec E). Les collisions statiques + BVH
+// sont enregistrées par le loader ; les colliders dynamiques des portes sont
+// ajoutés ici (dirty-flag dans update()).
+void Scene::loadMap(const char* jsonPath) {
+    m_wallShader      = m_shaderManager->getShader("cube/wall");
+    m_severallightsShader = m_shaderManager->getShader("cube/severallights");
+    m_containerTexture = m_textureManager->getTexture("container");
+    m_parquetTexture   = m_textureManager->getTexture("parquet");
+    m_leafTexture      = m_textureManager->getTexture("leaf");
+    m_greyRoofTexture  = m_textureManager->getTexture("grey_roof");
+    m_rietTexture      = m_textureManager->getTexture("riet");
 
     // Textures brickwall en .jpg : chargées directement via stb_image car le
     // TextureManager ne parcourt que les .png (dossier/fichier.png).
@@ -83,63 +148,49 @@ void Scene::loadWall() {
     m_wallNormal  = std::make_unique<Texture>("./res/textures/brickwall/brickwall_normal.jpg",
         Constants::Texture::FIRST_TEXTURE_ID + 101, Constants::Material::STONE, false);
 
-    // Quad double face de 8 x 3 m (épaisseur 2 cm pour la collision), face
-    // avant +Z. UV en mètres : la texture brickwall se répète chaque mètre.
-    const float wallW = 8.0f;
-    const float wallH = 3.0f;
-    const float wallT = 0.02f;
-    const float hw = wallW * 0.5f;
-    const float hh = wallH * 0.5f;
-    const float ht = wallT * 0.5f;
+    m_map = std::make_unique<MapLoader>(m_collisionManager);
+    if (!m_map->load(jsonPath)) {
+        LOG_ERROR("[Scene] Echec de chargement de la carte : %s", jsonPath);
+    }
 
-    std::vector<Vertex> vertices = {
-        // Face avant (+Z)
-        Vertex(-hw, -hh,  ht, 0.0f, 0.0f,  1.0f, 0.0f,    0.0f),
-        Vertex( hw, -hh,  ht, 0.0f, 0.0f,  1.0f, wallW,   0.0f),
-        Vertex( hw,  hh,  ht, 0.0f, 0.0f,  1.0f, wallW,   wallH),
-        Vertex(-hw,  hh,  ht, 0.0f, 0.0f,  1.0f, 0.0f,    wallH),
-        // Face arrière (-Z), winding inversé
-        Vertex(-hw,  hh, -ht, 0.0f, 0.0f, -1.0f, 0.0f,    0.0f),
-        Vertex( hw,  hh, -ht, 0.0f, 0.0f, -1.0f, wallW,   0.0f),
-        Vertex( hw, -hh, -ht, 0.0f, 0.0f, -1.0f, wallW,   wallH),
-        Vertex(-hw, -hh, -ht, 0.0f, 0.0f, -1.0f, 0.0f,    wallH),
-    };
-    std::vector<unsigned int> indices = {
-        0, 1, 2,   2, 3, 0,
-        4, 5, 6,   6, 7, 4,
-    };
+    // Colliders dynamiques des portes : l'AABB suit la rotation via
+    // updateDynamic dans update() (même principe que backpack/fropy plus bas).
+    m_lastDoorMatrices.clear();
+    auto& doors = m_map->getDoors();
+    for (size_t i = 0; i < doors.size(); ++i) {
+        const std::string key = "door" + std::to_string(i);
+        m_collisionManager->addDynamicMesh(key, { doors[i]->getMesh() },
+                                           doors[i]->getModelMatrix());
+        m_lastDoorMatrices.push_back(doors[i]->getModelMatrix());
+    }
 
-    m_wallMesh = std::make_unique<Mesh>(vertices, indices,
-        (unsigned int)VertexAttribute::POSITION |
-        (unsigned int)VertexAttribute::NORMAL |
-        (unsigned int)VertexAttribute::TEXCOORD);
-
-    m_wallModel = glm::translate(glm::mat4(1.0f), glm::vec3(-2.0f, 1.5f, -3.0f));
-
-    // Collision statique : enregistrée AVANT loadCubes() (qui appelle
-    // buildBVH) pour que le mur fasse partie du BVH.
-    m_collisionManager->addStaticMesh(m_wallMesh.get(), m_wallModel, "wall");
+    // E (touche Grab, ou RB manette) : ouvrir/fermer la porte visee.
+    if (m_inputManager) {
+        m_inputManager->setInteractCallback([this]() { tryToggleDoor(); });
+    }
 }
 
-void Scene::loadCubes() {
-    Texture* containerTexture = m_textureManager->getTexture("container");
-    Shader*  cubeShader       = m_shaderManager->getShader("cube/severallights");
-    std::vector<Texture*> crateTextures = { containerTexture };
+// Ouvre/ferme la porte interactive la plus proche parmi celles que le joueur
+// est en train de regarder (portee + cone de regard, voir Door::canInteract).
+void Scene::tryToggleDoor() {
+    if (!m_map) return;
 
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0, 0),  1.0f, cubeShader, crateTextures, m_renderer));
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(0, 0, -2), 1.0f, cubeShader, crateTextures, m_renderer));
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(1, 0.5, 2), 1.0f, cubeShader, crateTextures, m_renderer));
-    m_cubes[2]->setSpin(10.0f, glm::vec3(1.0f, 0.0f, 0.0f));
-    m_cubes.push_back(std::make_unique<Cube>(glm::vec3(0, -12, 0), 24.0f, cubeShader, crateTextures, m_renderer));
-
-    // Collisions statiques : AABB locale du cube unitaire (±0.5) transformée
-    // par la matrice modèle (translate·scale) → world AABB = centre ± edge/2,
-    // identique à l'ancien mesh par-cube. Le cube unitaire est partagé.
-    Mesh* unitCube = m_cubeRenderer->getUnitCubeMesh();
-    m_collisionManager->addStaticMesh(unitCube, m_cubes[0]->getModelMatrix(), "cube1");
-    m_collisionManager->addStaticMesh(unitCube, m_cubes[1]->getModelMatrix(), "cube2");
-    m_collisionManager->addStaticMesh(unitCube, m_cubes[3]->getModelMatrix(), "cube4");
-    m_collisionManager->buildBVH();
+    Door* best = nullptr;
+    float bestDist = 0.0f;
+    for (auto& door : m_map->getDoors()) {
+        if (!door->canInteract(m_camera->getPosition(), m_camera->getFront())) {
+            continue;
+        }
+        const float dist = glm::length(door->getCenter() - m_camera->getPosition());
+        if (!best || dist < bestDist) {
+            best = door.get();
+            bestDist = dist;
+        }
+    }
+    if (best) {
+        // Le joueur pousse la porte : elle bascule du cote oppose a sa position.
+        best->toggle(m_camera->getPosition());
+    }
 }
 
 void Scene::createSkybox(const char* path) {
@@ -157,17 +208,23 @@ void Scene::adoptEntities(ModelEntity* modelEntity, ModelEntity* fropyEntity,
 // ── Mise à jour du monde ────────────────────────────────────────────────────
 
 void Scene::update(float deltaTime) {
-    for (auto& cube : m_cubes) {
-        cube->update();
-    }
+    // Portes : glow d'interaction (portee + regard), animation d'ouverture /
+    // fermeture, et collider dynamique si la matrice a change (dirty-flag).
+    if (m_map) {
+        auto& doors = m_map->getDoors();
+        for (size_t i = 0; i < doors.size(); ++i) {
+            Door* door = doors[i].get();
+            door->setHighlighted(door->canInteract(m_camera->getPosition(),
+                                                   m_camera->getFront()));
+            door->update(deltaTime);
 
-    // Collision dynamique du cube tournant (cube3) : l'OBB est recomputée à
-    // partir de l'AABB locale du cube unitaire + la matrice modèle (rotation
-    // incluse), donc la hitbox suit fidèlement le spin.
-    if (m_cubes.size() > 2) {
-        m_collisionManager->updateDynamic("cube3",
-            { m_cubeRenderer->getUnitCubeMesh() },
-            m_cubes[2]->getModelMatrix());
+            const glm::mat4 mat = door->getModelMatrix();
+            if (mat != m_lastDoorMatrices[i]) {
+                m_collisionManager->updateDynamic("door" + std::to_string(i),
+                                                  { door->getMesh() }, mat);
+                m_lastDoorMatrices[i] = mat;
+            }
+        }
     }
 
     m_player->update();
@@ -248,13 +305,9 @@ void Scene::draw() {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    // Cubes + lumières : rendu INSTANCIÉ. Un seul glDrawElementsInstanced par
-    // shader (severallights pour les cubes texturés, lightsource pour les
-    // cubes de lumière), au lieu d'un draw call + set d'uniforms par cube.
+    // Cubes de lumière : rendu INSTANCIÉ (un seul glDrawElementsInstanced par
+    // shader), au lieu d'un draw call + set d'uniforms par cube.
     m_cubeRenderer->clear();
-    for (auto& cube : m_cubes) {
-        m_cubeRenderer->submit(cube->getShader(), cube->getTextures(), cube->getModelMatrix());
-    }
     for (auto* light : m_lightManager->getLightSources()) {
         Cube* lightCube = light->getCube().get();
         m_cubeRenderer->submit(lightCube->getShader(), {}, lightCube->getModelMatrix(),
@@ -262,14 +315,14 @@ void Scene::draw() {
     }
     m_cubeRenderer->draw(m_camera, m_lightManager);
 
-    // 2. Mur brickwall + normal mapping : shader dédié (TBN reconstruit par
-    // dérivées dans le fragment shader). Mêmes uniforms de lumière que
-    // severallights, donc LightManager::applyToShader fonctionne tel quel.
-    if (m_wallShader && m_wallMesh && m_wallDiffuse && m_wallNormal) {
+    // 2. Carte — matériau brique (murs + pignons du toit) : shader dédié "cube/wall"
+    // (TBN reconstruit par dérivées dans le fragment shader). Mêmes uniforms
+    // de lumière que severallights, donc LightManager::applyToShader
+    // fonctionne tel quel. UV en mètres : la texture se répète 1×/m.
+    if (m_map && m_wallShader && m_wallDiffuse && m_wallNormal) {
         m_wallShader->use();
         m_wallShader->setMat4("view", m_camera->getViewMatrix());
         m_wallShader->setMat4("projection", m_wallShader->getProjection());
-        m_wallShader->setMat4("model", m_wallModel);
         m_wallShader->setVec3("viewPos", m_camera->getPosition());
         m_lightManager->applyToShader(m_wallShader);
 
@@ -282,7 +335,55 @@ void Scene::draw() {
         m_wallShader->setInt("material.normal", 1);
         m_wallShader->setFloat("material.shininess", m_wallDiffuse->getShininess());
 
-        m_wallMesh->draw();
+        for (const auto& part : m_map->getParts()) {
+            if (part.material != MapMaterial::BrickWall) continue;
+            m_wallShader->setMat4("model", part.model);
+            part.mesh->draw();
+        }
+    }
+
+    // 3. Carte — matériaux à texture unique (caisses, sol parquet, terre/feuilles,
+    // toit, tapis d'entrée)
+    // : shader "cube/severallights" en mode mesh unique (useInstanceModel=0,
+    // matrice "model" en uniform). 1 passe par matériau (1 seul bind de texture).
+    if (m_map && m_severallightsShader) {
+        m_severallightsShader->use();
+        m_severallightsShader->setFloat("useInstanceModel", 0.0f);
+        m_severallightsShader->setMat4("view", m_camera->getViewMatrix());
+        m_severallightsShader->setMat4("projection", m_severallightsShader->getProjection());
+        m_severallightsShader->setVec3("viewPos", m_camera->getPosition());
+        m_lightManager->applyToShader(m_severallightsShader);
+
+        const struct { MapMaterial material; Texture* texture; } texturedMaterials[] = {
+            { MapMaterial::Container, m_containerTexture },
+            { MapMaterial::Parquet,   m_parquetTexture   },
+            { MapMaterial::Leaf,      m_leafTexture      },
+            { MapMaterial::GreyRoof,  m_greyRoofTexture  },
+            { MapMaterial::Riet,      m_rietTexture      },
+        };
+        for (const auto& entry : texturedMaterials) {
+            if (!entry.texture) continue;
+            entry.texture->applyToShader(m_severallightsShader);
+            for (const auto& part : m_map->getParts()) {
+                if (part.material != entry.material) continue;
+                m_severallightsShader->setMat4("model", part.model);
+                part.mesh->draw();
+            }
+        }
+    }
+
+    // 4. Portes interactives : matiere unie + contour (outline) pulse autour de
+    // la silhouette quand elles sont interactives. Les
+    // uniforms de lumiere sont communs a toutes les portes (1 seul apply).
+    if (m_doorShader && m_map && !m_map->getDoors().empty()) {
+        m_doorShader->use();
+        m_doorShader->setMat4("view", m_camera->getViewMatrix());
+        m_doorShader->setMat4("projection", m_doorShader->getProjection());
+        m_doorShader->setVec3("viewPos", m_camera->getPosition());
+        m_lightManager->applyToShader(m_doorShader);
+        for (auto& door : m_map->getDoors()) {
+            door->draw(m_doorShader, m_outlineShader, m_camera);
+        }
     }
 
     if (m_modelShader) {

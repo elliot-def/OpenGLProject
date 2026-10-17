@@ -6,6 +6,10 @@ Grab::Grab() : Key(nullptr, "Grab", ConfigKeys::KEY_GRAB) {
         if (m_firstPersonArms) {
             m_firstPersonArms->triggerGrab();
         }
+        // Interaction monde (portes...) : meme touche E.
+        if (m_onInteract) {
+            m_onInteract();
+        }
     });
 }
 

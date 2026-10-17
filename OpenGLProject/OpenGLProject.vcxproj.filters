@@ -56,12 +56,14 @@
     <ClCompile Include="Escape.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="Push.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="Grab.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="Door.cpp"><Filter>Graphics\Shape\3D</Filter></ClCompile>
     <ClCompile Include="Shader.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="Mesh.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="Model.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="ModelEntity.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="ModelEntity.h"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="ModelLoader.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="MapLoader.cpp"><Filter>Core</Filter></ClCompile>
     <ClCompile Include="Texture.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="TextureManager.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="ImageLoader.cpp"><Filter>Graphics</Filter></ClCompile>
@@ -138,6 +140,7 @@
     <ClInclude Include="Escape.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="Push.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="Grab.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="Door.h"><Filter>Graphics\Shape\3D</Filter></ClInclude>
     <ClInclude Include="Shader.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="ShaderManager.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="ShaderType.h"><Filter>Graphics</Filter></ClInclude>
@@ -145,6 +148,7 @@
     <ClInclude Include="Mesh.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="Model.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="ModelLoader.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="MapLoader.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="Texture.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="TextureManager.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="ResourceTree.h"><Filter>Graphics</Filter></ClInclude>
@@ -188,6 +192,7 @@
     <ClInclude Include="ReceiveBuffer.h"><Filter>Network</Filter></ClInclude>
     <ClInclude Include="constants\camera.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\color.h"><Filter>Constants</Filter></ClInclude>
+    <ClInclude Include="constants\door.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\file.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\firstPersonArms.h"><Filter>Constants</Filter></ClInclude>
     <ClInclude Include="constants\material.h"><Filter>Constants</Filter></ClInclude>
@@ -229,6 +234,8 @@
     <None Include="res\steam_input_manifest.vdf"><Filter>Resources</Filter></None>
     <None Include="res\textures\crate\details.json"><Filter>Resources\Textures</Filter></None>
     <None Include="res\keys.json"><Filter>Resources</Filter></None>
+    <None Include="res\maps\house.json"><Filter>Resources</Filter></None>
+    <None Include="res\maps\village.json"><Filter>Resources</Filter></None>
     <None Include="res\shaders\skybox\skybox.frag"><Filter>Resources\Shaders\Skybox</Filter></None>
     <None Include="res\shaders\skybox\skybox.vert"><Filter>Resources\Shaders\Skybox</Filter></None>
   </ItemGroup>

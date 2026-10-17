@@ -97,6 +97,16 @@ void InputManager::setFirstPersonArms(FirstPersonArms* arms) {
 	}
 }
 
+void InputManager::setInteractCallback(std::function<void()> callback) {
+	m_onInteract = std::move(callback);
+	// Touche E (clavier) : le lambda du Grab appelle m_onInteract a chaque
+	// pression. Le bouton RB (manette) l'appelle aussi via le membre.
+	auto grabIt = m_keys.find("Grab");
+	if (grabIt != m_keys.end()) {
+		static_cast<Grab*>(grabIt->second.get())->setInteractCallback(m_onInteract);
+	}
+}
+
 void InputManager::loadKeys() {
 	m_keys["Forward"]   = std::make_unique<PlayerKey>(m_player, "Forward",   m_keyBindings["Forward"],  nullptr, nullptr, [this]() { m_player->processDirectionKey(EntityRelativeDirection::FORWARD); });
 	m_keys["Backward"]  = std::make_unique<PlayerKey>(m_player, "Backward",  m_keyBindings["Backward"], nullptr, nullptr, [this]() { m_player->processDirectionKey(EntityRelativeDirection::BACKWARD); });
@@ -350,6 +360,8 @@ void InputManager::loadControllerKeys() {
 	m_controllerKeys["Grab"] = std::make_unique<ControllerKey>(m_player, "Grab", m_controllerBindings["Grab"], controller,
 	    [this]() {
 	        if (m_firstPersonArms) m_firstPersonArms->triggerGrab();
+	        // Interaction monde (portes...) : meme bouton qu'E au clavier.
+	        if (m_onInteract) m_onInteract();
 	    });
 
 	// Back : noclip (comme N au clavier)

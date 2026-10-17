@@ -199,6 +199,7 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClCompile Include="ModelEntity.cpp" />
     <ClCompile Include="ModelEntity.h" />
     <ClCompile Include="ModelLoader.cpp" />
+    <ClCompile Include="MapLoader.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="MultiplayerManager.cpp" />
     <ClCompile Include="MusicStream.cpp" />
@@ -209,6 +210,7 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClCompile Include="PlayerKey.cpp" />
     <ClCompile Include="Push.cpp" />
     <ClCompile Include="Grab.cpp" />
+    <ClCompile Include="Door.cpp" />
     <ClCompile Include="ReceiveBuffer.cpp" />
     <ClCompile Include="Rectangle.cpp" />
     <ClCompile Include="SelectInput.cpp" />
@@ -239,6 +241,7 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="configKeys.h" />
     <ClInclude Include="constants\camera.h" />
     <ClInclude Include="constants\color.h" />
+    <ClInclude Include="constants\door.h" />
     <ClInclude Include="constants\file.h" />
     <ClInclude Include="constants\firstPersonArms.h" />
     <ClInclude Include="constants\material.h" />
@@ -287,6 +290,7 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Entity.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="ModelLoader.h" />
+    <ClInclude Include="MapLoader.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="MultiplayerManager.h" />
     <ClInclude Include="MusicStream.h" />
@@ -298,6 +302,7 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="PlayerKey.h" />
     <ClInclude Include="Push.h" />
     <ClInclude Include="Grab.h" />
+    <ClInclude Include="Door.h" />
     <ClInclude Include="ReceiveBuffer.h" />
     <ClInclude Include="Rectangle.h" />
     <ClInclude Include="ResourceTree.h" />
@@ -326,6 +331,8 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\keys.json" />
+    <None Include="res\maps\house.json" />
+    <None Include="res\maps\village.json" />
     <None Include="res\options.json" />
     <None Include="res\steam_input_manifest.vdf" />
     <None Include="res\shaders\cube\cube.frag" />

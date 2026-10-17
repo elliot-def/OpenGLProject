@@ -1,0 +1,14 @@
+{
+  "name": "Village",
+  "description": "Carte composee : sol commun + 3 maisons instanciees depuis house.json via 'includes' (factorisation : house.json n'est ecrit qu'une fois). Chaque exemplaire est place par position (translation, metres) et yaw (degres autour de Y).",
+
+  "boxes": [
+    { "name": "village_ground", "center": [0, -0.1, -10], "size": [60, 0.2, 60], "material": "leaf" }
+  ],
+
+  "includes": [
+    { "name": "maison1", "path": "house.json", "position": [0, 0, 0],     "yaw": 0 },
+    { "name": "maison2", "path": "house.json", "position": [14, 0, -16], "yaw": -90 },
+    { "name": "maison3", "path": "house.json", "position": [-14, 0, -16], "yaw": 90 }
+  ]
+}
