@@ -254,6 +254,9 @@ les transparents sont triés par distance caméra puis dessinés avec `glDepthMa
 - `Sound::play()` n'est **pas** thread-safe. Toujours appeler depuis le thread principal.
 - `pitch != 1.0` = effet Doppler-like ; ne pas confondre avec `gain`.
 
+### Animations squelettiques
+- Ne jamais modifier la gestion du wrapper `_$AssimpFbx$_PreRotation` (`Animator::computeBoneTransform`) ni `repairRotationKeys` "a l'intuition" : les symptomes jambes en l'air / bras a 90 deg vers l'avant viennent d'une pre-rotation appliquee en double. Verifier avec le log `[DIAG POSE]` au lancement (lancer depuis `OpenGLProject/`) : pieds y~10, hanches y~100, mains y~90. Si ce n'est pas le cas, annuler la modif.
+
 ### Physique / collisions
 - `radius` est en mètres, pas en pixels.
 - Pour modifier la gravité, garder `GRAVITY < 0`. Sinon la capsule lévite.

@@ -43,6 +43,12 @@ public:
     // A appeler APRES update() pour ecraser la position par defaut (yeux).
     void setFlashlightPosition(const glm::vec3& position);
 
+    // ── Soleil (lumière directionnelle) ───────────────────────────────
+    // L'ambiance est propre à chaque carte : le MapLoader lit la clé "sun"
+    // du JSON (direction + couleurs RGB) et la Scene appelle setDirLight.
+    void setDirLight(const DirLight& light) { m_dirLight = light; }
+    const DirLight& getDirLight() const { return m_dirLight; }
+
     // Accès (lecture) aux sources de lumière : utilisé par Scene pour le rendu
     // instancié des cubes de lumière.
     const std::vector<LightSource*>& getLightSources() const { return m_lightSources; }

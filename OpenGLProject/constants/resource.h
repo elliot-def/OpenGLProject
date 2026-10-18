@@ -15,6 +15,7 @@ namespace Resource {
     // ── Modèles 3D ────────────────────────────────────────────────────────
     inline constexpr const char* MODEL_BACKPACK     = "./res/models/backpack/backpack.obj";
     inline constexpr const char* MODEL_FROPY        = "./res/models/fropy/fropy_low_poly.obj";
+    inline constexpr const char* MODEL_FROPY_HEAD   = "./res/models/fropy/fropy_head.obj";
     inline constexpr const char* MODEL_ARMS_RIG     = "./res/rigging/arm/arms_rig.glb";
     inline constexpr const char* MODEL_MEGAN        = "./res/rigging/mixamo/models/Megan.fbx";
     inline constexpr const char* MIXAMO_ANIM_DIR    = "./res/rigging/mixamo/animation/";

@@ -16,14 +16,18 @@
 #include "InputManager.h"
 #include "ModelEntity.h"
 #include "Skybox.h"
+#include "TvScreen.h"
 #include "CharacterAnimationController.h"
+#include "Creature.h"
 #include "Renderer.h"
 #include "Log.h"
 
 #include "constants/texture.h"
 #include "constants/material.h"
 #include "constants/door.h"
+#include "constants/resource.h"
 
+#include <cmath>
 #include <string>
 
 #include <glad/glad.h>
@@ -153,6 +157,54 @@ void Scene::loadMap(const char* jsonPath) {
         LOG_ERROR("[Scene] Echec de chargement de la carte : %s", jsonPath);
     }
 
+    // ── Ambiance de la carte : ensolleilement (clé "sun" du JSON) ──────────
+    // Direction + couleurs RGB du soleil → lumière directionnelle. C'est LE
+    // réglage d'ambiance par map (cf. MapSun / LightManager::setDirLight).
+    const MapSun& sun = m_map->getSun();
+    m_lightManager->setDirLight({ sun.direction, sun.ambient, sun.diffuse, sun.specular });
+
+    // Soleil VISIBLE : tête de fropy JAUNE dans le ciel, placée à l'opposé du
+    // rayonnement (le dir light pointe vers la scène, le soleil est en haut).
+    // Shader "door" = couleur unie (uColor) → jaune sans texture, quelle que
+    // soit l'ambiance de la map.
+    glm::vec3 sunDir = sun.direction;
+    if (glm::length(sunDir) < 1e-4f) sunDir = glm::vec3(0.0f, -1.0f, 0.0f);
+    sunDir = glm::normalize(sunDir);
+    const glm::vec3 mapCenter(0.0f, 0.0f, -10.0f);          // centre du village
+    m_sunHead = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
+                                              Constants::Resource::MODEL_FROPY_HEAD,
+                                              m_textureManager);
+    m_sunHead->setScale(12.0f);                              // tête géante, vue de loin
+    m_sunHead->setPosition(mapCenter - sunDir * 60.0f);
+    // Face (local +Z) tournée vers la scène : yaw = atan2(fz, fx) en degrés.
+    m_sunHead->setDirection(Direction(glm::degrees(std::atan2(-sunDir.z, -sunDir.x)), 0.0));
+    LOG_INFO("[Map] Soleil visible: tete de fropy jaune a (%.1f, %.1f, %.1f)",
+             (mapCenter - sunDir * 60.0f).x, (mapCenter - sunDir * 60.0f).y,
+             (mapCenter - sunDir * 60.0f).z);
+
+    // ── Créature qui poursuit le joueur (corps sombre + tête de fropy) ─────
+    m_creatureHead = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
+                                                   Constants::Resource::MODEL_FROPY_HEAD,
+                                                   m_textureManager);
+    m_creatureBodyShader = m_shaderManager->getShader("cube/lightsource");
+    m_creature = std::make_unique<Creature>(m_creatureHead.get(), glm::vec3(10.0f, 0.0f, -8.0f));
+    LOG_INFO("[Creature] spawn (10, 0, -8) : poursuit le joueur (%.1f u/s, s'arrete a 1.2 m)",
+             m_creature->getSpeed());
+
+    // [DIAG] auto-test de la poursuite (une fois au chargement) : la créature
+    // doit se rapprocher du joueur. Repart ensuite de son spawn.
+    {
+        const glm::vec3 target(0.0f, 0.0f, 3.0f);
+        const float d0 = glm::length(m_creature->getPosition() - target);
+        for (int i = 0; i < 300; ++i) {
+            m_creature->update(1.0f / 60.0f, target, nullptr);
+        }
+        const float d1 = glm::length(m_creature->getPosition() - target);
+        LOG_INFO("[Creature][DIAG] auto-test poursuite: distance %.2f -> %.2f en 5s (doit decroitre)",
+                 d0, d1);
+        m_creature->setPosition(glm::vec3(10.0f, 0.0f, -8.0f));
+    }
+
     // Colliders dynamiques des portes : l'AABB suit la rotation via
     // updateDynamic dans update() (même principe que backpack/fropy plus bas).
     m_lastDoorMatrices.clear();
@@ -162,6 +214,14 @@ void Scene::loadMap(const char* jsonPath) {
         m_collisionManager->addDynamicMesh(key, { doors[i]->getMesh() },
                                            doors[i]->getModelMatrix());
         m_lastDoorMatrices.push_back(doors[i]->getModelMatrix());
+    }
+
+    // Écrans TV ("tvs" dans la carte) : easter egg DVD animé, visible de près.
+    m_tvScreens.clear();
+    m_maskShader = m_shaderManager->getShader("image/mask");
+    for (const auto& screen : m_map->getScreens()) {
+        m_tvScreens.push_back(std::make_unique<TvScreen>(
+            m_maskShader, screen.model, screen.width, screen.height));
     }
 
     // E (touche Grab, ou RB manette) : ouvrir/fermer la porte visee.
@@ -227,7 +287,19 @@ void Scene::update(float deltaTime) {
         }
     }
 
+    // Écrans TV : animation du logo DVD uniquement à portée (optimisation).
+    for (auto& tv : m_tvScreens) {
+        tv->update(deltaTime, m_camera->getPosition());
+    }
+
     m_player->update();
+
+    // Créature : poursuite du joueur (glissement contre les murs via le
+    // sweepSphere du CollisionManager, s'arrête à sa portée).
+    if (m_creature) {
+        m_creature->update(deltaTime, m_player->getPosition(), m_collisionManager);
+    }
+
     m_camera->update(m_player);
     m_lightManager->update();
 
@@ -313,7 +385,19 @@ void Scene::draw() {
         m_cubeRenderer->submit(lightCube->getShader(), {}, lightCube->getModelMatrix(),
                                light->getLightColor());
     }
+    // Corps de la créature (cubes émissifs sombres) : même lot instancié.
+    if (m_creature && m_creatureBodyShader) {
+        m_creature->submitBody(m_cubeRenderer.get(), m_creatureBodyShader);
+    }
     m_cubeRenderer->draw(m_camera, m_lightManager);
+
+    // Soleil : tête de fropy JAUNE (shader "door" = couleur unie uColor,
+    // éclairée par la lumière directionnelle de la map).
+    if (m_sunHead && m_doorShader) {
+        m_doorShader->use();
+        m_doorShader->setVec3("uColor", glm::vec3(1.0f, 0.92f, 0.25f));
+        m_sunHead->draw(m_doorShader);
+    }
 
     // 2. Carte — matériau brique (murs + pignons du toit) : shader dédié "cube/wall"
     // (TBN reconstruit par dérivées dans le fragment shader). Mêmes uniforms
@@ -389,6 +473,17 @@ void Scene::draw() {
     if (m_modelShader) {
         if (m_modelEntity) m_modelEntity->draw(m_modelShader);
         if (m_fropyEntity) m_fropyEntity->draw(m_modelShader);
+        // Créature : tête de fropy (le corps sombre est instancié plus haut).
+        if (m_creatureHead) m_creatureHead->draw(m_modelShader);
+    }
+
+    // 5. Écrans TV : fond noir + logo DVD (blending, depth test actif — les
+    // murs occultent correctement l'écran). Le logo n'est dessiné qu'à
+    // proximité de la télé (cf. TvScreen::update).
+    if (m_maskShader) {
+        for (auto& tv : m_tvScreens) {
+            tv->draw(m_camera->getViewMatrix(), m_maskShader->getProjection());
+        }
     }
 
     // Humain 3ème personne (visible uniquement en vue 3P)
@@ -396,18 +491,8 @@ void Scene::draw() {
         m_humanEntity->draw(m_skinnedShader);
     }
 
-    // Vue 1ère personne : corps Mixamo (BRAS uniquement, le torse et les
-    // jambes sont masqués pour ne pas interférer avec la caméra).
-    // Alpha blending actif : le shader applique un fade progressif base sur
-    // la distance a la camera (smoothstep dans skinned.frag, uniform
-    // uNearFadeStart/End). Depth write reste actif (contrairement aux
-    // transparences standards) pour que les bras occultent correctement
-    // le monde et soient occultes par les murs.
-    if (!m_player->isThirdPerson() && m_humanEntity && m_skinnedShader &&
-        !m_humanEntity->getMeshes().empty()) {
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        m_humanEntity->drawFirstPerson(m_skinnedShader);
-        glDisable(GL_BLEND);
-    }
+    // Vue 1ère personne : le playermodel est CACHÉ (aucun rendu du modèle
+    // du joueur — ni corps ni bras). Il n'apparaît qu'en vue 3ème personne
+    // (cf. bloc ci-dessus) ; les joueurs distants restent visibles dans les
+    // deux vues (MultiplayerManager).
 }

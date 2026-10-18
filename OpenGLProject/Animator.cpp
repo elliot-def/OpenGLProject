@@ -199,20 +199,33 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
         // laisser passer une clé ~180° qui retourne le corps (jambes en l'air,
         // tête sous les hanches → "marche sur la tête").
         //
-        // Détection : la clé à l'index 1 d'un canal corrompu porte la
-        // signature du parasite (w ≈ 0 et norme ≈ 2, marqueur de frame-index).
-        // Si elle est présente, on garde UNIQUEMENT les indices i%4==0.
-        // Les GLB réparés par GlbAnimationRepair (clés denses, index 1 réel)
-        // ne matchent pas cette signature et passent par le filtre temporel
-        // ci-dessous : comportement inchangé.
+        // Signature d'une cle parasite : marqueur de frame-index stocke en
+        // memoire non initialisee -> quaternion w ≈ 0 et norme ≈ 2. Ces
+        // dechets varient d'un process a l'autre : on sonde donc les 3
+        // premieres cles parasites potentielles (indices 1, 2, 3 — celles
+        // qui suivent la 1re vraie cle) et pas seulement l'index 1. Une
+        // detection trop fragile laissait une cle corrompue atteindre le
+        // filtre temporel, qui la normalise en rotation ~180deg (jambes en
+        // l'air, tete sous les hanches : "marche sur la tete"). Si le
+        // parasite est detecte, on garde UNIQUEMENT les indices i%4==0.
+        // Les GLB repares par GlbAnimationRepair (cles normalisees, norme 1)
+        // ne matchent jamais cette signature et passent par le filtre
+        // temporel ci-dessous : comportement inchange.
+        auto isPhantomKey = [](const aiQuatKey& k) {
+            const glm::quat q(k.mValue.w, k.mValue.x, k.mValue.y, k.mValue.z);
+            const float len = glm::length(q);
+            return std::isfinite(len) && std::abs(k.mValue.w) < 1e-6f &&
+                   len > 1.5f && len < 4.0f;
+        };
         bool fbxPhantomPattern = false;
         if (n >= 4) {
-            const aiQuatKey& k1 = ch->mRotationKeys[1];
-            const glm::quat q1(k1.mValue.w, k1.mValue.x, k1.mValue.y, k1.mValue.z);
-            const float len1 = glm::length(q1);
-            fbxPhantomPattern = std::isfinite(len1) &&
-                                std::abs(k1.mValue.w) < 1e-6f &&
-                                len1 > 1.5f && len1 < 4.0f;
+            const unsigned int probe = std::min(n, 4u);
+            for (unsigned int i = 1; i < probe; i++) {
+                if (isPhantomKey(ch->mRotationKeys[i])) {
+                    fbxPhantomPattern = true;
+                    break;
+                }
+            }
         }
 
         if (fbxPhantomPattern) {
@@ -222,7 +235,11 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
                 aiQuatKey& k = ch->mRotationKeys[i];
                 const glm::quat q(k.mValue.w, k.mValue.x, k.mValue.y, k.mValue.z);
                 const float len = glm::length(q);
-                const bool quatOk = std::isfinite(len) && len > 0.0001f && len < 10.0f;
+                // Une cle portant la signature parasite est rejetee meme si
+                // l'indice n'est pas i%4==0 : normalisee, elle deviendrait
+                // une rotation ~180deg (corps retourne).
+                const bool quatOk = std::isfinite(len) && len > 0.0001f && len < 10.0f &&
+                                    !isPhantomKey(k);
                 if (!quatOk) continue;
                 if (kept != i) ch->mRotationKeys[kept] = k;
                 aiQuatKey& keptKey = ch->mRotationKeys[kept];
@@ -256,8 +273,13 @@ void Animator::repairRotationKeys(const aiAnimation* anim) {
             // Les supprimer réduit fortement la fréquence des poses et rend
             // l'animation saccadée. On garde donc toute rotation finie,
             // non-nulle et raisonnable, puis on la normalise immédiatement.
-            // Les valeurs manifestement corrompues (ex: ~1e17) restent rejetées.
-            const bool quatOk = std::isfinite(len) && len > 0.0001f && len < 10.0f;
+            // Les valeurs manifestement corrompues (ex: ~1e17) restent rejetées,
+            // ainsi que les cles portant la signature parasite (w ≈ 0 et
+            // norme > 1.5 : marqueur de frame-index) — meme avec un temps
+            // plausible, normalisees elles donneraient une rotation ~180deg
+            // qui retourne le corps.
+            const bool quatOk = std::isfinite(len) && len > 0.0001f && len < 10.0f &&
+                                !isPhantomKey(k);
             if (timeOk && quatOk) {
                 if (kept != i) ch->mRotationKeys[kept] = k;
                 aiQuatKey& keptKey = ch->mRotationKeys[kept];
@@ -289,7 +311,9 @@ void Animator::update(float deltaTime) {
     if (!std::isfinite(deltaTime) || deltaTime < 0.0f) {
         deltaTime = 0.0f;
     }
-    m_currentTime += deltaTime * m_ticksPerSecond;
+    // m_speedScale : cadence de lecture (setSpeedScale) pour synchroniser les
+    // pas sur la vitesse reelle du joueur (cf. CharacterAnimationController).
+    m_currentTime += deltaTime * m_ticksPerSecond * m_speedScale;
 
     const float duration = static_cast<float>(m_currentAnimation->mDuration);
     // Une animation vide ne doit jamais alimenter fmodf(..., 0) : cela
@@ -462,12 +486,13 @@ void Animator::computeBoneTransform(const aiNode* node, const glm::mat4& parentT
     }
 
     // ── RrTt : sauter la rotation du wrapper "_$AssimpFbx$_PreRotation" ──
-    // Ce wrapper porte la pre-rotation du bind (le flip 180° Mixamo sur les
-    // jambes). L'animation externe NON decomposee fournit deja la rotation
-    // ABSOLUE (pre-rotation incluse) : l'appliquer en plus l'annule
-    // (180°+180°=360°) et retourne les jambes vers le haut. On garde sa
-    // translation (nulle ici) et on retire la rotation — l'offsetMatrix du
-    // mesh gere deja la pre-rotation pour le bind, donc rien n'est perdu.
+    // Les canaux des animations externes (non decomposees) fournissent la
+    // rotation ABSOLUE du bone, pre-rotation incluse. Appliquer en plus le
+    // wrapper la double : jambes vers le haut (pieds au-dessus des hanches),
+    // bras a 90 deg vers l'avant. Mesure : pre-rotation CONSERVEE -> pieds
+    // y=177 pour des hanches y=100 ; IGNOREE -> pieds y=10, mains y=91.
+    // On garde la translation du wrapper ; l'offsetMatrix gere le bind.
+    // Ne pas "corriger" ceci sans relancer le log [DIAG POSE] (ModelLoader).
     if (nodeName.find("_$AssimpFbx$_PreRotation") != std::string::npos) {
         const glm::vec3 preTrans(nodeTransform[3]);
         nodeTransform = glm::translate(glm::mat4(1.0f), preTrans);

@@ -50,6 +50,7 @@
     <ClCompile Include="GlfwController.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="SteamController.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="ControllerKey.cpp"><Filter>Input</Filter></ClCompile>
+    <ClCompile Include="Creature.cpp"><Filter>Core</Filter></ClCompile>
     <ClCompile Include="PlayerKey.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="Mouse.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="LeftClick.cpp"><Filter>Input</Filter></ClCompile>
@@ -72,6 +73,7 @@
     <ClCompile Include="Rectangle.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
     <ClCompile Include="Triangle.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
     <ClCompile Include="DVDShape.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
+    <ClCompile Include="TvScreen.cpp"><Filter>Core</Filter></ClCompile>
     <ClCompile Include="Image.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
     <ClCompile Include="MaskImage.cpp"><Filter>Graphics\Shape\2D</Filter></ClCompile>
     <ClCompile Include="Cube.cpp"><Filter>Graphics\Shape\3D</Filter></ClCompile>
@@ -132,6 +134,7 @@
     <ClInclude Include="GlfwController.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="SteamController.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="ControllerKey.h"><Filter>Input</Filter></ClInclude>
+    <ClInclude Include="Creature.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="Key.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="configKeys.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="PlayerKey.h"><Filter>Input</Filter></ClInclude>
@@ -159,6 +162,7 @@
     <ClInclude Include="Rectangle.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
     <ClInclude Include="Triangle.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
     <ClInclude Include="DVDShape.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
+    <ClInclude Include="TvScreen.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="Image.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
     <ClInclude Include="MaskImage.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>
     <ClInclude Include="SharedQuad.h"><Filter>Graphics\Shape\2D</Filter></ClInclude>

@@ -24,6 +24,8 @@ class ModelEntity;
 class Skybox;
 class CharacterAnimationController;
 class Door;
+class TvScreen;
+class Creature;
 
 // ---------------------------------------------------------------------------
 // Scene : monde 3D du jeu (carte, lumières, entités riggées, skybox).
@@ -81,6 +83,7 @@ private:
     Shader* m_skinnedShader = nullptr;
     Shader* m_doorShader    = nullptr;  // "door" : matière unie (surlignage via contour)
     Shader* m_outlineShader = nullptr;  // "outline" : contour des portes interactives
+    Shader* m_maskShader    = nullptr;  // "image/mask" : écrans TV (easter egg DVD)
 
     // Rendu instancié des cubes de lumière (cube unitaire + lots par shader).
     std::unique_ptr<CubeRenderer> m_cubeRenderer;
@@ -94,6 +97,11 @@ private:
     // Colliders dynamiques des portes : matrices de la frame précédente
     // (dirty-flag, même principe que backpack/fropy plus bas).
     std::vector<glm::mat4> m_lastDoorMatrices;
+
+    // ── Écrans TV ("tvs" dans la carte) ───────────────────────────────
+    // Placements créés par le MapLoader ; la Scene possède les TvScreen
+    // (easter egg DVD animé, visible/animé seulement à proximité).
+    std::vector<std::unique_ptr<TvScreen>> m_tvScreens;
 
     // ── Matériaux de la carte ────────────────────────────────────────────
     // "brickwall" (murs + pignons du toit) : textures brickwall (.jpg chargées
@@ -129,6 +137,16 @@ private:
     bool      m_backpackDirty = true;
     glm::mat4 m_lastFropyMatrix{ 1.0f };
     bool      m_fropyDirty = true;
+
+    // ── Soleil & créature ────────────────────────────────────────────────
+    // Soleil visible : tête de fropy JAUNE (shader "door" = couleur unie),
+    // placée à l'opposé du rayonnement du dir light (ambiance de la map).
+    std::unique_ptr<ModelEntity> m_sunHead;
+    // Créature qui poursuit le joueur : corps sombre en cubes (instancié via
+    // CubeRenderer + shader "cube/lightsource") + tête de fropy (Creature.h).
+    std::unique_ptr<ModelEntity> m_creatureHead;
+    std::unique_ptr<Creature>    m_creature;
+    Shader* m_creatureBodyShader = nullptr;   // "cube/lightsource" (émissif)
 
     // E (touche Grab / RB manette) : ouvre/ferme la porte visee la plus proche.
     void tryToggleDoor();

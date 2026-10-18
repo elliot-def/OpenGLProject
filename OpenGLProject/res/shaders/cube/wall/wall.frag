@@ -83,14 +83,28 @@ vec3 calcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 void main()
 {
     // ── Normal mapping ───────────────────────────────────────────────────
-    // Le mur est un plan AXIS-ALIGNED (face +Z, maillage plan XY) : l'espace
-    // tangent est identique a l'espace monde (U=x, V=y, N=z). On applique
-    // donc la normal map directement, sans TBN ni tangentes ni derivees.
-    // (Si le mur devait etre incline, il faudrait un vrai TBN par sommets.)
-    vec3 normalFromMap = texture(material.normal, TexCoords).rgb * 2.0 - 1.0;
+    // TBN reconstruit par derivees ecran (Mikkelsen, "Bump Mapping
+    // Unparametrized Surfaces") : Vertex n'a pas de tangentes, et les murs
+    // peuvent etre orientes dans n'importe quel sens (maisons tournees par
+    // les includes du JSON, pignons...). La normale geometrique sortante +
+    // les derivees de la position monde et des UV reconstituent le repere
+    // tangent : la normal map s'applique correctement quelle que soit
+    // l'orientation de la face (avant, elle etait utilisee telle quelle en
+    // repere monde : relief correct uniquement sur les faces +Z).
+    vec3 mapN = texture(material.normal, TexCoords).rgb * 2.0 - 1.0;
     // brickwall_normal.jpg : Y vers le haut (convention OpenGL). Si le relief
     // semble creux (lumieres inversees), inverser la composante verte.
-    vec3 norm = normalize(vec3(normalFromMap.x, normalFromMap.y, normalFromMap.z));
+    vec3 N = normalize(Normal);
+    vec3 dp1 = dFdx(FragPos);
+    vec3 dp2 = dFdy(FragPos);
+    vec2 duv1 = dFdx(TexCoords);
+    vec2 duv2 = dFdy(TexCoords);
+    vec3 dp2perp = cross(dp2, N);
+    vec3 dp1perp = cross(N, dp1);
+    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+    float invmax = inversesqrt(max(dot(T, T), dot(B, B)));
+    vec3 norm = normalize(mat3(T * invmax, B * invmax, N) * mapN);
 
     // properties
     vec3 viewDir = normalize(viewPos - FragPos);

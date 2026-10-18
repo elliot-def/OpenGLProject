@@ -98,6 +98,14 @@ public:
     // glisser lateralement, (2) zero le yaw de la chaine spine (tete face avant).
     void setStrafeCompensation(bool enable) { m_strafeCompensation = enable; }
 
+    // Facteur de vitesse de lecture de l'animation (1.0 = cadence d'origine).
+    // Sert a synchroniser la cadence des pas sur la vitesse reelle du joueur
+    // (moins de glissement des pieds, pas sur place quand le joueur est bloque
+    // contre un mur). Applique dans update() sur l'avancement du temps d'anim.
+    void setSpeedScale(float scale) {
+        m_speedScale = (scale > 0.01f) ? scale : 0.01f;
+    }
+
 private:
     Model* m_model = nullptr;
     const aiScene* m_scene = nullptr;
@@ -106,6 +114,7 @@ private:
     std::string m_currentAnimName;
     float m_currentTime = 0.0f;
     float m_ticksPerSecond = 30.0f;
+    float m_speedScale = 1.0f;   // facteur de vitesse de lecture (setSpeedScale)
     bool m_loop = true;
 
     std::vector<glm::mat4> m_finalBoneMatrices;

@@ -1,6 +1,13 @@
 {
   "name": "Petite maison",
-  "description": "Carte maison : sol rectangulaire, petite maison en briques (murs + linteaux) avec toit a deux pans et deux portes interactives. Unites en metres, Y vers le haut, sol en y=0. Spawn du joueur en (0, 0, 3), devant la porte d'entree. Les murs sont enfonces de 5 cm dans le sol et de 5 cm dans le toit pour eviter tout z-fighting entre faces coplanaires.",
+  "description": "Carte maison : sol rectangulaire, petite maison en briques (murs + linteaux) avec toit a deux pans, deux portes interactives et un meuble de tele avec ecran (\"tvs\", easter egg DVD visible de pres). Unites en metres, Y vers le haut, sol en y=0. Spawn du joueur en (0, 0, 3), devant la porte d'entree. Les murs sont enfonces de 5 cm dans le sol et de 5 cm dans le toit pour eviter tout z-fighting entre faces coplanaires.",
+
+  "sun": {
+    "direction": [-0.2, -1.0, -0.4],
+    "ambient":  [0.35, 0.30, 0.22],
+    "diffuse":  [1.10, 0.95, 0.75],
+    "specular": [0.50, 0.45, 0.40]
+  },
 
   "boxes": [
     { "name": "ground", "center": [0, -0.1, -3], "size": [20, 0.2, 20], "material": "leaf" },
@@ -16,7 +23,9 @@
     { "name": "wall_back_lintel",  "center": [ 1.5,  2.325, -5.8], "size": [1.4, 0.25, 0.2], "material": "brickwall" },
 
     { "name": "wall_west", "center": [-3.1, 1.2, -2.95], "size": [0.2, 2.5, 5.9], "material": "brickwall" },
-    { "name": "wall_east", "center": [ 3.1, 1.2, -2.95], "size": [0.2, 2.5, 5.9], "material": "brickwall" }
+    { "name": "wall_east", "center": [ 3.1, 1.2, -2.95], "size": [0.2, 2.5, 5.9], "material": "brickwall" },
+
+    { "name": "tv_stand", "center": [0, 0.225, -5.5], "size": [1.5, 0.55, 0.55], "material": "container" }
   ],
 
   "roof": {
@@ -29,6 +38,10 @@
     "gableMaterial": "brickwall",
     "collision": "mesh"
   },
+
+  "tvs": [
+    { "name": "tv", "center": [0, 0.9, -5.62], "width": 1.2, "height": 0.7 }
+  ],
 
   "doors": [
     { "name": "door_front", "hinge": [-0.58, 0.005, -0.1], "yaw": 0, "width": 1.16 },

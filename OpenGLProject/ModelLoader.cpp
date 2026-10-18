@@ -113,6 +113,28 @@ void ModelLoader::loadHumanCharacter() {
     // pour creer les joueurs distants a l'identique.
     configureHumanCharacter(m_humanEntity.get());
 
+    // ── Diagnostic one-shot : anatomie de la pose (repère modèle) ──────
+    // Les pieds doivent être SOUS les hanches, les mains le long du buste.
+    // Protège la chaîne RrTt (pre-rotation ignorée dans Animator) contre
+    // les régressions : des pieds AU-DESSUS des hanches = bind cassé (attendu : pieds y~10, hanches y~100).
+    if (Animator* anim = m_humanEntity->getAnimator()) {
+        anim->update(0.0f);
+        const glm::vec3 hips = anim->getBoneWorldPosition("Hips");
+        const glm::vec3 head = anim->getBoneWorldPosition("Head");
+        const glm::vec3 lUp = anim->getBoneWorldPosition("LeftUpLeg");
+        const glm::vec3 lFoot = anim->getBoneWorldPosition("LeftFoot");
+        const glm::vec3 rFoot = anim->getBoneWorldPosition("RightFoot");
+        const glm::vec3 lArm = anim->getBoneWorldPosition("LeftArm");
+        const glm::vec3 lHand = anim->getBoneWorldPosition("LeftHand");
+        const glm::vec3 rHand = anim->getBoneWorldPosition("RightHand");
+        LOG_INFO("[DIAG POSE] Hips=(%.1f,%.1f,%.1f) Head=(%.1f,%.1f,%.1f)",
+                 hips.x, hips.y, hips.z, head.x, head.y, head.z);
+        LOG_INFO("[DIAG POSE] L.UpLeg=(%.1f,%.1f,%.1f) L.Foot=(%.1f,%.1f,%.1f) R.Foot=(%.1f,%.1f,%.1f)",
+                 lUp.x, lUp.y, lUp.z, lFoot.x, lFoot.y, lFoot.z, rFoot.x, rFoot.y, rFoot.z);
+        LOG_INFO("[DIAG POSE] L.Arm=(%.1f,%.1f,%.1f) L.Hand=(%.1f,%.1f,%.1f) R.Hand=(%.1f,%.1f,%.1f)",
+                 lArm.x, lArm.y, lArm.z, lHand.x, lHand.y, lHand.z, rHand.x, rHand.y, rHand.z);
+    }
+
     // Controleur d'animation du personnage 3P (extrait de Game::update)
     m_characterAnim = std::make_unique<CharacterAnimationController>(m_humanEntity.get(), m_inputManager);
 }

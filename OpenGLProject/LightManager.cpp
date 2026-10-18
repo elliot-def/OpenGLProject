@@ -11,11 +11,13 @@ LightManager::LightManager(Renderer* renderer, Player* player) {
     m_flashlight = new Spotlight(renderer);
     m_player = player;
 
-    // DirLight
+    // DirLight (soleil) : défauts LUMINEUX (cf. demande « luminosité
+    // directionnelle du soleil augmentée »). Surchargés par la carte via
+    // setDirLight (clé "sun" du JSON, ambiance par map).
     m_dirLight.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
-    m_dirLight.ambient = glm::vec3(0.2f, 0.2f, 0.05f);
-    m_dirLight.diffuse = glm::vec3(0.2f, 0.2f, 0.2f);
-    m_dirLight.specular = glm::vec3(0.5f, 0.5f, 0.5f);
+    m_dirLight.ambient = glm::vec3(0.55f, 0.55f, 0.48f);
+    m_dirLight.diffuse = glm::vec3(1.5f, 1.5f, 1.4f);
+    m_dirLight.specular = glm::vec3(0.6f, 0.6f, 0.6f);
 }
 
 LightManager::~LightManager() {

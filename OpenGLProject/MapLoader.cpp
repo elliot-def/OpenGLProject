@@ -118,9 +118,14 @@ static std::unique_ptr<Mesh> buildBoxMesh(const glm::vec3& size, const glm::mat4
     // deux faces coplanaires de boîtes différentes deviennent texel-identiques
     // → pas de z-fighting visible aux jonctions (le culling est désactivé), et
     // la texture est continue d'une boîte à l'autre sur toute la carte.
+    // ATTENTION : la normale doit être TRANSFORMÉE par la matrice modèle avant
+    // de choisir les axes UV. Avec la normale locale, une boîte tournée (les
+    // maisons instanciées avec "yaw" dans village.json) choisit les mauvais
+    // axes : un axe UV devient constant sur la face → la texture s'écrase sur
+    // une bande de 1 texel (les murs en briques "disparaissent").
     for (auto& v : vertices) {
         const glm::vec3 world = glm::vec3(model * glm::vec4(v.getPositions(), 1.0f));
-        const glm::vec3 n = glm::abs(v.getNormals());
+        const glm::vec3 n = glm::abs(glm::mat3(model) * v.getNormals());
         glm::vec2 uv;
         if (n.x >= n.y && n.x >= n.z) uv = glm::vec2(world.z, world.y);
         else if (n.y >= n.z)          uv = glm::vec2(world.x, world.z);
@@ -136,13 +141,18 @@ static std::unique_ptr<Mesh> buildBoxMesh(const glm::vec3& size, const glm::mat4
 
 // Toit à deux pentes = 2 dalles inclinées jointives au faîtage, chacune avec
 // une épaisseur `thickness` (verticale) : visu « couverture » au lieu du
-// prisme plein. Le pignon est désormais porté par buildGablesMesh (base en
-// y=-thickness pour fermer le bord des dalles).
+// prisme plein. Le pignon est porté par buildGablesMesh.
 //
-// Par dalle (côté s, s=-1 ou +1, hauteur h) :            (extrémités z ouvertes
-//   dessus  (s·hx, 0) → (0, h)                           ≠ z=±hz : les pignons
-//   dessous (s·hx, -t) → (0, h-t)  (décalage vertical)   les referment)
+// Par dalle (côté s, s=-1 ou +1, hauteur h) :
+//   dessus  (s·hx, 0) → (0, h)
+//   dessous (s·hx, -t) → (0, h-t)  (décalage vertical)
 //   tranche d'égout verticale à x=s·hx entre y=0 et y=-t
+//   2 tranches d'extrémité (caps) aux bouts z=±hz : la coupe de la dalle,
+//   parallélogramme (s·hx,0)-(0,h)-(0,h-t)-(s·hx,-t) → la bordure de la
+//   couverture reste TEXTURÉE et garde toute son épaisseur t jusqu'au faîtage
+//   (sans ces caps, l'extrémité est ouverte : la dalle dépasse du pignon d'un
+//   lambeau dont l'épaisseur visible tombe à 0 au faîtage, et ce bord n'a
+//   aucune face → pas de texture).
 // Les 2 dessus partagent l'arête du faîtage, les 2 dessous celle en (0,h-t) :
 // le volume est fermé, aucune face coplanaire entre les 2 dalles.
 static std::unique_ptr<Mesh> buildRoofMesh(const glm::vec2& span, float height,
@@ -167,18 +177,23 @@ static std::unique_ptr<Mesh> buildRoofMesh(const glm::vec2& span, float height,
 
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
-    vertices.reserve(21);   // 2 dalles × (8 sommets dessus/dessous + 4 égout)
-    indices.reserve(36);
+    vertices.reserve(40);   // 2 dalles × (8 sommets dessus/dessous + 4 égout
+                            // + 8 sommets pour les 2 caps d'extrémité)
+    indices.reserve(60);
 
     // Dalle -X
     pushQuad(vertices, indices, A, D, R1, R0, span.y, slopeLen);       // dessus
     pushQuad(vertices, indices, A2, R02, R12, D2, span.y, slopeLen);   // dessous
     pushQuad(vertices, indices, A, A2, D2, D, t, span.y);              // égout (-X)
+    pushQuad(vertices, indices, A, R0, R02, A2, slopeLen, t);          // cap z=-hz
+    pushQuad(vertices, indices, D, D2, R12, R1, slopeLen, t);          // cap z=+hz
 
     // Dalle +X
     pushQuad(vertices, indices, R1, C, B, R0, span.y, slopeLen);       // dessus
     pushQuad(vertices, indices, R02, B2, C2, R12, span.y, slopeLen);   // dessous
     pushQuad(vertices, indices, C, C2, B2, B, t, span.y);              // égout (+X)
+    pushQuad(vertices, indices, B, B2, R02, R0, slopeLen, t);          // cap z=-hz
+    pushQuad(vertices, indices, C, R1, R12, C2, slopeLen, t);          // cap z=+hz
 
     return std::make_unique<Mesh>(vertices, indices,
         (unsigned int)VertexAttribute::POSITION |
@@ -187,10 +202,12 @@ static std::unique_ptr<Mesh> buildRoofMesh(const glm::vec2& span, float height,
 }
 
 // Pignons : 2 triangles verticaux aux extrémités du faîtage (la façade
-// continue les murs jusqu'au toit). Base en y=-thickness pour couvrir aussi
-// le bord ouvert des dalles de toit (arête d'égout) : fermeture complète,
-// même plan que le dessus des dalles mais aucune face coplanaire (les dalles
-// n'ont pas de face aux extrémités z).
+// continue les murs jusqu'au toit). Le triangle remplit exactement la zone
+// SOUS le dessous des 2 dalles de couverture : base en y=-thickness, sommet
+// en (0, height-thickness) — les arêtes suivent le dessous des dalles
+// ((-hx,-t) → (0,h-t) → (hx,-t)). Les caps d'extrémité des dalles (cf.
+// buildRoofMesh) couvrent au-dessus : chaque face est dans son plan, aucune
+// coplanaire, et la coupe de la couverture reste visible et texturée.
 // UV = coordonnées locales en mètres (u = x + hx, v = y + thickness).
 static std::unique_ptr<Mesh> buildGablesMesh(const glm::vec2& span, float height,
                                              float thickness) {
@@ -202,8 +219,11 @@ static std::unique_ptr<Mesh> buildGablesMesh(const glm::vec2& span, float height
     const glm::vec3 B( hx, baseY, -hz);
     const glm::vec3 C( hx, baseY,  hz);
     const glm::vec3 D(-hx, baseY,  hz);
-    const glm::vec3 R0(0.0f, height, -hz);   // extrémités du faîtage
-    const glm::vec3 R1(0.0f, height,  hz);
+    // Sommet sous le faîtage (dessous des dalles), pas au faîtage lui-même :
+    // au-dessus, ce sont les caps des dalles (matériau couverture) qui
+    // ferment, avec l'épaisseur t visible jusqu'en haut.
+    const glm::vec3 R0(0.0f, height - thickness, -hz);
+    const glm::vec3 R1(0.0f, height - thickness,  hz);
 
     std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
@@ -212,10 +232,10 @@ static std::unique_ptr<Mesh> buildGablesMesh(const glm::vec2& span, float height
 
     pushTriangle(vertices, indices,
                  D, {0.0f, 0.0f}, C, {span.x, 0.0f},
-                 R1, {hx, height + thickness});   // +Z
+                 R1, {hx, height});   // +Z
     pushTriangle(vertices, indices,
                  B, {span.x, 0.0f}, A, {0.0f, 0.0f},
-                 R0, {hx, height + thickness});   // -Z
+                 R0, {hx, height});   // -Z
 
     return std::make_unique<Mesh>(vertices, indices,
         (unsigned int)VertexAttribute::POSITION |
@@ -236,11 +256,13 @@ MapLoader::~MapLoader() = default;
 
 bool MapLoader::load(const std::string& jsonPath) {
     m_parts.clear();
+    m_screens.clear();
     m_doors.clear();
 
     std::vector<std::string> stack;
     if (!loadMapFile(jsonPath, glm::mat4(1.0f), 0.0f, 0, "", stack)) {
         m_parts.clear();
+        m_screens.clear();
         m_doors.clear();
         return false;
     }
@@ -257,8 +279,8 @@ bool MapLoader::load(const std::string& jsonPath) {
     }
     m_collisionManager->buildBVH();
 
-    LOG_INFO("[Map] Carte chargee : %s (%zu parties, %zu portes)",
-             jsonPath.c_str(), m_parts.size(), m_doors.size());
+    LOG_INFO("[Map] Carte chargee : %s (%zu parties, %zu ecrans, %zu portes)",
+             jsonPath.c_str(), m_parts.size(), m_screens.size(), m_doors.size());
     return true;
 }
 
@@ -303,6 +325,28 @@ bool MapLoader::loadMapFile(const std::string& jsonPath, const glm::mat4& transf
     bool ok = true;
     try {
         const json data = json::parse(file);
+
+        // -1. Ambiance / ensolleilement : clé "sun" (racine uniquement, pas
+        //     dans les includes) = direction + couleurs RGB de la lumière
+        //     directionnelle. La Scene applique ça via LightManager::setDirLight.
+        if (depth == 0 && data.contains("sun") && data["sun"].is_object()) {
+            const json& sun = data["sun"];
+            auto readVec3 = [&sun](const char* key, glm::vec3& out) {
+                if (sun.contains(key) && sun[key].is_array() && sun[key].size() == 3) {
+                    out = glm::vec3(sun[key][0].get<float>(),
+                                    sun[key][1].get<float>(),
+                                    sun[key][2].get<float>());
+                }
+            };
+            readVec3("direction", m_sun.direction);
+            readVec3("ambient",  m_sun.ambient);
+            readVec3("diffuse",  m_sun.diffuse);
+            readVec3("specular", m_sun.specular);
+            LOG_INFO("[Map] Soleil: dir(%.2f, %.2f, %.2f) ambient(%.2f, %.2f, %.2f) diffuse(%.2f, %.2f, %.2f)",
+                     m_sun.direction.x, m_sun.direction.y, m_sun.direction.z,
+                     m_sun.ambient.r, m_sun.ambient.g, m_sun.ambient.b,
+                     m_sun.diffuse.r, m_sun.diffuse.g, m_sun.diffuse.b);
+        }
 
         // 0. Includes : instancie d'autres cartes (prefabs factorisés, ex. N
         //    fois la même maison), chacune placée par "position" (translation)
@@ -387,7 +431,24 @@ bool MapLoader::loadMapFile(const std::string& jsonPath, const glm::mat4& transf
             m_parts.push_back(std::move(gable));
         }
 
-        // 3. Portes interactives (charnière transformée par l'include)
+        // 3. Écrans (TV) : placement + taille (l'easter egg DVD animé est
+        //    créé/dessiné par la Scene — classe TvScreen — quand le joueur
+        //    est assez proche). Pas de mesh, pas de collision.
+        if (data.contains("tvs") && data["tvs"].is_array()) {
+            for (const auto& tv : data["tvs"]) {
+                MapScreen screen;
+                screen.name   = prefix + tv.value("name", "tv");
+                screen.width  = tv.value("width", 1.0f);
+                screen.height = tv.value("height", 0.6f);
+                screen.model  = transform
+                              * glm::translate(glm::mat4(1.0f),
+                                   readVec3(tv.value("center", json()), glm::vec3(0.0f)))
+                              * rotationMatrix(readVec3(tv.value("rotation", json()), glm::vec3(0.0f)));
+                m_screens.push_back(std::move(screen));
+            }
+        }
+
+        // 4. Portes interactives (charnière transformée par l'include)
         if (data.contains("doors") && data["doors"].is_array()) {
             for (const auto& door : data["doors"]) {
                 const glm::vec3 hinge = readVec3(door.value("hinge", json()), glm::vec3(0.0f));

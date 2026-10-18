@@ -324,6 +324,27 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
             }
         }
 
+        // ── Cadence de lecture ∝ vitesse reelle ─────────────────────────
+        // Les pas suivent la vitesse du joueur (moins de glissement des
+        // pieds) et l'animation ralentit quand il est bloque (pousser un
+        // mur : la tete n'avance plus dans le mur pendant que les jambes
+        // animent des pas sur place). References = vitesses de marche/course
+        // du joueur ; hors locomotion, cadence d'origine (1.0).
+        const bool isLocomotion =
+            targetIdx == walkIdx || targetIdx == runIdx || targetIdx == walkBackIdx ||
+            targetIdx == strafeLIdx || targetIdx == strafeRIdx ||
+            targetIdx == strafeWLIdx || targetIdx == strafeWRIdx;
+        if (isLocomotion) {
+            const bool fast = (targetIdx == runIdx) || (m_isStrafing && isSprinting);
+            const float refSpeed = fast ? Constants::Player::PLAYER_SPRINTING_SPEED
+                                        : Constants::Player::PLAYER_WALKING_SPEED;
+            const float speedScale = glm::clamp(horizSpeed / std::max(refSpeed, 0.1f),
+                                                kAnimSpeedScaleMin, kAnimSpeedScaleMax);
+            m_entity->getAnimator()->setSpeedScale(speedScale);
+        } else {
+            m_entity->getAnimator()->setSpeedScale(1.0f);
+        }
+
         // Cooldown anti-clignotement : on ne change d'animation que si
         // le delai minimum est ecoule depuis le dernier changement.
         // Evite les oscillations idle/walk quand on pousse contre un mur.
@@ -334,8 +355,10 @@ void CharacterAnimationController::update(const glm::vec3& playerPos, float dt, 
             m_animChangeTimer = kAnimChangeCooldown;
         }
     } else {
-        // Reset du cooldown quand on sort d'un one-shot
+        // Reset du cooldown quand on sort d'un one-shot, cadence d'origine
+        // pour les one-shots (jump/turn/punch/landing : timing de clip).
         m_animChangeTimer = 0.0f;
+        m_entity->getAnimator()->setSpeedScale(1.0f);
     }
 
     // ── Post-atterrissage : mise a jour du timer de ralenti ──────────────

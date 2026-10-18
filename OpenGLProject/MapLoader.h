@@ -22,6 +22,8 @@ class CollisionManager;
 //                "material": "brickwall|container|parquet|leaf|grey_roof|riet" } ],
 //   "roof":  { "name": "...", "center": [x,y,z], "span": [sx,sz], "height": h,
 //              "thickness": t, "material": "...", "gableMaterial": "..." },
+//   "tvs":   [ { "name": "...", "center": [x,y,z], "rotation": [rx,ry,rz],
+//                "width": w, "height": h } ],
 //   "doors": [ { "name": "...", "hinge": [x,y,z], "yaw": deg } ]
 // }
 //  - "includes": instancie d'autres cartes (factorisation : ex. N fois la même
@@ -32,7 +34,9 @@ class CollisionManager;
 //    tandis qu'un fichier absent/JSON invalide fait échouer le chargement.
 //  - "boxes"  : pavé droit (sol, mur, linteau...). "rotation" en degrés (Euler
 //    XYZ, défaut [0,0,0]) ; UV projetés en repère monde selon la normale
-//    dominante de la face (texture 1×/m, continue d'une boîte à l'autre).
+//    dominante de la face (texture 1×/m, continue d'une boîte à l'autre, y
+//    compris pour les boîtes tournées : la normale est transformée par la
+//    matrice modèle avant de choisir les axes UV).
 //  - "roof"   : toit à deux pentes = 2 dalles jointives au faîtage (pignons
 //    compris), base rectangulaire "span" × "span.y", faîtage à "height" au-
 //    dessus de "center", épaisseur verticale "thickness" (défaut 0.15 m).
@@ -41,6 +45,11 @@ class CollisionManager;
 //  - "collision": "box" (défaut) = cube englobant (AABB, pour les pavés) ;
 //    "mesh" = collision triangles, la hitbox suit la géométrie réelle (pentu
 //    du toit...) — à mettre sur le "roof".
+//  - "tvs"   : écran de télévision (sur un meuble = un "box"). "center" =
+//    centre de l'écran, "rotation" comme les "boxes" (l'écran est un quad dans
+//    le plan XY local, normale +Z) ; "width"/"height" en mètres. Le loader ne
+//    stocke que le placement (pas de mesh, pas de collision) : la Scene crée
+//    les TvScreen (easter egg DVD animé, visible de près).
 //  - "doors"  : portes interactives (classe Door) — largeur/hauteur/épaisseur
 //    surchargables par "width"/"height"/"thickness" (défauts constants/door.h).
 //
@@ -70,6 +79,34 @@ struct MapPart {
     std::unique_ptr<Mesh> mesh;
 };
 
+// Placement d'un écran de télévision (clé JSON "tvs") : quad centré dans le
+// plan XY local (normale +Z), largeur/hauteur en mètres. Pas de mesh ni de
+// collision — la Scene crée les TvScreen (easter egg DVD) à partir de ça.
+struct MapScreen {
+    std::string name;
+    glm::mat4   model{ 1.0f };   // translate · rotate (comme MapPart::model)
+    float       width  = 1.0f;
+    float       height = 0.6f;
+};
+
+// ── Ambiance / ensolleilement (cle JSON "sun") ──────────────────────────────
+// Parametres du SOLEIL de la carte : direction du rayonnement de la lumiere
+// directionnelle + couleurs RGB de l'ambiance (ambiante / diffuse / speculaire).
+// C'est LE reglage d'ambiance par map : chaque carte configure ses couleurs.
+// Lu uniquement au niveau racine (pas dans les "includes") ; cles optionnelles.
+// {
+//   "sun": { "direction": [x, y, z],  // vers le bas, ex [-0.3, -1, -0.2]
+//            "ambient":  [r, g, b],   // couleur ambiante
+//            "diffuse":  [r, g, b],   // lumiere directe (soleil)
+//            "specular": [r, g, b] }  // reflets
+// }
+struct MapSun {
+    glm::vec3 direction{ -0.3f, -1.0f, -0.2f };
+    glm::vec3 ambient  { 0.55f, 0.55f, 0.48f };
+    glm::vec3 diffuse  { 1.5f, 1.5f, 1.4f };
+    glm::vec3 specular { 0.6f, 0.6f, 0.6f };
+};
+
 class MapLoader {
 public:
     // collisionManager : requis pour enregistrer les collisions statiques.
@@ -87,6 +124,12 @@ public:
     // Portes interactives (détenues par le loader).
     std::vector<std::unique_ptr<Door>>& getDoors() { return m_doors; }
 
+    // Placements des écrans ("tvs"), détenus par le loader.
+    const std::vector<MapScreen>& getScreens() const { return m_screens; }
+
+    // Soleil / ambiance de la carte (clé "sun" du JSON) — cf. MapSun.
+    const MapSun& getSun() const { return m_sun; }
+
 private:
     // Charge un fichier de carte, récursivement pour les "includes".
     // transform + yawOffset : repère local → monde de la carte appelée ;
@@ -99,5 +142,7 @@ private:
     CollisionManager* m_collisionManager;
 
     std::vector<MapPart>              m_parts;
+    std::vector<MapScreen>            m_screens;
     std::vector<std::unique_ptr<Door>> m_doors;
+    MapSun                            m_sun;
 };

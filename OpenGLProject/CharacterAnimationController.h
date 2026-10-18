@@ -111,6 +111,11 @@ private:
     static constexpr float kMoveStartSpeed = 0.25f;    // seuil haut pour commencer a bouger
     static constexpr float kMoveStopSpeed  = 0.06f;    // seuil bas pour arreter de bouger
     static constexpr float kAnimChangeCooldown = 0.15f; // delai min entre 2 changements
+    // Bornes du facteur de vitesse de lecture des clips de locomotion
+    // (Animator::setSpeedScale) : cadence ∝ vitesse reelle du joueur, pour
+    // que les pas suivent le sol (anti-glissement) sans devenir illisibles.
+    static constexpr float kAnimSpeedScaleMin = 0.35f;
+    static constexpr float kAnimSpeedScaleMax = 1.6f;
     // Composante avant/arriere max au-dessus de laquelle on prefere la marche
     // avant/arriere au strafe : des qu'on avance ou recule en meme temps que
     // lateralement (diagonale), on joue walk/run/walkback, pas le strafe.

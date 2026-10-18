@@ -2,6 +2,13 @@
   "name": "Village",
   "description": "Carte composee : sol commun + 3 maisons instanciees depuis house.json via 'includes' (factorisation : house.json n'est ecrit qu'une fois). Chaque exemplaire est place par position (translation, metres) et yaw (degres autour de Y).",
 
+  "sun": {
+    "direction": [-0.3, -1.0, -0.2],
+    "ambient":  [0.55, 0.55, 0.48],
+    "diffuse":  [1.50, 1.50, 1.40],
+    "specular": [0.60, 0.60, 0.60]
+  },
+
   "boxes": [
     { "name": "village_ground", "center": [0, -0.1, -10], "size": [60, 0.2, 60], "material": "leaf" }
   ],
