@@ -105,6 +105,14 @@ bool Window::init() {
         return false;
     }
 
+    {
+        GLint maxFragUniforms = 0;
+        glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_COMPONENTS, &maxFragUniforms);
+        LOG_INFO("[GL] %s | %s | GL %s | max fragment uniform components: %d",
+                 (const char*)glGetString(GL_VENDOR), (const char*)glGetString(GL_RENDERER),
+                 (const char*)glGetString(GL_VERSION), maxFragUniforms);
+    }
+
     // Définition de la zone de rendu
     glViewport(0, 0, m_width, m_height);
 

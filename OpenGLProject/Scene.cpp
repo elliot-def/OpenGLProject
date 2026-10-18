@@ -225,7 +225,7 @@ void Scene::updateSunGlare(float deltaTime) {
 }
 
 void Scene::drawSunGlare() {
-    if (!m_glareShader || !m_sunHead || m_glare < 0.003f) return;
+    if (!m_glareShader || !m_sunHead || !(m_glare >= 0.003f)) return;   // !(>=) : rejette aussi NaN
     const glm::mat4 proj = m_doorShader->getProjection();
     const glm::vec4 clip = proj * m_camera->getViewMatrix() * glm::vec4(m_sunHead->getPosition(), 1.0f);
     if (clip.w <= 0.01f) return;   // derriere la camera

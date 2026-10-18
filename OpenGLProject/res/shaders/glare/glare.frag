@@ -33,8 +33,8 @@ void main() {
         vec2 gp = (ndc - sunNdc * k) * vec2(aspect, 1.0);
         float d = length(gp);
         float size = 0.10 + 0.05 * float(i);
-        float ring = smoothstep(size, size * 0.8, d) * smoothstep(size * 0.5, size, d);
-        ghosts += vec3(0.5 + 0.15 * float(i), 0.7, 1.0 - 0.2 * float(i)) * (ring + 0.25 * smoothstep(size, 0.0, d)) * 0.25;
+        float ring = (1.0 - smoothstep(size * 0.8, size, d)) * smoothstep(size * 0.5, size, d);
+        ghosts += vec3(0.5 + 0.15 * float(i), 0.7, 1.0 - 0.2 * float(i)) * (ring + 0.25 * (1.0 - smoothstep(0.0, size, d))) * 0.25;
     }
 
     vec3 col = WARM * (core + halo + rays) * intensity + ghosts * intensity;
@@ -43,5 +43,7 @@ void main() {
     float veil = dazzle * (0.45 + 0.55 * exp(-r * 0.9));
     col += vec3(1.0, 0.96, 0.85) * veil;
 
+    // Garde-fou : un NaN avec le blend "screen" noircirait tout l'ecran.
+    if (any(isnan(col)) || any(isinf(col))) col = vec3(0.0);
     FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
