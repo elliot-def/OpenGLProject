@@ -90,6 +90,10 @@ public:
     // le sens reel du deplacement (voir CharacterAnimationController).
     void setYawOffsetDeg(float deg) { m_yawOffsetDeg = deg; m_modelMatrixValid = false; }
     float getYawOffsetDeg() const { return m_yawOffsetDeg; }
+    // Inclinaison vers le bas (degres, autour de l'axe X local), appliquee
+    // apres le cap : sert a viser une cible plus basse (ex: tete du soleil).
+    void setPitchDeg(float deg) { m_pitchDeg = deg; m_modelMatrixValid = false; }
+    float m_pitchDeg = 0.0f;
 
     // Retourne l'Animator pour un contrôle avancé
     Animator* getAnimator() { return m_animator.get(); }
@@ -132,6 +136,7 @@ private:
     mutable float m_cachedSpinAngle = 0.0f;
     mutable float m_cachedScale = 0.0f;
     mutable float m_cachedYawOffsetDeg = 0.0f;
+    mutable float m_cachedPitchDeg = 0.0f;
     mutable bool m_modelMatrixValid = false;
     Camera* m_camera;
 	LightManager* m_lightManager;

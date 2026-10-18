@@ -331,3 +331,11 @@ void MultiplayerManager::applyState(RemotePlayer& rp) {
         rp.lastAnimIndex = rp.animIndex;
     }
 }
+
+std::vector<glm::vec3> MultiplayerManager::getRemotePositions() const {
+    std::vector<glm::vec3> out;
+    for (const auto& [id, rp] : m_remotePlayers) {
+        if (rp->hasPrev && rp->timeSincePacket < STALE_TIMEOUT) out.push_back(rp->targetPos);
+    }
+    return out;
+}

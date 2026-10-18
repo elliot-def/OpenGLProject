@@ -47,7 +47,6 @@ public:
 
     // ── Construction du monde (appelé pendant loadResources) ─────────────
     // Séparés pour conserver la progression visuelle du loading screen.
-    void loadLights();                   // lumières ponctuelles (point lights)
     void loadMap(const char* jsonPath);  // carte JSON (sol, murs, toit, portes)
 
     // Skybox (contexte GL principal — à appeler après le thread de chargement).
@@ -150,6 +149,12 @@ private:
 
     // E (touche Grab / RB manette) : ouvre/ferme la porte visee la plus proche.
     void tryToggleDoor();
+public:
+    // Positions des joueurs distants, mises a jour chaque frame par Game.
+    void setRemoteTargets(std::vector<glm::vec3> targets) { m_remoteTargets = std::move(targets); }
+private:
+    void updateSunGaze();
+    std::vector<glm::vec3> m_remoteTargets;   // joueurs distants (multijoueur)
 
     // Etat no-clip de la frame precedente : sert a detecter la TRANSITION
     // (entree/sortie) pour forcer l'idle une seule fois a l'entree et

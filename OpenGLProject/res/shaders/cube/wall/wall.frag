@@ -42,14 +42,14 @@ struct SpotLight {
     vec3 specular;
 };
 
-#define MAX_POINT_LIGHTS 10
+#define MAX_POINT_LIGHTS 32
 uniform int numberLightSources;
 
 // Pièces intérieures : chaque lumière est assignée à une pièce par
 // uLightRoom[i] (LightManager) et n'éclaire que les fragments de CETTE
 // pièce — la lumière ne traverse pas les murs. -1 = lumière libre.
 // uRoomCount = nombre de pièces valides (0 = aucune).
-#define MAX_ROOMS 4
+#define MAX_ROOMS 8
 uniform int   uRoomCount;
 uniform vec3  uRoomMin[MAX_ROOMS];
 uniform vec3  uRoomMax[MAX_ROOMS];
@@ -69,6 +69,7 @@ uniform vec3 viewPos;
 uniform DirLight dirLight;
 uniform PointLight lightSources[MAX_POINT_LIGHTS];
 uniform SpotLight spotLight;
+uniform SpotLight sunSpot;   // soleil (LightManager::aimSunSpot)
 uniform Material material;
 
 // La brique est un matériau mat : pas de carte spéculaire, on utilise une
@@ -120,6 +121,7 @@ void main()
 
     // phase 3: spot light
     result += calcSpotLight(spotLight, norm, FragPos, viewDir);
+    result += calcSpotLight(sunSpot, norm, FragPos, viewDir);
 
     FragColor = vec4(result, 1.0);
 }

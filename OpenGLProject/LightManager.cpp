@@ -10,6 +10,11 @@
 LightManager::LightManager(Renderer* renderer, Player* player) {
     m_flashlight = new Spotlight(renderer);
     m_player = player;
+    // Soleil : cone etroit (6 deg / 10 deg), forte intensite chaude, portee ~100 m.
+    m_sunSpot = new Spotlight(renderer,
+        glm::vec3(0.0f), glm::vec3(6.0f, 5.2f, 2.8f), glm::vec3(3.0f),
+        1.0f, 0.007f, 0.0002f,
+        glm::cos(glm::radians(6.0f)), glm::cos(glm::radians(10.0f)), "sunSpot");
 
     // DirLight (soleil) : défauts LUMINEUX (cf. demande « luminosité
     // directionnelle du soleil augmentée »). Surchargés par la carte via
@@ -26,6 +31,7 @@ LightManager::~LightManager() {
     }
 
 	delete m_flashlight;
+	delete m_sunSpot;
 }
 size_t LightManager::addPointLight(LightSource* light) {
     if (m_lightSources.size() < MAX_POINT_LIGHTS) {
@@ -95,6 +101,7 @@ void LightManager::applyToShader(Shader* shader) {
 
     // Flashlight
     m_flashlight->applyToShader(shader, m_player->getFlashlightIsEnabled());
+    m_sunSpot->applyToShader(shader, true);
 
     // DirLight
     shader->setVec3(loc.dirDirection, m_dirLight.direction);
@@ -146,4 +153,8 @@ void LightManager::setLightRoom(size_t lightIndex, int roomIndex) {
     if (lightIndex < m_lightRoom.size()) {
         m_lightRoom[lightIndex] = roomIndex;
     }
+}
+
+void LightManager::aimSunSpot(const glm::vec3& from, const glm::vec3& target) {
+    m_sunSpot->aim(from, target - from);
 }

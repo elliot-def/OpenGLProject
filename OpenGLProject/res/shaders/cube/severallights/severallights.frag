@@ -42,14 +42,14 @@ struct SpotLight {
     vec3 specular;       
 };
 
-#define MAX_POINT_LIGHTS 10  // Limite maximale pour le tableau
+#define MAX_POINT_LIGHTS 32  // Limite maximale pour le tableau
 uniform int numberLightSources;    // Nombre r�el de lumi�res actives
 
 // Pièces intérieures : chaque lumière est assignée à une pièce par
 // uLightRoom[i] (LightManager) et n'éclaire que les fragments de CETTE
 // pièce — la lumière ne traverse pas les murs. -1 = lumière libre.
 // uRoomCount = nombre de pièces valides (0 = aucune).
-#define MAX_ROOMS 4
+#define MAX_ROOMS 8
 uniform int   uRoomCount;
 uniform vec3  uRoomMin[MAX_ROOMS];
 uniform vec3  uRoomMax[MAX_ROOMS];
@@ -69,6 +69,7 @@ uniform vec3 viewPos;
 uniform DirLight dirLight;
 uniform PointLight lightSources[MAX_POINT_LIGHTS];
 uniform SpotLight spotLight;
+uniform SpotLight sunSpot;   // soleil (LightManager::aimSunSpot)
 uniform Material material;
 
 // function prototypes
@@ -93,6 +94,7 @@ void main()
     
     // phase 3: spot light
     result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
+    result += CalcSpotLight(sunSpot, norm, FragPos, viewDir);
     
     FragColor = vec4(result, 1.0);
 }

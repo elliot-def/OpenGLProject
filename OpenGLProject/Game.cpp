@@ -280,7 +280,6 @@ void Game::loadResources() {
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
     if (!loadingTick()) return;
 
-    m_scene->loadLights();
     m_scene->loadMap(Constants::Resource::MAP_VILLAGE); // carte JSON composee : sol + 3 maisons (includes de house.json)
 
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
@@ -645,6 +644,7 @@ void Game::update() {
 // ---------------------------------------------------------------------------
 void Game::updateWorld(float dt) {
     // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
+    if (m_multiplayerManager) m_scene->setRemoteTargets(m_multiplayerManager->getRemotePositions());
     m_scene->update(dt);
 
     m_soundManager->setListenerTransform(m_camera->getPosition(), m_camera->getFront(), m_camera->getUp());

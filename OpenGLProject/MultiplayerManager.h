@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <glm/glm.hpp>
 
@@ -51,6 +52,10 @@ public:
 
     // Appelé quand le lobby est quitté : libère tous les joueurs distants.
     void onLobbyLeft();
+
+    // Positions monde des joueurs distants actifs (hors pairs silencieux
+    // depuis STALE_TIMEOUT) : cibles possibles de la creature.
+    std::vector<glm::vec3> getRemotePositions() const;
 
     // Définit le modèle local (personnage Megan) dont on lit l'animation
     // courante. Appelé par Game::adoptLoadedEntities() une fois le chargement

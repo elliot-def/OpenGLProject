@@ -39,6 +39,10 @@
     "collision": "mesh"
   },
 
+  "rooms": [
+    { "name": "interieur", "min": [-3.0, 0.0, -5.7], "max": [3.0, 2.5, -0.1] }
+  ],
+
   "tvs": [
     { "name": "tv", "center": [0, 0.9, -5.62], "width": 1.2, "height": 0.7 }
   ],

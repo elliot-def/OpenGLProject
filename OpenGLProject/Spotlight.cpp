@@ -7,7 +7,8 @@
 Spotlight::Spotlight(Renderer* renderer,
 	glm::vec3 ambient, glm::vec3 diffuse, glm::vec3 specular,
 	float constant, float linear, float quadratic,
-	float cutOff, float outerCutOff) : Entity(renderer, nullptr) {
+	float cutOff, float outerCutOff, const char* uniformName) : Entity(renderer, nullptr) {
+    m_uniformName = uniformName;
 
     m_ambient = ambient;
     m_diffuse = diffuse;
@@ -37,16 +38,16 @@ const Spotlight::SpotLocations& Spotlight::ensureLocations(Shader* shader) {
     }
 
     SpotLocations loc;
-    loc.position    = shader->getUniformLocation("spotLight.position");
-    loc.direction   = shader->getUniformLocation("spotLight.direction");
-    loc.ambient     = shader->getUniformLocation("spotLight.ambient");
-    loc.diffuse     = shader->getUniformLocation("spotLight.diffuse");
-    loc.specular    = shader->getUniformLocation("spotLight.specular");
-    loc.constant    = shader->getUniformLocation("spotLight.constant");
-    loc.linear      = shader->getUniformLocation("spotLight.linear");
-    loc.quadratic   = shader->getUniformLocation("spotLight.quadratic");
-    loc.cutOff      = shader->getUniformLocation("spotLight.cutOff");
-    loc.outerCutOff = shader->getUniformLocation("spotLight.outerCutOff");
+    loc.position    = shader->getUniformLocation(m_uniformName + ".position");
+    loc.direction   = shader->getUniformLocation(m_uniformName + ".direction");
+    loc.ambient     = shader->getUniformLocation(m_uniformName + ".ambient");
+    loc.diffuse     = shader->getUniformLocation(m_uniformName + ".diffuse");
+    loc.specular    = shader->getUniformLocation(m_uniformName + ".specular");
+    loc.constant    = shader->getUniformLocation(m_uniformName + ".constant");
+    loc.linear      = shader->getUniformLocation(m_uniformName + ".linear");
+    loc.quadratic   = shader->getUniformLocation(m_uniformName + ".quadratic");
+    loc.cutOff      = shader->getUniformLocation(m_uniformName + ".cutOff");
+    loc.outerCutOff = shader->getUniformLocation(m_uniformName + ".outerCutOff");
 
     return m_lightLocations.emplace(programId, loc).first->second;
 }
@@ -56,7 +57,7 @@ void Spotlight::applyToShader(Shader* shader, bool isEnabled) {
     const SpotLocations& loc = ensureLocations(shader);
 
     shader->setVec3(loc.position, m_position);
-    shader->setVec3(loc.direction, m_direction->getDirectionVector());
+    shader->setVec3(loc.direction, m_hasFixedDir ? m_fixedDir : m_direction->getDirectionVector());
     shader->setFloat(loc.cutOff, m_cutOff);
     shader->setFloat(loc.outerCutOff, m_outerCutOff);
 

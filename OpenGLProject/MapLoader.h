@@ -107,6 +107,40 @@ struct MapSun {
     glm::vec3 specular { 0.6f, 0.6f, 0.6f };
 };
 
+// ── Lumières / pièces / spawns (clés JSON "lights", "rooms", "spawns") ──────
+// Toutes les positions passent par la transform des "includes" : une maison
+// décrite une fois dans house.json porte ses lumières et sa pièce partout.
+// {
+//   "rooms":  [ { "name": "salon", "min": [x,y,z], "max": [x,y,z] } ],
+//   "lights": [ { "position": [x,y,z], "room": "salon",   // room optionnel
+//                 "ambient": [r,g,b], "diffuse": [r,g,b], "specular": [r,g,b],
+//                 "attenuation": [constant, linear, quadratic],
+//                 "color": [r,g,b] } ],                    // couleur du cube visible
+//   "spawns": [ { "name": "creature", "position": [x,y,z] } ]
+// }
+// "room" = nom d'une pièce du MÊME fichier : la lumière n'éclaire alors que
+// cette pièce (cf. LightManager::addRoom/setLightRoom). Sans "room" = libre.
+struct MapRoom {
+    std::string name;        // préfixé par l'include
+    glm::vec3   min{ 0.0f }; // AABB monde
+    glm::vec3   max{ 0.0f };
+};
+
+struct MapLight {
+    glm::vec3   position{ 0.0f };
+    std::string room;        // nom préfixé de la pièce, "" = libre
+    glm::vec3   ambient { 0.1f };
+    glm::vec3   diffuse { 1.0f };
+    glm::vec3   specular{ 1.0f };
+    glm::vec3   attenuation{ 1.0f, 0.09f, 0.032f };
+    glm::vec3   color{ 1.0f };
+};
+
+struct MapSpawn {
+    std::string name;        // préfixé par l'include
+    glm::vec3   position{ 0.0f };
+};
+
 class MapLoader {
 public:
     // collisionManager : requis pour enregistrer les collisions statiques.
@@ -130,6 +164,16 @@ public:
     // Soleil / ambiance de la carte (clé "sun" du JSON) — cf. MapSun.
     const MapSun& getSun() const { return m_sun; }
 
+    const std::vector<MapRoom>&  getRooms()  const { return m_rooms; }
+    const std::vector<MapLight>& getLights() const { return m_lights; }
+
+    // Position du spawn nommé (nom complet, préfixe d'include compris).
+    // Renvoie fallback si absent.
+    glm::vec3 getSpawn(const std::string& name, const glm::vec3& fallback) const {
+        for (const auto& s : m_spawns) if (s.name == name) return s.position;
+        return fallback;
+    }
+
 private:
     // Charge un fichier de carte, récursivement pour les "includes".
     // transform + yawOffset : repère local → monde de la carte appelée ;
@@ -145,4 +189,7 @@ private:
     std::vector<MapScreen>            m_screens;
     std::vector<std::unique_ptr<Door>> m_doors;
     MapSun                            m_sun;
+    std::vector<MapRoom>              m_rooms;
+    std::vector<MapLight>             m_lights;
+    std::vector<MapSpawn>             m_spawns;
 };

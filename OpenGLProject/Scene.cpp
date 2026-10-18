@@ -29,6 +29,7 @@
 
 #include <cmath>
 #include <string>
+#include <unordered_map>
 
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -57,78 +58,6 @@ Scene::Scene(Camera* camera, Player* player, CollisionManager* collisionManager,
 Scene::~Scene() = default;
 
 // ── Construction du monde ────────────────────────────────────────────────────
-
-void Scene::loadLights() {
-    Shader* lightShader = m_shaderManager->getShader("cube/lightsource");
-
-    // Indices des lumières (ordre d'ajout) : conservés pour l'affectation
-    // aux pièces plus bas (setLightRoom).
-    const size_t idxRed = m_lightManager->addPointLight(new LightSource(
-        glm::vec3(1, 0.5, 2), lightShader,
-        glm::vec3(0.2f, 0.0f, 0.0f), glm::vec3(1.0f, 0.0f, 0.0f),
-        glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
-        glm::vec3(5.0f, 0.0f, 0.0f)));
-    (void)idxRed;   // extérieure (devant maison 1) : reste libre
-
-    const size_t idxGreen = m_lightManager->addPointLight(new LightSource(
-        glm::vec3(3, 0.5, -2), lightShader,
-        glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
-        glm::vec3(0.0f, 5.0f, 0.0f)));
-
-    // Lumière blanche dédiée aux murs brique : l' incidence rasant rend le
-    // relief du normal mapping bien visible. Bornée à la pièce maison 1
-    // plus bas (la lumière ne traverse pas les murs).
-    const size_t idxWhite = m_lightManager->addPointLight(new LightSource(
-        glm::vec3(-1.5f, 2.2f, -1.2f), lightShader,
-        glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3(1.0f, 1.0f, 1.0f),
-        glm::vec3(0.5f, 0.5f, 0.5f), 1.0f, 0.09f, 0.032f,
-        glm::vec3(1.0f, 1.0f, 1.0f)));
-
-    // ── Pièces intérieures : les 3 maisons de village.json ───────────────
-    // Bornes = image du volume intérieur de house.json par la transform de
-    // l'include (position + yaw, cf. village.json). Chaque maison a ses
-    // propres lumières bornées à SON intérieur : la lumière ne traverse
-    // pas les murs ET aucune maison n'est laissée dans le noir.
-    const int room1 = m_lightManager->addRoom(glm::vec3(-3.0f,  0.0f, -5.7f),
-                                               glm::vec3( 3.0f,  2.5f, -0.1f));   // maison 1 : (0,0,0), yaw 0
-    const int room2 = m_lightManager->addRoom(glm::vec3(14.1f,  0.0f, -19.0f),
-                                               glm::vec3(19.7f,  2.5f, -13.0f));  // maison 2 : (14,0,-16), yaw -90
-    const int room3 = m_lightManager->addRoom(glm::vec3(-19.7f, 0.0f, -19.0f),
-                                               glm::vec3(-14.1f, 2.5f, -13.0f));  // maison 3 : (-14,0,-16), yaw 90
-
-    m_lightManager->setLightRoom(idxWhite, room1);
-    m_lightManager->setLightRoom(idxGreen, room1);
-
-    // Lumières intérieures des maisons 2 et 3 : images des lumières blanche
-    // et verte de la maison 1 par la transform de l'include.
-    // maison 2 : (x,z) ↦ (-z, x) + (14,0,-16) ; maison 3 : (x,z) ↦ (z, -x) + (-14,0,-16)
-    const size_t idxWhite2 = m_lightManager->addPointLight(new LightSource(
-        glm::vec3(15.2f, 2.2f, -17.5f), lightShader,
-        glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3(1.0f, 1.0f, 1.0f),
-        glm::vec3(0.5f, 0.5f, 0.5f), 1.0f, 0.09f, 0.032f,
-        glm::vec3(1.0f, 1.0f, 1.0f)));
-    const size_t idxGreen2 = m_lightManager->addPointLight(new LightSource(
-        glm::vec3(16.0f, 0.5f, -13.0f), lightShader,
-        glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
-        glm::vec3(0.0f, 5.0f, 0.0f)));
-    const size_t idxWhite3 = m_lightManager->addPointLight(new LightSource(
-        glm::vec3(-15.2f, 2.2f, -14.5f), lightShader,
-        glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3(1.0f, 1.0f, 1.0f),
-        glm::vec3(0.5f, 0.5f, 0.5f), 1.0f, 0.09f, 0.032f,
-        glm::vec3(1.0f, 1.0f, 1.0f)));
-    const size_t idxGreen3 = m_lightManager->addPointLight(new LightSource(
-        glm::vec3(-16.0f, 0.5f, -19.0f), lightShader,
-        glm::vec3(0.0f, 0.2f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f),
-        glm::vec3(1.0f, 1.0f, 1.0f), 1.0f, 0.09f, 0.032f,
-        glm::vec3(0.0f, 5.0f, 0.0f)));
-
-    m_lightManager->setLightRoom(idxWhite2, room2);
-    m_lightManager->setLightRoom(idxGreen2, room2);
-    m_lightManager->setLightRoom(idxWhite3, room3);
-    m_lightManager->setLightRoom(idxGreen3, room3);
-}
 
 // ── Carte (JSON) ────────────────────────────────────────────────────────────
 // Charge la carte (sol, murs, toit à deux pans, portes) depuis un fichier
@@ -163,6 +92,26 @@ void Scene::loadMap(const char* jsonPath) {
     const MapSun& sun = m_map->getSun();
     m_lightManager->setDirLight({ sun.direction, sun.ambient, sun.diffuse, sun.specular });
 
+    // ── Pièces + lumières ponctuelles de la carte ("rooms", "lights") ─────
+    std::unordered_map<std::string, int> roomIndex;
+    for (const auto& room : m_map->getRooms()) {
+        roomIndex[room.name] = m_lightManager->addRoom(room.min, room.max);
+    }
+    Shader* lightShader = m_shaderManager->getShader("cube/lightsource");
+    for (const auto& l : m_map->getLights()) {
+        const size_t idx = m_lightManager->addPointLight(new LightSource(
+            l.position, lightShader, l.ambient, l.diffuse, l.specular,
+            l.attenuation.x, l.attenuation.y, l.attenuation.z, l.color));
+        if (!l.room.empty()) {
+            const auto it = roomIndex.find(l.room);
+            if (it != roomIndex.end()) {
+                m_lightManager->setLightRoom(idx, it->second);
+            } else {
+                LOG_WARN("[Map] Lumiere : piece inconnue \"%s\"", l.room.c_str());
+            }
+        }
+    }
+
     // Soleil VISIBLE : tête de fropy JAUNE dans le ciel, placée à l'opposé du
     // rayonnement (le dir light pointe vers la scène, le soleil est en haut).
     // Shader "door" = couleur unie (uColor) → jaune sans texture, quelle que
@@ -187,9 +136,10 @@ void Scene::loadMap(const char* jsonPath) {
                                                    Constants::Resource::MODEL_FROPY_HEAD,
                                                    m_textureManager);
     m_creatureBodyShader = m_shaderManager->getShader("cube/lightsource");
-    m_creature = std::make_unique<Creature>(m_creatureHead.get(), glm::vec3(10.0f, 0.0f, -8.0f));
-    LOG_INFO("[Creature] spawn (10, 0, -8) : poursuit le joueur (%.1f u/s, s'arrete a 1.2 m)",
-             m_creature->getSpeed());
+    const glm::vec3 creatureSpawn = m_map->getSpawn("creature", glm::vec3(10.0f, 0.0f, -8.0f));
+    m_creature = std::make_unique<Creature>(m_creatureHead.get(), creatureSpawn);
+    LOG_INFO("[Creature] spawn (%.1f, %.1f, %.1f) : poursuit le joueur (%.1f u/s, s'arrete a 1.2 m)",
+             creatureSpawn.x, creatureSpawn.y, creatureSpawn.z, m_creature->getSpeed());
 
     // [DIAG] auto-test de la poursuite (une fois au chargement) : la créature
     // doit se rapprocher du joueur. Repart ensuite de son spawn.
@@ -202,7 +152,7 @@ void Scene::loadMap(const char* jsonPath) {
         const float d1 = glm::length(m_creature->getPosition() - target);
         LOG_INFO("[Creature][DIAG] auto-test poursuite: distance %.2f -> %.2f en 5s (doit decroitre)",
                  d0, d1);
-        m_creature->setPosition(glm::vec3(10.0f, 0.0f, -8.0f));
+        m_creature->setPosition(creatureSpawn);
     }
 
     // Colliders dynamiques des portes : l'AABB suit la rotation via
@@ -232,6 +182,17 @@ void Scene::loadMap(const char* jsonPath) {
 
 // Ouvre/ferme la porte interactive la plus proche parmi celles que le joueur
 // est en train de regarder (portee + cone de regard, voir Door::canInteract).
+// La tete du soleil regarde la creature en permanence et l'eclaire d'un spot.
+void Scene::updateSunGaze() {
+    if (!m_sunHead || !m_creature) return;
+    const glm::vec3 from = m_sunHead->getPosition();
+    const glm::vec3 target = m_creature->getPosition() + glm::vec3(0.0f, 1.0f, 0.0f);   // torse
+    const glm::vec3 d = glm::normalize(target - from);
+    m_sunHead->setDirection(Direction(glm::degrees(std::atan2(d.z, d.x)), 0.0));
+    m_sunHead->setPitchDeg(glm::degrees(std::asin(-d.y)));
+    m_lightManager->aimSunSpot(from, target);
+}
+
 void Scene::tryToggleDoor() {
     if (!m_map) return;
 
@@ -297,7 +258,16 @@ void Scene::update(float deltaTime) {
     // Créature : poursuite du joueur (glissement contre les murs via le
     // sweepSphere du CollisionManager, s'arrête à sa portée).
     if (m_creature) {
-        m_creature->update(deltaTime, m_player->getPosition(), m_collisionManager);
+        // Cible = joueur (local ou distant) le plus proche en XZ.
+        const glm::vec3 cpos = m_creature->getPosition();
+        glm::vec3 target = m_player->getPosition();
+        float best = glm::distance(glm::vec2(cpos.x, cpos.z), glm::vec2(target.x, target.z));
+        for (const glm::vec3& p : m_remoteTargets) {
+            const float d = glm::distance(glm::vec2(cpos.x, cpos.z), glm::vec2(p.x, p.z));
+            if (d < best) { best = d; target = p; }
+        }
+        m_creature->update(deltaTime, target, m_collisionManager);
+        updateSunGaze();
     }
 
     m_camera->update(m_player);

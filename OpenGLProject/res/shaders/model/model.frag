@@ -29,7 +29,7 @@ struct PointLight {
     float linear;
     float quadratic;
 };
-#define MAX_POINT_LIGHTS 10
+#define MAX_POINT_LIGHTS 32
 uniform PointLight lightSources[MAX_POINT_LIGHTS];
 uniform int numberLightSources;
 
@@ -37,7 +37,7 @@ uniform int numberLightSources;
 // uLightRoom[i] (LightManager) et n'éclaire que les fragments de CETTE
 // pièce — la lumière ne traverse pas les murs. -1 = lumière libre.
 // uRoomCount = nombre de pièces valides (0 = aucune).
-#define MAX_ROOMS 4
+#define MAX_ROOMS 8
 uniform int   uRoomCount;
 uniform vec3  uRoomMin[MAX_ROOMS];
 uniform vec3  uRoomMax[MAX_ROOMS];
@@ -62,7 +62,8 @@ struct SpotLight {
     float cutOff;
     float outerCutOff;
 };
-uniform SpotLight spotLight; // nom identique à Spotlight::applyToShader
+uniform SpotLight spotLight;
+uniform SpotLight sunSpot;   // soleil (LightManager::aimSunSpot) // nom identique à Spotlight::applyToShader
 
 // ===== Fonctions =====
 vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 diffuseTex, vec3 specularTex) {
@@ -130,6 +131,7 @@ void main() {
     }
 
     result += calcSpotLight(spotLight, norm, FragPos, viewDir, diffuseTex, specularTex);
+    result += calcSpotLight(sunSpot, norm, FragPos, viewDir, diffuseTex, specularTex);
 
     FragColor = vec4(result, 1.0);
 }

@@ -43,6 +43,9 @@ public:
     // A appeler APRES update() pour ecraser la position par defaut (yeux).
     void setFlashlightPosition(const glm::vec3& position);
 
+    // Spot du soleil (uniform "sunSpot") : de `from` vers `target`.
+    void aimSunSpot(const glm::vec3& from, const glm::vec3& target);
+
     // ── Soleil (lumière directionnelle) ───────────────────────────────
     // L'ambiance est propre à chaque carte : le MapLoader lit la clé "sun"
     // du JSON (direction + couleurs RGB) et la Scene appelle setDirLight.
@@ -84,6 +87,7 @@ private:
     std::vector<LightSource*> m_lightSources;
     std::unordered_map<unsigned int, LightLocations> m_lightLocations; // par id de programme GL
     Spotlight* m_flashlight;
+    Spotlight* m_sunSpot;
     Player* m_player;
     struct DirLight m_dirLight;
 

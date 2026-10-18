@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <string>
 #include <unordered_map>
 #include "Entity.h"
 class Player;
@@ -12,9 +13,14 @@ public:
 	Spotlight(Renderer* renderer,
 		glm::vec3 ambient = glm::vec3(0.1f, 0.1f, 0.1f), glm::vec3 diffuse = glm::vec3(0.8f, 0.8f, 0.8f), glm::vec3 specular = glm::vec3(1.0f, 1.0f, 1.0f),
 		float constant = 1.0f, float linear = 0.09f, float quadratic = 0.032f,
-		float cutOff = glm::cos(glm::radians(12.5f)), float outerCutOff = glm::cos(glm::radians(17.5f)));
+		float cutOff = glm::cos(glm::radians(12.5f)), float outerCutOff = glm::cos(glm::radians(17.5f)),
+		const char* uniformName = "spotLight");
 	void update(glm::vec3 position, Direction* direction);
 	void update(Player* player);
+	// Spot fixe (ex: soleil) : position + direction monde, sans Player.
+	void aim(const glm::vec3& position, const glm::vec3& direction) {
+		m_position = position; m_fixedDir = glm::normalize(direction); m_hasFixedDir = true;
+	}
 	void applyToShader(Shader* shader, bool isEnabled);
 private:
 
@@ -51,6 +57,10 @@ private:
 	float m_quadratic;
 
 	// Constantes
+
+	std::string m_uniformName;
+	glm::vec3 m_fixedDir{ 0.0f, -1.0f, 0.0f };
+	bool m_hasFixedDir = false;
 
 	float m_cutOff;
 	float m_outerCutOff;

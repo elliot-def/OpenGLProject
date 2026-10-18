@@ -13,6 +13,14 @@
     { "name": "village_ground", "center": [0, -0.1, -10], "size": [60, 0.2, 60], "material": "leaf" }
   ],
 
+  "lights": [
+    { "position": [1, 0.5, 2], "ambient": [0.2, 0, 0], "diffuse": [1, 0, 0], "color": [5, 0, 0] }
+  ],
+
+  "spawns": [
+    { "name": "creature", "position": [10, 0, -8] }
+  ],
+
   "includes": [
     { "name": "maison1", "path": "house.json", "position": [0, 0, 0],     "yaw": 0 },
     { "name": "maison2", "path": "house.json", "position": [14, 0, -16], "yaw": -90 },

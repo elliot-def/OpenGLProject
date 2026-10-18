@@ -1,6 +1,7 @@
 #include "MapLoader.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -258,12 +259,18 @@ bool MapLoader::load(const std::string& jsonPath) {
     m_parts.clear();
     m_screens.clear();
     m_doors.clear();
+    m_rooms.clear();
+    m_lights.clear();
+    m_spawns.clear();
 
     std::vector<std::string> stack;
     if (!loadMapFile(jsonPath, glm::mat4(1.0f), 0.0f, 0, "", stack)) {
         m_parts.clear();
         m_screens.clear();
         m_doors.clear();
+        m_rooms.clear();
+        m_lights.clear();
+        m_spawns.clear();
         return false;
     }
 
@@ -459,6 +466,54 @@ bool MapLoader::loadMapFile(const std::string& jsonPath, const glm::mat4& transf
                     door.value("width", Constants::Door::DEFAULT_WIDTH),
                     door.value("height", Constants::Door::DEFAULT_HEIGHT),
                     door.value("thickness", Constants::Door::DEFAULT_THICKNESS)));
+            }
+        }
+
+        // 5. Pièces : AABB locale → AABB monde (8 coins transformés, valable
+        //    pour les yaw multiples de 90°).
+        if (data.contains("rooms") && data["rooms"].is_array()) {
+            for (const auto& r : data["rooms"]) {
+                const glm::vec3 lo = readVec3(r.value("min", json()), glm::vec3(0.0f));
+                const glm::vec3 hi = readVec3(r.value("max", json()), glm::vec3(0.0f));
+                MapRoom room;
+                room.name = prefix + r.value("name", "room");
+                room.min  = glm::vec3(FLT_MAX);
+                room.max  = glm::vec3(-FLT_MAX);
+                for (int i = 0; i < 8; ++i) {
+                    const glm::vec3 corner(i & 1 ? hi.x : lo.x, i & 2 ? hi.y : lo.y, i & 4 ? hi.z : lo.z);
+                    const glm::vec3 w = glm::vec3(transform * glm::vec4(corner, 1.0f));
+                    room.min = glm::min(room.min, w);
+                    room.max = glm::max(room.max, w);
+                }
+                m_rooms.push_back(std::move(room));
+            }
+        }
+
+        // 6. Lumières ponctuelles
+        if (data.contains("lights") && data["lights"].is_array()) {
+            for (const auto& l : data["lights"]) {
+                MapLight light;
+                light.position = glm::vec3(transform * glm::vec4(
+                    readVec3(l.value("position", json()), glm::vec3(0.0f)), 1.0f));
+                const std::string room = l.value("room", "");
+                if (!room.empty()) light.room = prefix + room;
+                light.ambient     = readVec3(l.value("ambient", json()),     light.ambient);
+                light.diffuse     = readVec3(l.value("diffuse", json()),     light.diffuse);
+                light.specular    = readVec3(l.value("specular", json()),    light.specular);
+                light.attenuation = readVec3(l.value("attenuation", json()), light.attenuation);
+                light.color       = readVec3(l.value("color", json()),       light.diffuse);
+                m_lights.push_back(std::move(light));
+            }
+        }
+
+        // 7. Points d'apparition nommés
+        if (data.contains("spawns") && data["spawns"].is_array()) {
+            for (const auto& s : data["spawns"]) {
+                MapSpawn spawn;
+                spawn.name = prefix + s.value("name", "spawn");
+                spawn.position = glm::vec3(transform * glm::vec4(
+                    readVec3(s.value("position", json()), glm::vec3(0.0f)), 1.0f));
+                m_spawns.push_back(std::move(spawn));
             }
         }
     } catch (const json::exception& e) {

@@ -1,6 +1,8 @@
 #include "Creature.h"
 
+#include <algorithm>
 #include <cmath>
+#include <queue>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -25,17 +27,150 @@ void Creature::setPosition(const glm::vec3& position) {
     syncHead();
 }
 
+// Sphere du corps remontee de kStepHeight, comme pour le deplacement.
+bool Creature::isFree(const glm::vec3& p, const CollisionManager* cm) const {
+    return !cm->testSphereAll(glm::vec3(p.x, kBodyRadius + kStepHeight, p.z), kBodyRadius).hit;
+}
+
+bool Creature::lineClear(const glm::vec3& a, const glm::vec3& b, const CollisionManager* cm) const {
+    const float len = glm::length(glm::vec2(b.x - a.x, b.z - a.z));
+    const int n = std::max(1, (int)std::ceil(len / kCellSize));
+    for (int i = 1; i <= n; ++i) {
+        if (!isFree(glm::mix(a, b, (float)i / n), cm)) return false;
+    }
+    return true;
+}
+
+bool Creature::findPath(const glm::vec3& goal, const CollisionManager* cm) {
+    const glm::vec3 start = m_position;
+    const float minX = std::min(start.x, goal.x) - kPathMargin;
+    const float minZ = std::min(start.z, goal.z) - kPathMargin;
+    const int W = std::min(400, (int)std::ceil((std::max(start.x, goal.x) + kPathMargin - minX) / kCellSize));
+    const int H = std::min(400, (int)std::ceil((std::max(start.z, goal.z) + kPathMargin - minZ) / kCellSize));
+
+    auto toCell = [&](const glm::vec3& p, int& cx, int& cz) {
+        cx = std::clamp((int)((p.x - minX) / kCellSize), 0, W - 1);
+        cz = std::clamp((int)((p.z - minZ) / kCellSize), 0, H - 1);
+    };
+    auto toWorld = [&](int cx, int cz) {
+        return glm::vec3(minX + (cx + 0.5f) * kCellSize, 0.0f, minZ + (cz + 0.5f) * kCellSize);
+    };
+    std::vector<uint8_t> walk((size_t)W * H, 2);   // 2 = non teste, 1 = libre, 0 = bloque
+    auto free = [&](int cx, int cz) {
+        if (cx < 0 || cz < 0 || cx >= W || cz >= H) return false;
+        uint8_t& w = walk[(size_t)cz * W + cx];
+        if (w == 2) w = isFree(toWorld(cx, cz), cm) ? 1 : 0;
+        return w == 1;
+    };
+
+    int sx, sz, gx, gz;
+    toCell(start, sx, sz);
+    toCell(goal, gx, gz);
+    // Cible dans un mur (joueur colle) : cellule libre la plus proche (<= 1 m).
+    if (!free(gx, gz)) {
+        int best = -1; int bestD = 1 << 30;
+        const int R = (int)(1.0f / kCellSize);
+        for (int dz = -R; dz <= R; ++dz)
+            for (int dx = -R; dx <= R; ++dx)
+                if (dx * dx + dz * dz < bestD && free(gx + dx, gz + dz)) {
+                    bestD = dx * dx + dz * dz; best = (gz + dz) * W + gx + dx;
+                }
+        if (best < 0) return false;
+        gx = best % W; gz = best / W;
+    }
+
+    const size_t N = (size_t)W * H;
+    std::vector<float> g(N, 1e30f);
+    std::vector<int>   parent(N, -1);
+    using QE = std::pair<float, int>;
+    std::priority_queue<QE, std::vector<QE>, std::greater<QE>> open;
+    auto heur = [&](int cx, int cz) { return std::hypot((float)(cx - gx), (float)(cz - gz)); };
+
+    const int startIdx = sz * W + sx;
+    const int goalIdx = gz * W + gx;
+    g[startIdx] = 0.0f;
+    open.push({ heur(sx, sz), startIdx });
+    bool found = false;
+    for (int expanded = 0; !open.empty() && expanded < kMaxExpand; ++expanded) {
+        const int cur = open.top().second;
+        const float curF = open.top().first;
+        open.pop();
+        const int cx = cur % W, cz = cur / W;
+        if (curF > g[cur] + heur(cx, cz) + 1e-3f) continue;   // entree perimee
+        if (cur == goalIdx) { found = true; break; }
+        for (int dz = -1; dz <= 1; ++dz) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                if (!dx && !dz) continue;
+                const int nx = cx + dx, nz = cz + dz;
+                if (!free(nx, nz)) continue;
+                // Pas de coupe de coin en diagonale.
+                if (dx && dz && (!free(cx + dx, cz) || !free(cx, cz + dz))) continue;
+                const int ni = nz * W + nx;
+                const float ng = g[cur] + (dx && dz ? 1.4142f : 1.0f);
+                if (ng < g[ni]) {
+                    g[ni] = ng; parent[ni] = cur;
+                    open.push({ ng + heur(nx, nz), ni });
+                }
+            }
+        }
+    }
+    if (!found) return false;
+
+    std::vector<glm::vec3> raw;
+    for (int i = goalIdx; i != -1 && i != startIdx; i = parent[i]) raw.push_back(toWorld(i % W, i / W));
+    std::reverse(raw.begin(), raw.end());
+    if (raw.empty()) return false;
+
+    // Lissage : de chaque point, saute au waypoint le plus lointain en vue directe.
+    m_path.clear();
+    glm::vec3 from = start;
+    for (size_t i = 0; i < raw.size();) {
+        size_t j = raw.size() - 1;
+        while (j > i && !lineClear(from, raw[j], cm)) --j;
+        m_path.push_back(raw[j]);
+        from = raw[j];
+        i = j + 1;
+    }
+    m_pathIdx = 0;
+    return true;
+}
+
 void Creature::update(float deltaTime, const glm::vec3& playerPos,
                       CollisionManager* collisionManager) {
     if (!(deltaTime > 0.0f)) deltaTime = 0.0f;
 
-    glm::vec3 to = playerPos - m_position;
-    to.y = 0.0f;
-    const float dist = glm::length(to);
+    glm::vec3 toPlayer = playerPos - m_position;
+    toPlayer.y = 0.0f;
+    const float dist = glm::length(toPlayer);
     m_moving = false;
 
-    if (dist > 0.001f) {
-        const glm::vec3 dir = to / dist;
+    // Cible de marche : joueur en vue directe, sinon prochain waypoint A*
+    // (contourne maisons et portes fermees). Sans collisionManager : joueur.
+    glm::vec3 to = toPlayer;
+    if (collisionManager && dist > kStopDistance) {
+        m_repathTimer -= deltaTime;
+        if (m_repathTimer <= 0.0f) {
+            m_repathTimer = kRepathInterval;
+            if (lineClear(m_position, playerPos, collisionManager) ||
+                !findPath(playerPos, collisionManager)) {
+                m_path.assign(1, playerPos);   // degage, ou repli (pas de chemin)
+                m_pathIdx = 0;
+            }
+        }
+        while (m_pathIdx + 1 < m_path.size() &&
+               glm::length(glm::vec2(m_path[m_pathIdx].x - m_position.x,
+                                     m_path[m_pathIdx].z - m_position.z)) < 0.3f) {
+            ++m_pathIdx;
+        }
+        if (m_pathIdx < m_path.size()) {
+            to = m_path[m_pathIdx] - m_position;
+            to.y = 0.0f;
+        }
+    }
+    const float stepDist = glm::length(to);
+
+    if (stepDist > 0.001f) {
+        const glm::vec3 dir = to / stepDist;
 
         // Cap : lissage angulaire (chemin le plus court) vers le joueur.
         const float targetAngle = std::atan2(dir.x, dir.z);

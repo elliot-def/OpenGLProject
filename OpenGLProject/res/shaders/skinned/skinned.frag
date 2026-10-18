@@ -35,7 +35,7 @@ struct SpotLight {
     float outerCutOff;
 };
 
-#define MAX_LIGHTS 10
+#define MAX_LIGHTS 32
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -50,6 +50,7 @@ uniform sampler2D texture_specular;
 uniform vec3 viewPos;
 uniform DirLight dirLight;
 uniform SpotLight spotLight;
+uniform SpotLight sunSpot;   // soleil (LightManager::aimSunSpot)
 uniform int numberLightSources;
 uniform PointLight lightSources[MAX_LIGHTS];
 
@@ -57,7 +58,7 @@ uniform PointLight lightSources[MAX_LIGHTS];
 // uLightRoom[i] (LightManager) et n'éclaire que les fragments de CETTE
 // pièce — la lumière ne traverse pas les murs. -1 = lumière libre.
 // uRoomCount = nombre de pièces valides (0 = aucune).
-#define MAX_ROOMS 4
+#define MAX_ROOMS 8
 uniform int   uRoomCount;
 uniform vec3  uRoomMin[MAX_ROOMS];
 uniform vec3  uRoomMax[MAX_ROOMS];
@@ -93,6 +94,7 @@ void main()
         result += CalcPointLight(lightSources[i], norm, FragPos, viewDir, diffTex, specTex);
     }
     result += CalcSpotLight(spotLight, norm, FragPos, viewDir, diffTex, specTex);
+    result += CalcSpotLight(sunSpot, norm, FragPos, viewDir, diffTex, specTex);
 
     // Alpha fade progressif base sur la distance a la camera.
     // Les fragments proches (epaules qui traversent la camera en strafe)
