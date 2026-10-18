@@ -80,6 +80,8 @@ void Scene::loadMap(const char* jsonPath) {
     // TextureManager ne parcourt que les .png (dossier/fichier.png).
     m_wallDiffuse = std::make_unique<Texture>("./res/textures/brickwall/brickwall.jpg",
         Constants::Texture::FIRST_TEXTURE_ID + 100, Constants::Material::STONE, false);
+    m_treeTexture = std::make_unique<Texture>("./res/models/trees/tree_palette.png",
+        Constants::Texture::FIRST_TEXTURE_ID + 102, Constants::Material::STONE, false);
     m_wallNormal  = std::make_unique<Texture>("./res/textures/brickwall/brickwall_normal.jpg",
         Constants::Texture::FIRST_TEXTURE_ID + 101, Constants::Material::STONE, false);
 
@@ -468,6 +470,7 @@ void Scene::draw() {
             { MapMaterial::Leaf,      m_leafTexture      },
             { MapMaterial::GreyRoof,  m_greyRoofTexture  },
             { MapMaterial::Riet,      m_rietTexture      },
+            { MapMaterial::Tree,      m_treeTexture.get() },
         };
         for (const auto& entry : texturedMaterials) {
             if (!entry.texture) continue;

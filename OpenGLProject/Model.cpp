@@ -222,6 +222,12 @@ void Model::loadExternalAnimations(const std::vector<std::string>& paths) {
         auto importer = std::make_unique<Assimp::Importer>();
         // On ne veut QUE les animations, pas la geometrie. Sans flags,
         // Assimp ne traite pas les meshes/textures → gain memoire/perf.
+        // Canaux NON decomposes (un canal par bone, pre-rotation incluse) :
+        // l'Animator (computeBoneTransform) suppose ce format. Sans cette
+        // propriete, la build Debug d'Assimp decompose en "..._$AssimpFbx$_
+        // Rotation" et la pose est cassee (pieds au-dessus des hanches),
+        // alors que la build Release donne deja des canaux non decomposes.
+        importer->SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
         const aiScene* extScene = importer->ReadFile(path, 0);
         if (!extScene) {
             logErr() << "[Model] Echec chargement animation externe: " << path

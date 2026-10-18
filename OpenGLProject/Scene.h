@@ -110,6 +110,7 @@ private:
     // severallights (LightManager::applyToShader).
     Shader*                  m_wallShader   = nullptr;
     std::unique_ptr<Texture> m_wallDiffuse;   // brickwall.jpg
+    std::unique_ptr<Texture> m_treeTexture;   // tree_palette.png (tronc + feuillage)
     std::unique_ptr<Texture> m_wallNormal;    // brickwall_normal.jpg
     // "container" / "parquet" / "leaf" / "grey_roof" / "riet" (caisses,
     // sol parquet, terre extérieure, toit, tapis d'entrée) : shader

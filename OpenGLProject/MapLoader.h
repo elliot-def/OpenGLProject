@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -24,7 +25,8 @@ class CollisionManager;
 //              "thickness": t, "material": "...", "gableMaterial": "..." },
 //   "tvs":   [ { "name": "...", "center": [x,y,z], "rotation": [rx,ry,rz],
 //                "width": w, "height": h } ],
-//   "doors": [ { "name": "...", "hinge": [x,y,z], "yaw": deg } ]
+//   "doors": [ { "name": "...", "hinge": [x,y,z], "yaw": deg } ],
+//   "trees": [ { "type": 0..5, "position": [x,y,z], "yaw": deg, "scale": s } ]
 // }
 //  - "includes": instancie d'autres cartes (factorisation : ex. N fois la même
 //    maison). "path" tel quel ou relatif au fichier appelant ; chaque
@@ -53,6 +55,10 @@ class CollisionManager;
 //  - "doors"  : portes interactives (classe Door) — largeur/hauteur/épaisseur
 //    surchargables par "width"/"height"/"thickness" (défauts constants/door.h).
 //
+//  - "trees"  : arbres (res/models/trees/tree_<type>.obj, base en (0,0,0)).
+//    Collision "mesh" systématique : la hitbox suit les triangles réels
+//    (tronc ET feuillage). Le mesh d'un type est chargé une seule fois.
+//
 // Le loader possède les meshs et les portes qu'il crée ; la Scene n'en garde
 // que des vues non-propriétaires (même convention que ModelLoader). Les
 // collisions statiques sont enregistrées dans le CollisionManager et le BVH
@@ -67,6 +73,7 @@ enum class MapMaterial {
     Leaf,       // "leaf"      : terre/feuilles, sol extérieur (cube/severallights)
     GreyRoof,   // "grey_roof" : toit gris (shader cube/severallights)
     Riet,       // "riet"      : tapis d'entrée (shader cube/severallights)
+    Tree,       // arbres ("trees") : palette tree_palette.png (cube/severallights)
 };
 
 // Une partie statique de la carte : pavé droit ou toit à deux pans.
@@ -76,7 +83,7 @@ struct MapPart {
     glm::mat4             model{ 1.0f };   // translate · rotate (pas d'échelle
                                            // : les meshs sont à taille réelle)
     bool                  triangleCollision = false;  // "collision": "mesh"
-    std::unique_ptr<Mesh> mesh;
+    std::shared_ptr<Mesh> mesh;   // partagé entre les instances d'un même arbre
 };
 
 // Placement d'un écran de télévision (clé JSON "tvs") : quad centré dans le
@@ -184,6 +191,7 @@ private:
                      std::vector<std::string>& stack);
 
     CollisionManager* m_collisionManager;
+    std::map<int, std::shared_ptr<Mesh>> m_treeMeshes;   // cache par "type"
 
     std::vector<MapPart>              m_parts;
     std::vector<MapScreen>            m_screens;

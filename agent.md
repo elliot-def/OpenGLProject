@@ -244,6 +244,12 @@ les transparents sont triés par distance caméra puis dessinés avec `glDepthMa
 - **Emojis/symboles décoratifs** interdits dans le code ; commentaires box-drawing `─` OK.
 - **Encodage des sorties console & textes in-game** : aucun accent ni caractère hors ASCII de base (0x20–0x7E) dans les `printf`, `std::cout`, `std::cerr`, `renderText()`, et toute chaîne affichée à l'écran. La console Windows n'interprète pas l'UTF-8 et affiche `�` pour `é`, `è`, `à`, `ù`, `ç`, `ê`, etc. Utiliser les équivalents sans accent : `e` pour `é`/`è`/`ê`, `a` pour `à`/`â`, `c` pour `ç`, `u` pour `ù`/`û`. Exemples : `"Initialisation"` (pas `"Initialisation"`), `"Deja pret"` (pas `"Déjà prêt"`), `"Arrete"` (pas `"Arrêté"`). Les commentaires restent en français avec accents, ils ne sont pas affichés à l'utilisateur.
 
+### Nouvelles features et ressources (git)
+- Toute nouvelle feature doit ajouter ses fichiers a git **dans la meme session** : `git add <fichiers>` (sources, shaders, cartes JSON, textures, modeles). Ne pas laisser un fichier necessaire en "untracked" : le jeu marche chez le dev mais pas chez les autres joueurs (ecran noir, modele invisible).
+- Piege : `.gitignore` ignore **tous les `*.obj`** (sauf exceptions `!OpenGLProject/res/models/...`). Pour un nouveau modele `.obj`, ajouter une exception dans `.gitignore` puis `git add`, et verifier avec `git status --short` (aucun `??` sur une ressource utilisee) ou `git check-ignore -v <fichier>`.
+- Dependances d'un modele (`.mtl`, textures `.png`/`.jpg`) : verifier aussi qu'elles sont suivies (`git ls-files <dossier>`).
+- Ne pas committer sans demande ; `git add` suffit.
+
 ### GPU / OpenGL
 - `glad.c` est l'unique `.c` du projet (loader auto-généré).
 - Chaque `Shader*` doit être relâché par son propriétaire. Utiliser `std::unique_ptr<Shader>` au-dessus de `ShaderManager`.
@@ -256,6 +262,8 @@ les transparents sont triés par distance caméra puis dessinés avec `glDepthMa
 
 ### Animations squelettiques
 - Ne jamais modifier la gestion du wrapper `_$AssimpFbx$_PreRotation` (`Animator::computeBoneTransform`) ni `repairRotationKeys` "a l'intuition" : les symptomes jambes en l'air / bras a 90 deg vers l'avant viennent d'une pre-rotation appliquee en double. Verifier avec le log `[DIAG POSE]` au lancement (lancer depuis `OpenGLProject/`) : pieds y~10, hanches y~100, mains y~90. Si ce n'est pas le cas, annuler la modif.
+
+- **Debug vs Release (Assimp)** : les deux configs lient des builds d'Assimp differentes (`assimp-vc143-mtd.lib` / `assimp-vc143-mt.lib`). La build Debug decomposait les canaux FBX en `..._$AssimpFbx$_Rotation` (pieds y=179 au lieu de 10, mains a 90 deg), pas la Release. `Model::loadExternalAnimations` force donc `AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS=false` pour obtenir des canaux non decomposes dans les deux configs. Ne pas retirer cette ligne. Toujours verifier `[DIAG POSE]` en Debug ET en Release.
 
 ### Physique / collisions
 - `radius` est en mètres, pas en pixels.

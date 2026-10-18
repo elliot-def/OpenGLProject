@@ -5,6 +5,8 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
+#include <cstdio>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -244,6 +246,46 @@ static std::unique_ptr<Mesh> buildGablesMesh(const glm::vec2& span, float height
         (unsigned int)VertexAttribute::TEXCOORD);
 }
 
+// Charge un OBJ simple (v/vt/vn, faces v/vt/vn triangulées) en Mesh.
+// nullptr si le fichier est absent ou vide.
+static std::shared_ptr<Mesh> loadObjMesh(const std::string& path) {
+    std::ifstream in(path);
+    if (!in.is_open()) return nullptr;
+
+    std::vector<glm::vec3> pos, nor;
+    std::vector<glm::vec2> uv;
+    std::vector<Vertex> vertices;
+    std::vector<unsigned int> indices;
+    std::string line;
+    while (std::getline(in, line)) {
+        std::istringstream ss(line);
+        std::string tag;
+        ss >> tag;
+        if (tag == "v")       { glm::vec3 p; ss >> p.x >> p.y >> p.z; pos.push_back(p); }
+        else if (tag == "vn") { glm::vec3 n; ss >> n.x >> n.y >> n.z; nor.push_back(n); }
+        else if (tag == "vt") { glm::vec2 t; ss >> t.x >> t.y; uv.push_back(t); }
+        else if (tag == "f") {
+            std::string tok;
+            while (ss >> tok) {
+                int vi = 0, ti = 0, ni = 0;
+                std::sscanf(tok.c_str(), "%d/%d/%d", &vi, &ti, &ni);
+                if (vi < 1 || ti < 1 || ni < 1 || vi > (int)pos.size() ||
+                    ti > (int)uv.size() || ni > (int)nor.size()) continue;
+                const glm::vec3& p = pos[vi - 1];
+                const glm::vec3& n = nor[ni - 1];
+                const glm::vec2& t = uv[ti - 1];
+                indices.push_back((unsigned int)vertices.size());
+                vertices.push_back(Vertex(p.x, p.y, p.z, n.x, n.y, n.z, t.x, t.y));
+            }
+        }
+    }
+    if (vertices.empty()) return nullptr;
+    return std::make_shared<Mesh>(vertices, indices,
+        (unsigned int)VertexAttribute::POSITION |
+        (unsigned int)VertexAttribute::NORMAL |
+        (unsigned int)VertexAttribute::TEXCOORD);
+}
+
 // ── MapLoader ────────────────────────────────────────────────────────────────
 
 // Profondeur maximale d'includes imbriqués (protection anti-boucle).
@@ -466,6 +508,35 @@ bool MapLoader::loadMapFile(const std::string& jsonPath, const glm::mat4& transf
                     door.value("width", Constants::Door::DEFAULT_WIDTH),
                     door.value("height", Constants::Door::DEFAULT_HEIGHT),
                     door.value("thickness", Constants::Door::DEFAULT_THICKNESS)));
+            }
+        }
+
+        // 8. Arbres : mesh OBJ partagé par type, collision triangles (hitbox fidèle).
+        if (data.contains("trees") && data["trees"].is_array()) {
+            for (const auto& tr : data["trees"]) {
+                const int type = tr.value("type", 0);
+                auto it = m_treeMeshes.find(type);
+                if (it == m_treeMeshes.end()) {
+                    auto mesh = loadObjMesh("./res/models/trees/tree_" + std::to_string(type) + ".obj");
+                    if (!mesh) {
+                        LOG_WARN("[Map] Arbre type %d introuvable, ignore", type);
+                        continue;
+                    }
+                    it = m_treeMeshes.emplace(type, std::move(mesh)).first;
+                }
+                const float s = tr.value("scale", 1.0f);
+                MapPart part;
+                part.name     = prefix + "tree" + std::to_string(type);
+                part.material = MapMaterial::Tree;
+                part.triangleCollision = true;
+                part.model    = transform
+                              * glm::translate(glm::mat4(1.0f),
+                                   readVec3(tr.value("position", json()), glm::vec3(0.0f)))
+                              * glm::rotate(glm::mat4(1.0f), glm::radians(tr.value("yaw", 0.0f)),
+                                            glm::vec3(0.0f, 1.0f, 0.0f))
+                              * glm::scale(glm::mat4(1.0f), glm::vec3(s));
+                part.mesh     = it->second;
+                m_parts.push_back(std::move(part));
             }
         }
 
