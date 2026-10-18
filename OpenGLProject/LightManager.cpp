@@ -10,11 +10,11 @@
 LightManager::LightManager(Renderer* renderer, Player* player) {
     m_flashlight = new Spotlight(renderer);
     m_player = player;
-    // Soleil : cone etroit (6 deg / 10 deg), forte intensite chaude, portee ~100 m.
+    // Soleil : cone tres etroit (3 deg / 5 deg), forte intensite chaude, portee ~100 m.
     m_sunSpot = new Spotlight(renderer,
         glm::vec3(0.0f), glm::vec3(6.0f, 5.2f, 2.8f), glm::vec3(3.0f),
         1.0f, 0.007f, 0.0002f,
-        glm::cos(glm::radians(6.0f)), glm::cos(glm::radians(10.0f)), "sunSpot");
+        glm::cos(glm::radians(3.0f)), glm::cos(glm::radians(5.0f)), "sunSpot");
 
     // DirLight (soleil) : défauts LUMINEUX (cf. demande « luminosité
     // directionnelle du soleil augmentée »). Surchargés par la carte via

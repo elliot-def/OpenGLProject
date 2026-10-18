@@ -154,6 +154,13 @@ public:
     void setRemoteTargets(std::vector<glm::vec3> targets) { m_remoteTargets = std::move(targets); }
 private:
     void updateSunGaze();
+    void updateSunGlare(float deltaTime);
+    void drawSunGlare();
+    Shader* m_glareShader = nullptr;   // "glare" : eblouissement plein ecran
+    unsigned int m_glareVao = 0;       // VAO vide (quad genere par gl_VertexID)
+    float m_glare = 0.0f;              // halo + rayons, lisse 0..1
+    float m_dazzle = 0.0f;             // voile d eblouissement, lisse 0..1
+    float m_glareTime = 0.0f;
     std::vector<glm::vec3> m_remoteTargets;   // joueurs distants (multijoueur)
 
     // Etat no-clip de la frame precedente : sert a detecter la TRANSITION

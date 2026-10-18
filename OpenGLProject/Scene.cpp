@@ -53,6 +53,8 @@ Scene::Scene(Camera* camera, Player* player, CollisionManager* collisionManager,
     // (loadResources, thread principal), donc la création du VAO/VBO/EBO du
     // cube unitaire est sûre.
     m_cubeRenderer = std::make_unique<CubeRenderer>();
+    m_glareShader = m_shaderManager->getShader("glare");
+    glGenVertexArrays(1, &m_glareVao);
 }
 
 Scene::~Scene() = default;
@@ -123,7 +125,7 @@ void Scene::loadMap(const char* jsonPath) {
     m_sunHead = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
                                               Constants::Resource::MODEL_FROPY_HEAD,
                                               m_textureManager);
-    m_sunHead->setScale(12.0f);                              // tête géante, vue de loin
+    m_sunHead->setScale(24.0f);                              // tête géante, vue de loin
     m_sunHead->setPosition(mapCenter - sunDir * 60.0f);
     // Face (local +Z) tournée vers la scène : yaw = atan2(fz, fx) en degrés.
     m_sunHead->setDirection(Direction(glm::degrees(std::atan2(-sunDir.z, -sunDir.x)), 0.0));
@@ -191,6 +193,57 @@ void Scene::updateSunGaze() {
     m_sunHead->setDirection(Direction(glm::degrees(std::atan2(d.z, d.x)), 0.0));
     m_sunHead->setPitchDeg(glm::degrees(std::asin(-d.y)));
     m_lightManager->aimSunSpot(from, target);
+}
+
+// Eblouissement : intensite selon l'angle entre le regard et le soleil, annulee
+// si un obstacle (toit, mur) coupe la ligne camera -> soleil. Lissee pour
+// eviter les sauts quand on passe une porte ou qu'on tourne la tete.
+void Scene::updateSunGlare(float deltaTime) {
+    m_glareTime += deltaTime;
+    float target = 0.0f, targetDazzle = 0.0f;
+    if (m_sunHead) {
+        const glm::vec3 cam = m_camera->getPosition();
+        const glm::vec3 toSun = m_sunHead->getPosition() - cam;
+        const float dist = glm::length(toSun);
+        const float facing = dist > 1e-3f ? glm::dot(m_camera->getFront(), toSun / dist) : 0.0f;
+        const float wide = glm::smoothstep(std::cos(glm::radians(55.0f)), std::cos(glm::radians(6.0f)), facing);
+        if (wide > 0.0f) {
+            bool visible = true;
+            const glm::vec3 dir = toSun / dist;
+            for (float t = 0.5f; t < dist - 10.0f && visible; t += 1.5f) {   // -10 : on s'arrete avant la tete (pas de collider)
+                visible = !m_collisionManager->testSphereAll(cam + dir * t, 0.15f).hit;
+            }
+            if (visible) {
+                target = wide;
+                targetDazzle = glm::smoothstep(std::cos(glm::radians(22.0f)), std::cos(glm::radians(2.0f)), facing);
+            }
+        }
+    }
+    const float k = std::min(1.0f, deltaTime * 6.0f);
+    m_glare  += (target - m_glare) * k;
+    m_dazzle += (targetDazzle - m_dazzle) * k;
+}
+
+void Scene::drawSunGlare() {
+    if (!m_glareShader || !m_sunHead || m_glare < 0.003f) return;
+    const glm::mat4 proj = m_doorShader->getProjection();
+    const glm::vec4 clip = proj * m_camera->getViewMatrix() * glm::vec4(m_sunHead->getPosition(), 1.0f);
+    if (clip.w <= 0.01f) return;   // derriere la camera
+
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);   // melange "screen" : ne sature jamais au-dela de 1
+    m_glareShader->use();
+    m_glareShader->setVec2("sunNdc", glm::vec2(clip.x / clip.w, clip.y / clip.w));
+    m_glareShader->setFloat("aspect", proj[1][1] / proj[0][0]);
+    m_glareShader->setFloat("intensity", m_glare);
+    m_glareShader->setFloat("dazzle", m_dazzle);
+    m_glareShader->setFloat("time", m_glareTime);
+    glBindVertexArray(m_glareVao);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
 }
 
 void Scene::tryToggleDoor() {
@@ -269,6 +322,7 @@ void Scene::update(float deltaTime) {
         m_creature->update(deltaTime, target, m_collisionManager);
         updateSunGaze();
     }
+    updateSunGlare(deltaTime);
 
     m_camera->update(m_player);
     m_lightManager->update();
@@ -465,4 +519,6 @@ void Scene::draw() {
     // du joueur — ni corps ni bras). Il n'apparaît qu'en vue 3ème personne
     // (cf. bloc ci-dessus) ; les joueurs distants restent visibles dans les
     // deux vues (MultiplayerManager).
+
+    drawSunGlare();
 }
