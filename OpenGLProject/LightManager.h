@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 #include <unordered_map>
 #include <glm/glm.hpp>
@@ -26,6 +27,8 @@ public:
 
     // Retourne l'index de la lumière (attendu par setLightRoom).
     size_t addPointLight(LightSource* light);
+    // Rechargement de carte : supprime les lumieres ponctuelles et les pieces.
+    void clearMapLights();
     void applyToShader(Shader* shader);
     void update();
 
@@ -43,14 +46,24 @@ public:
     // A appeler APRES update() pour ecraser la position par defaut (yeux).
     void setFlashlightPosition(const glm::vec3& position);
 
+    // Couleur/intensite de la spot du soleil (jaune chaud le jour, blanc-gris la nuit).
+    void setSunSpotColor(const glm::vec3& diffuse);
+
     // Spot du soleil (uniform "sunSpot") : de `from` vers `target`.
     void aimSunSpot(const glm::vec3& from, const glm::vec3& target);
 
     // ── Soleil (lumière directionnelle) ───────────────────────────────
     // L'ambiance est propre à chaque carte : le MapLoader lit la clé "sun"
     // du JSON (direction + couleurs RGB) et la Scene appelle setDirLight.
-    void setDirLight(const DirLight& light) { m_dirLight = light; }
+    void setDirLight(const DirLight& light) { m_dirLight = light; ++m_frame; }
     const DirLight& getDirLight() const { return m_dirLight; }
+
+    // ── Brouillard (exponentiel au carre) ─────────────────────────────
+    // Applique par tous les shaders lumineux (uniforms fogColor/fogDensity).
+    // getFogVisibility() = distance ou le brouillard atteint ~95 % : sert
+    // aussi de portee de vue a la creature.
+    void setFog(const glm::vec3& color, float density) { m_fogColor = color; m_fogDensity = density; ++m_frame; }
+    float getFogVisibility() const { return m_fogDensity > 1e-5f ? 1.7321f / m_fogDensity : 1e9f; }
 
     // Accès (lecture) aux sources de lumière : utilisé par Scene pour le rendu
     // instancié des cubes de lumière.
@@ -76,6 +89,8 @@ private:
         int dirAmbient = -1;
         int dirDiffuse = -1;
         int dirSpecular = -1;
+        int fogColor = -1;
+        int fogDensity = -1;
         int roomCount = -1;
         int roomMin[Constants::Shader::MAX_ROOMS] = {};
         int roomMax[Constants::Shader::MAX_ROOMS] = {};
@@ -84,12 +99,19 @@ private:
     const LightLocations& ensureLightLocations(Shader* shader);
 
     static constexpr int MAX_POINT_LIGHTS = Constants::Shader::MAX_LIGHTS_SOURCES;
-    std::vector<LightSource*> m_lightSources;
+    std::vector<LightSource*> m_lightSources;                 // vues (ordre d'ajout, cf. getLightSources)
+    std::vector<std::unique_ptr<LightSource>> m_ownedLights;  // possession
     std::unordered_map<unsigned int, LightLocations> m_lightLocations; // par id de programme GL
-    Spotlight* m_flashlight;
-    Spotlight* m_sunSpot;
+    std::unique_ptr<Spotlight> m_flashlight;
+    std::unique_ptr<Spotlight> m_sunSpot;
     Player* m_player;
     struct DirLight m_dirLight;
+    // Envoi des uniforms une seule fois par frame et par programme GL (cle = id) :
+    // applyToShader est appele a chaque draw mais les valeurs ne changent qu'en update().
+    unsigned long long m_frame = 1;
+    std::unordered_map<unsigned int, unsigned long long> m_lastApplied;
+    glm::vec3 m_fogColor{ 0.22f, 0.24f, 0.28f };
+    float m_fogDensity = 0.08f;
 
     // Bornes (monde) des pièces intérieures + affectation lumière → pièce
     // (-1 = libre), alignée sur m_lightSources (voir addRoom/setLightRoom).

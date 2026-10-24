@@ -5,9 +5,15 @@
 namespace Constants {
 	namespace Player {
 		inline constexpr float PLAYER_WALKING_SPEED = 2.5f; // unit : pixels per second
-		inline constexpr float PLAYER_SPRINTING_SPEED = 4.0f; // unit : pixels per second
+		inline constexpr float CREATURE_ATTACK_RANGE = 1.6f;   // m : fropy touche le joueur en dessous
+		inline constexpr float PLAYER_HIT_COOLDOWN = 2.5f;     // s d'invulnerabilite apres un coup
+		inline constexpr float CREATURE_STUN_TIME = 2.5f;      // s pendant lesquelles fropy reste fige apres avoir touche
+		inline constexpr float PLAYER_VOICE_NOISE_RADIUS = 35.0f; // m : portee a laquelle fropy entend un joueur parler
+		inline constexpr float PLAYER_SPRINTING_SPEED = 7.5f; // unit : pixels per second
+		inline constexpr float PLAYER_NOCLIP_SPRINT_SPEED = 20.0f; // sprint en no-clip (vol libre) : traverser la carte vite
 		inline constexpr float DEFAULT_PLAYER_RADIUS = 0.2f;
 		inline constexpr float DEFAULT_PLAYER_HEIGHT = 1.8f;
+		inline constexpr float PLAYER_STEP_HEIGHT = 0.8f; // m : hauteur max d'une marche montee automatiquement (marches ~0.28 m)
 
 		inline constexpr glm::vec3 PLAYER_EYE_HEIGHT = glm::vec3(0.0f, 1.5f, 0.0f); // Hauteur des yeux du joueur par rapport à sa position (en unités de jeu)
 

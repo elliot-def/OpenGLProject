@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include <cmath>
 #include "CollisionManager.h"
 #include "Entity.h"
 #include "Renderer.h"
@@ -82,6 +83,9 @@ void Camera::update(Entity* entity) {
         float dt = m_renderer ? m_renderer->getDeltaTime() : 0.016f;
         float t = glm::clamp(Constants::Camera::CAMERA_FP_MOVEMENT_LERP_SPEED * dt, 0.0f, 1.0f);
         m_smoothedMovementOffset = glm::mix(m_smoothedMovementOffset, targetOffset, t);
+        // Garde : une valeur non finie resterait pour toujours dans le lissage.
+        if (!std::isfinite(m_smoothedMovementOffset.x) || !std::isfinite(m_smoothedMovementOffset.y) ||
+            !std::isfinite(m_smoothedMovementOffset.z)) m_smoothedMovementOffset = glm::vec3(0.0f);
 
         // Premiere personne : camera a hauteur des yeux + offset configurable
         // + decalage lisse dans la direction de deplacement.

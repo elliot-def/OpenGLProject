@@ -14,10 +14,13 @@
 
 MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, std::vector<std::unique_ptr<TextRenderer>>* textRenderers, ShaderManager* shaderManager, CursorManager* cursorManager, const std::string& t, bool bg) :
         Menu(game, soundManager, textRenderers, shaderManager, cursorManager, t, bg), m_renderer(renderer), m_colorDVDLogo(glm::vec3(1.0f, 1.0f, 1.0f)) {
-    addItem("Jouer", Constants::Window::WINDOW_WIDTH / 2, 700, 200, 50, [this]() {
+    constexpr float cx = Constants::Window::WINDOW_WIDTH / 2;
+    constexpr float W = Constants::Menu::ITEM_W, H = Constants::Menu::ITEM_H;
+    constexpr float T = Constants::Menu::MAIN_TOP, S = Constants::Menu::MAIN_STEP;
+    addItem("Jouer", cx, T + 0 * S, W, H, [this]() {
         m_game->changeState(STATE_PLAYING);
         });
-    addItem("Multijoueur", Constants::Window::WINDOW_WIDTH / 2, 750, 200, 50, [this]() {
+    addItem("Multijoueur", cx, T + 1 * S, W, H, [this]() {
         // Crée un lobby friends-only et ouvre l'overlay d'invitation Steam.
         // L'entrée en jeu se fait via l'invitation acceptée (callback
         // onLobbyEntered -> changeState(STATE_PLAYING)) ou via "Jouer".
@@ -28,10 +31,10 @@ MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, s
             LOG_WARN("[MainMenu] Steam indisponible : multijoueur desactive.");
         }
         });
-    addItem("Options", Constants::Window::WINDOW_WIDTH / 2, 800, 200, 50, [this]() {
+    addItem("Options", cx, T + 2 * S, W, H, [this]() {
         m_game->changeState(STATE_OPTIONS);
         });
-    addItem("Quitter", Constants::Window::WINDOW_WIDTH / 2, 900, 200, 50, [this]() {
+    addItem("Quitter", cx, T + 3 * S, W, H, [this]() {
         m_game->stop();
         });
     // Dans la classe qui instancie le menu :
@@ -47,6 +50,7 @@ MainMenu::MainMenu(Game* game, SoundManager* soundManager, Renderer* renderer, s
     m_weirdSounds.push_back(m_soundManager->load("weird_sound6", Constants::Resource::SOUND_MENU_FISHMAN_GRUNT, false, 2.0f, 1.0f));
 
     m_clickSound = m_soundManager->load("menu_click_sound", Constants::Resource::SOUND_MENU_CLICK, false, 6.0f, 1.0f);
+    m_soundManager->load("menu_hover_sound", Constants::Resource::SOUND_MENU_HOVER, false, 3.0f, 1.0f);
     //m_clickSound = m_soundManager->load("menu_click_sound", "./res/sounds/menu/Pokemon (A Button) - Sound Effect (HD).wav", false, 6.0f, 1.0f);
 
     addShape(0, dvd);

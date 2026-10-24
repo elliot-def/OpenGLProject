@@ -8,12 +8,12 @@
 #include "Renderer.h"
 
 LightManager::LightManager(Renderer* renderer, Player* player) {
-    m_flashlight = new Spotlight(renderer);
+    m_flashlight = std::make_unique<Spotlight>(renderer);
     m_player = player;
     // Soleil : cone tres etroit (3 deg / 5 deg), forte intensite chaude, portee ~100 m.
-    m_sunSpot = new Spotlight(renderer,
+    m_sunSpot = std::make_unique<Spotlight>(renderer,
         glm::vec3(0.0f), glm::vec3(6.0f, 5.2f, 2.8f), glm::vec3(3.0f),
-        1.0f, 0.007f, 0.0002f,
+        1.0f, 0.0f, 0.00003f,   // portee ~250 m (le soleil est tres haut)
         glm::cos(glm::radians(3.0f)), glm::cos(glm::radians(5.0f)), "sunSpot");
 
     // DirLight (soleil) : défauts LUMINEUX (cf. demande « luminosité
@@ -26,16 +26,13 @@ LightManager::LightManager(Renderer* renderer, Player* player) {
 }
 
 LightManager::~LightManager() {
-    for (auto& light : m_lightSources) {
-        delete light;
-    }
-
-	delete m_flashlight;
-	delete m_sunSpot;
+    // Lumieres et spots : liberes par leurs unique_ptr.
 }
 size_t LightManager::addPointLight(LightSource* light) {
+    std::unique_ptr<LightSource> owned(light);   // possession, liberee meme si la limite est atteinte
     if (m_lightSources.size() < MAX_POINT_LIGHTS) {
         m_lightSources.push_back(light);
+        m_ownedLights.push_back(std::move(owned));
         m_lightRoom.push_back(-1);   // no affectée : lumière libre
         return m_lightSources.size() - 1;
     }
@@ -69,6 +66,8 @@ const LightManager::LightLocations& LightManager::ensureLightLocations(Shader* s
     loc.dirDirection = shader->getUniformLocation("dirLight.direction");
     loc.dirAmbient   = shader->getUniformLocation("dirLight.ambient");
     loc.dirDiffuse   = shader->getUniformLocation("dirLight.diffuse");    loc.dirSpecular = shader->getUniformLocation("dirLight.specular");
+    loc.fogColor   = shader->getUniformLocation("fogColor");
+    loc.fogDensity = shader->getUniformLocation("fogDensity");
     loc.roomCount = shader->getUniformLocation("uRoomCount");
     for (int i = 0; i < Constants::Shader::MAX_ROOMS; ++i) {
         loc.roomMin[i] = shader->getUniformLocation("uRoomMin[" + std::to_string(i) + "]");
@@ -82,6 +81,11 @@ const LightManager::LightLocations& LightManager::ensureLightLocations(Shader* s
 }
 
 void LightManager::applyToShader(Shader* shader) {
+    // Deja envoye cette frame pour ce programme : les uniforms sont toujours valides.
+    unsigned long long& last = m_lastApplied[shader->getID()];
+    if (last == m_frame) return;
+    last = m_frame;
+
     // Hot path : uniquement des GLint pré-calculées (aucun hash de string).
     const LightLocations& loc = ensureLightLocations(shader);
 
@@ -109,6 +113,10 @@ void LightManager::applyToShader(Shader* shader) {
     shader->setVec3(loc.dirDiffuse,   m_dirLight.diffuse);
     shader->setVec3(loc.dirSpecular,  m_dirLight.specular);
 
+    // Brouillard
+    shader->setVec3(loc.fogColor, m_fogColor);
+    shader->setFloat(loc.fogDensity, m_fogDensity);
+
     // Pièces intérieures : uRoomCount = nb de pièces valides ; chaque lumière
     // assignée (uLightRoom[i] >= 0) n'éclaire que les fragments de SA pièce
     // (la lumière ne traverse pas les murs) ; -1 = lumière libre (extérieure).
@@ -126,6 +134,7 @@ void LightManager::applyToShader(Shader* shader) {
 }
 
 void LightManager::update() {
+    ++m_frame;   // nouvelle frame : les shaders recevront les valeurs a jour
     for (auto& light : m_lightSources) {
         light->update();
     }
@@ -133,6 +142,7 @@ void LightManager::update() {
 }
 
 void LightManager::setFlashlightPosition(const glm::vec3& position) {
+    ++m_frame;   // valeur modifiee apres update() : renvoyer aux shaders
     // Position seule : la direction reste celle empruntee au joueur
     // (setBorrowedDirection dans Spotlight::update(Player*)).
     if (m_flashlight) {
@@ -156,5 +166,18 @@ void LightManager::setLightRoom(size_t lightIndex, int roomIndex) {
 }
 
 void LightManager::aimSunSpot(const glm::vec3& from, const glm::vec3& target) {
+    ++m_frame;
     m_sunSpot->aim(from, target - from);
+}
+
+void LightManager::setSunSpotColor(const glm::vec3& diffuse) {
+    m_sunSpot->setColors(glm::vec3(0.0f), diffuse, diffuse * 0.5f);
+}
+
+void LightManager::clearMapLights() {
+    m_lightSources.clear();
+    m_ownedLights.clear();
+    m_lightRoom.clear();
+    m_roomMin.clear();
+    m_roomMax.clear();
 }

@@ -1,6 +1,10 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include "Log.h"
 #include "CollisionManager.h"
+
+#include <map>
+#include <tuple>
+#include <cmath>
 #include "Mesh.h"
 
 #include "constants/physics.h"
@@ -326,6 +330,37 @@ void CollisionManager::addStaticTriangleMesh(const Mesh* mesh,
     m_staticTriangleGroups.push_back(std::move(group));
 }
 
+void CollisionManager::addStaticTriangleSoup(const std::vector<glm::vec3>& tris,
+    const std::string& name, float cell)
+{
+    std::map<std::tuple<int, int, int>, StaticTriangleGroup> groups;
+    for (size_t i = 0; i + 2 < tris.size(); i += 3) {
+        const glm::vec3& p0 = tris[i];
+        const glm::vec3& p1 = tris[i + 1];
+        const glm::vec3& p2 = tris[i + 2];
+        glm::vec3 normal = glm::cross(p1 - p0, p2 - p0);
+        const float len = glm::length(normal);
+        if (len < 1e-8f) continue;   // triangle degenere
+        normal /= len;
+
+        const glm::vec3 c = (p0 + p1 + p2) / 3.0f;
+        const auto key = std::make_tuple(static_cast<int>(std::floor(c.x / cell)),
+                                         static_cast<int>(std::floor(c.y / cell)),
+                                         static_cast<int>(std::floor(c.z / cell)));
+        StaticTriangleGroup& g = groups[key];
+        g.triangles.push_back({ p0, p1, p2, normal });
+        g.aabb.expand(p0);
+        g.aabb.expand(p1);
+        g.aabb.expand(p2);
+    }
+    int n = 0;
+    for (auto& kv : groups) {
+        if (kv.second.triangles.empty() || !kv.second.aabb.isValid()) continue;
+        kv.second.name = name + "#" + std::to_string(n++);
+        m_staticTriangleGroups.push_back(std::move(kv.second));
+    }
+}
+
 void CollisionManager::addDynamicMesh(const std::string& key,
     const std::vector<Mesh*>& meshes,
     const glm::mat4& modelMatrix)
@@ -356,58 +391,134 @@ void CollisionManager::removeDynamic(const std::string& key) {
 void CollisionManager::clear() {
     m_staticBoxes.clear();
     m_dynamicBoxes.clear();
+    m_staticTriangleGroups.clear();
+    m_bvh.build({});
+    m_useBVH = false;
+    m_triGrid.clear();
+    m_triGridBuilt = false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CollisionManager : test global
 // ─────────────────────────────────────────────────────────────────────────────
 
-CollisionResult CollisionManager::testSphereAll(glm::vec3 center, float radius) const {
-    CollisionResult best;
+// Segment contre AABB (methode des dalles).
+static bool segmentHitsAABB(const glm::vec3& a, const glm::vec3& d, const AABB& box) {
+    float t0 = 0.0f, t1 = 1.0f;
+    for (int i = 0; i < 3; ++i) {
+        if (std::abs(d[i]) < 1e-9f) {
+            if (a[i] < box.min[i] || a[i] > box.max[i]) return false;
+        } else {
+            float ta = (box.min[i] - a[i]) / d[i];
+            float tb = (box.max[i] - a[i]) / d[i];
+            if (ta > tb) std::swap(ta, tb);
+            t0 = std::max(t0, ta);
+            t1 = std::min(t1, tb);
+            if (t0 > t1) return false;
+        }
+    }
+    return true;
+}
 
-    // Closest-penetration accumulator partagé entre statiques et dynamiques.
-    // Capture par référence : le lambda peut muter best.
+// Segment contre triangle (Moller-Trumbore, double face) : t dans [0,1].
+static bool segmentHitsTriangle(const glm::vec3& a, const glm::vec3& d, const StaticTriangle& tri) {
+    const glm::vec3 e1 = tri.b - tri.a, e2 = tri.c - tri.a;
+    const glm::vec3 p = glm::cross(d, e2);
+    const float det = glm::dot(e1, p);
+    if (std::abs(det) < 1e-9f) return false;
+    const float inv = 1.0f / det;
+    const glm::vec3 tv = a - tri.a;
+    const float u = glm::dot(tv, p) * inv;
+    if (u < 0.0f || u > 1.0f) return false;
+    const glm::vec3 q = glm::cross(tv, e1);
+    const float v = glm::dot(d, q) * inv;
+    if (v < 0.0f || u + v > 1.0f) return false;
+    const float t = glm::dot(e2, q) * inv;
+    return t >= 0.0f && t <= 1.0f;
+}
+
+bool CollisionManager::segmentBlocked(const glm::vec3& from, const glm::vec3& to) const {
+    const glm::vec3 d = to - from;
+    for (const auto& box : m_staticBoxes) {
+        if (segmentHitsAABB(from, d, box.aabb)) return true;
+    }
+    bool hit = false;
+    forEachTriangleGroup(glm::min(from, to), glm::max(from, to), [&](const StaticTriangleGroup& group) {
+        if (hit || !segmentHitsAABB(from, d, group.aabb)) return;   // rejet rapide : AABB du groupe
+        for (const auto& tri : group.triangles) {
+            if (segmentHitsTriangle(from, d, tri)) { hit = true; return; }
+        }
+    });
+    if (hit) return true;
+    for (const auto& kv : m_dynamicBoxes) {
+        if (segmentHitsAABB(from, d, kv.second.aabb)) return true;
+    }
+    return false;
+}
+
+// Parcourt les groupes de triangles dont la cellule de grille recoupe [mn, mx] (XZ),
+// chacun une seule fois. Sans grille (pas encore de buildBVH) : tous les groupes.
+template <typename Func>
+void CollisionManager::forEachTriangleGroup(const glm::vec3& mn, const glm::vec3& mx, Func&& fn) const {
+    if (!m_triGridBuilt) {
+        for (const auto& g : m_staticTriangleGroups) fn(g);
+        return;
+    }
+    if (++m_queryStamp == 0) {   // debordement : on remet les marques a zero
+        std::fill(m_groupStamp.begin(), m_groupStamp.end(), 0u);
+        m_queryStamp = 1;
+    }
+    const int x0 = static_cast<int>(std::floor(mn.x / kTriGridCell)), x1 = static_cast<int>(std::floor(mx.x / kTriGridCell));
+    const int z0 = static_cast<int>(std::floor(mn.z / kTriGridCell)), z1 = static_cast<int>(std::floor(mx.z / kTriGridCell));
+    for (int cx = x0; cx <= x1; ++cx) {
+        for (int cz = z0; cz <= z1; ++cz) {
+            const auto it = m_triGrid.find(triGridKey(cx, cz));
+            if (it == m_triGrid.end()) continue;
+            for (int gi : it->second) {
+                if (m_groupStamp[gi] == m_queryStamp) continue;
+                m_groupStamp[gi] = m_queryStamp;
+                fn(m_staticTriangleGroups[gi]);
+            }
+        }
+    }
+}
+
+CollisionResult CollisionManager::testSphereStatic(glm::vec3 center, float radius) const {
+    CollisionResult best;
     auto considerStatic = [&](const StaticBox& sb) {
         CollisionResult r = testSphereAABB(center, radius, sb.aabb);
         if (r.hit && r.penetration > best.penetration) best = r;
     };
+    // Boites : BVH (O(log n)) des qu'il est construit.
+    if (m_useBVH) m_bvh.querySphere(center, radius, considerStatic);
+    else for (const auto& sb : m_staticBoxes) considerStatic(sb);
 
-    // 1) Statiques : on passe par le BVH (O(log n)) dès qu'il est construit.
-    // Le BVH possède sa propre copie des StaticBox (déplacées par buildBVH) et
-    // n'est pas perturbé par des ajouts/suppressions ultérieures dans
-    // m_staticBoxes — ce qui est le cas attendu, buildBVH étant appelé une
-    // seule fois à l'initialisation du niveau (cf. Game::initialize).
-    if (m_useBVH) {
-        m_bvh.querySphere(center, radius, considerStatic);
-    }
-    else {
-        // Fallback : aucun niveau chargé encore (ou buildBVH jamais appelé).
-        for (const auto& sb : m_staticBoxes) considerStatic(sb);
-    }
+    // Triangles precis : grille 2D puis rejet AABB par groupe.
+    const glm::vec3 r3(radius);
+    forEachTriangleGroup(center - r3, center + r3, [&](const StaticTriangleGroup& group) {
+        if (!group.aabb.intersectsSphere(center, radius)) return;
+        for (const auto& tri : group.triangles) {
+            CollisionResult r = testSphereTriangle(center, radius, tri.a, tri.b, tri.c, tri.normal);
+            if (r.hit && r.penetration > best.penetration) best = r;
+        }
+    });
+    return best;
+}
 
-    // 2) Dynamiques : scan linéaire. Les AABB bougent à chaque frame, donc
-    // reconstruire un BVH par frame annulerait le gain — le coût de
-    // m_dynamicBoxes reste borné par le nombre d'objets mobiles réellement
-    // actifs (souvent < 10 dans ce projet).
-    // Test OBB : les objets dynamiques peuvent etre rotatés (cube qui tourne),
-    // une AABB ne peut pas représenter leur hitbox fidèlement.
+CollisionResult CollisionManager::testSphereDynamic(glm::vec3 center, float radius) const {
+    // Scan lineaire : peu d'objets mobiles. Test OBB (objets tournes : portes).
+    CollisionResult best;
     for (const auto& [key, db] : m_dynamicBoxes) {
         CollisionResult r = testSphereOBB(center, radius, db.obb);
         if (r.hit && r.penetration > best.penetration) best = r;
     }
+    return best;
+}
 
-    // 3) Triangles statiques (collision précise "mesh" : pentes du toit...).
-    // Peu nombreux (quelques dizaines) : scan linéaire avec rejet AABB par
-    // groupe avant les tests triangle par triangle.
-    for (const auto& group : m_staticTriangleGroups) {
-        if (!group.aabb.intersectsSphere(center, radius)) continue;
-        for (const auto& tri : group.triangles) {
-            CollisionResult r = testSphereTriangle(center, radius,
-                                                   tri.a, tri.b, tri.c, tri.normal);
-            if (r.hit && r.penetration > best.penetration) best = r;
-        }
-    }
-
+CollisionResult CollisionManager::testSphereAll(glm::vec3 center, float radius) const {
+    CollisionResult best = testSphereStatic(center, radius);
+    const CollisionResult dyn = testSphereDynamic(center, radius);
+    if (dyn.hit && dyn.penetration > best.penetration) best = dyn;
     return best;
 }
 
@@ -531,6 +642,7 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
     glm::vec3 offsetMiddle = glm::vec3(0.f, height * 0.5f, 0.f);
     glm::vec3 offsetTop = glm::vec3(0.f, height - radius, 0.f);
 
+    const bool wasGrounded = m_isPlayerGrounded;
     m_isPlayerGrounded = false;
 
     // ── 0. APPLICATION DE LA GRAVITÉ ─────────────────────────────────────────
@@ -548,19 +660,77 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
     glm::vec3 horizontalMovement = glm::vec3(desiredMovement.x, 0.f, desiredMovement.z);
     glm::vec3 posAfterH = currentPos;
 
-    if (glm::length2(horizontalMovement) > 1e-8f) {
-        glm::vec3 newBottom = sweepSphere(posAfterH + offsetBottom, horizontalMovement, radius);
-        posAfterH = newBottom - offsetBottom;
+    const float stepH = Constants::Player::PLAYER_STEP_HEIGHT;
 
+    // Deplacement horizontal depuis `from` : balayage + depenetration.
+    auto moveHorizontal = [&](glm::vec3 from) {
+        glm::vec3 p = sweepSphere(from + offsetBottom, horizontalMovement, radius) - offsetBottom;
         for (int pass = 0; pass < 3; ++pass) {
-            CollisionResult colMid = testSphereAll(posAfterH + offsetMiddle, radius);
-            if (colMid.hit) posAfterH += colMid.normal * (colMid.penetration + 1e-3f);
+            CollisionResult colMid = testSphereAll(p + offsetMiddle, radius);
+            if (colMid.hit) p += colMid.normal * (colMid.penetration + 1e-3f);
 
-            CollisionResult colTop = testSphereAll(posAfterH + offsetTop, radius);
-            if (colTop.hit) posAfterH += colTop.normal * (colTop.penetration + 1e-3f);
+            CollisionResult colTop = testSphereAll(p + offsetTop, radius);
+            if (colTop.hit) p += colTop.normal * (colTop.penetration + 1e-3f);
 
-            CollisionResult colBot = testSphereAll(posAfterH + offsetBottom, radius);
-            if (colBot.hit) posAfterH += colBot.normal * (colBot.penetration + 1e-3f);
+            CollisionResult colBot = testSphereAll(p + offsetBottom, radius);
+            if (colBot.hit) p += colBot.normal * (colBot.penetration + 1e-3f);
+        }
+        return p;
+    };
+    // Sol marchable sous `p` (a moins de `dist`) ? testSphereAll ne renvoie que le
+    // contact le plus profond : collee a une contremarche, la sphere pleine voit la
+    // contremarche (normale horizontale) et masque le sol -> sonde etroite en plus.
+    // La sphere pleine reste necessaire pour un pied pose sur le bord d'une marche.
+    // Sphere pleine abaissee de 1 cm seulement : plus bas, la normale sur une arete
+    // de marche s'incline sous le seuil et le pied perche n'est plus "au sol".
+    auto groundBelow = [&](glm::vec3 p, float dist) {
+        CollisionResult c = testSphereAll(p + offsetBottom - glm::vec3(0.f, std::min(dist, 0.01f), 0.f), radius);
+        if (c.hit && c.normal.y > 0.5f) return true;
+        const float r2 = radius * 0.5f;
+        c = testSphereAll(p + glm::vec3(0.f, r2 - dist, 0.f), r2);
+        return c.hit && c.normal.y > 0.5f;
+    };
+
+    // Descend `p` verticalement jusqu'au premier contact (au plus `maxDrop`).
+    // Contrairement a sweepSphere, ne glisse pas le long de l'arete arrondie
+    // d'une marche : sinon le joueur retombait au pied de la marche.
+    auto dropToContact = [&](glm::vec3 p, float maxDrop) {
+        if (!testSphereAll(p + offsetBottom - glm::vec3(0.f, maxDrop, 0.f), radius).hit) return p - glm::vec3(0.f, maxDrop, 0.f);
+        float lo = 0.f, hi = maxDrop;   // lo : libre, hi : contact
+        for (int i = 0; i < 10; ++i) {
+            const float mid = 0.5f * (lo + hi);
+            if (testSphereAll(p + offsetBottom - glm::vec3(0.f, mid, 0.f), radius).hit) hi = mid; else lo = mid;
+        }
+        return p - glm::vec3(0.f, lo, 0.f);
+    };
+
+    const bool walking = wasGrounded && m_verticalVelocity <= 0.f && desiredMovement.y <= 1e-6f;
+    bool stepped = false;
+
+    if (glm::length2(horizontalMovement) > 1e-8f) {
+        posAfterH = moveHorizontal(currentPos);
+
+        // Montee automatique des marches : on tente aussi le deplacement depuis
+        // une position surelevee de stepH, puis on repose le joueur au sol. On
+        // garde cette version seulement si elle finit plus haut (sur plat ou
+        // contre un mur elle revient au meme niveau et est ignoree).
+        if (walking) {
+            const glm::vec3 raised = currentPos + glm::vec3(0.f, stepH, 0.f);
+            if (!testSphereAll(raised + offsetTop, radius).hit && !testSphereAll(raised + offsetMiddle, radius).hit) {
+                const glm::vec3 up = moveHorizontal(raised);
+                const float maxDrop = stepH + 0.05f;
+                const glm::vec3 p = dropToContact(up, maxDrop);
+                // Appui trouve (pas forcement "au sol" : a haut FPS on avance peu par
+                // frame et le pied n'est d'abord que perche sur l'arete de la marche,
+                // avec une normale trop inclinee pour groundBelow -> montee qui calait).
+                const bool support = up.y - p.y < maxDrop - 1e-4f;
+                if (support && p.y > posAfterH.y + 1e-3f
+                    && !testSphereAll(p + offsetMiddle, radius).hit && !testSphereAll(p + offsetTop, radius).hit) {
+                    posAfterH = p;
+                    m_verticalVelocity = 0.f;
+                    stepped = true;
+                }
+            }
         }
     }
 
@@ -587,16 +757,23 @@ glm::vec3 CollisionManager::resolvePlayerMovement(glm::vec3 currentPos,
         }
     }
 
+    // Descente de marches : on reste colle au sol plutot que de tomber marche par marche.
+    if (walking && !stepped && !groundBelow(posAfterV, 0.05f)) {
+        glm::vec3 p = sweepSphere(posAfterV + offsetBottom, glm::vec3(0.f, -stepH, 0.f), radius) - offsetBottom;
+        if (groundBelow(p, 0.05f)) {
+            posAfterV = p;
+            m_verticalVelocity = 0.f;
+        }
+    }
+
     // ── 3. DÉTECTION SOL / PLAFOND (sonde indépendante du mouvement) ────────
     // ── 3. DÉTECTION SOL / PLAFOND (sonde indépendante du mouvement) ────────
     float actualVertical = posAfterV.y - posAfterH.y;  // <-- à rajouter
 
     if (gravityEnabled) {
-        const float groundProbeDistance = 0.05f;
-        glm::vec3 groundProbePos = posAfterV + offsetBottom + glm::vec3(0.f, -groundProbeDistance, 0.f);
-        CollisionResult groundCheck = testSphereAll(groundProbePos, radius);
-
-        m_isPlayerGrounded = groundCheck.hit && groundCheck.normal.y > 0.5f;
+        // Perche sur une marche qu'on vient de monter : compte comme au sol pour
+        // que la montee continue a la frame suivante.
+        m_isPlayerGrounded = stepped || groundBelow(posAfterV, 0.05f);
 
         if (m_isPlayerGrounded && m_verticalVelocity < 0.f) {
             m_verticalVelocity = 0.f;
@@ -618,6 +795,20 @@ void CollisionManager::buildBVH() {
         m_bvh.build(m_staticBoxes);
         m_useBVH = true;
     }
+    // Grille 2D des groupes de triangles (chaque groupe dans toutes les cellules
+    // que recouvre son AABB).
+    m_triGrid.clear();
+    for (int gi = 0; gi < static_cast<int>(m_staticTriangleGroups.size()); ++gi) {
+        const AABB& b = m_staticTriangleGroups[gi].aabb;
+        const int x0 = static_cast<int>(std::floor(b.min.x / kTriGridCell)), x1 = static_cast<int>(std::floor(b.max.x / kTriGridCell));
+        const int z0 = static_cast<int>(std::floor(b.min.z / kTriGridCell)), z1 = static_cast<int>(std::floor(b.max.z / kTriGridCell));
+        for (int cx = x0; cx <= x1; ++cx)
+            for (int cz = z0; cz <= z1; ++cz)
+                m_triGrid[triGridKey(cx, cz)].push_back(gi);
+    }
+    m_groupStamp.assign(m_staticTriangleGroups.size(), 0u);
+    m_queryStamp = 0;
+    m_triGridBuilt = true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

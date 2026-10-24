@@ -6,6 +6,8 @@
 #include <vector>
 #include <glm/glm.hpp>
 
+#include "Vertex.h"
+
 // Déclarations anticipées
 class Mesh;
 class Door;
@@ -42,6 +44,12 @@ class CollisionManager;
 //  - "roof"   : toit à deux pentes = 2 dalles jointives au faîtage (pignons
 //    compris), base rectangulaire "span" × "span.y", faîtage à "height" au-
 //    dessus de "center", épaisseur verticale "thickness" (défaut 0.15 m).
+//    "gableThickness" (m, défaut 0) = épaisseur du pignon (mettre l'épaisseur des murs) :
+//    deux faces, extérieure dans le plan des murs et intérieure en retrait.
+//    "gableInset" (m, défaut 0) = retrait du pignon par rapport au bout du toit : à
+//    régler sur le débord de toiture pour que le pignon soit dans le plan des murs ;
+//    "gableBase" (y local, défaut -thickness) = hauteur de la base du pignon (haut
+//    des murs). Leur UV est en repère monde : briques alignées avec les murs.
 //    "material" = couverture (les dalles), "gableMaterial" = pignons
 //    (défaut "brickwall" : la façade reste en briques même si la couverture
 //  - "collision": "box" (défaut) = cube englobant (AABB, pour les pavés) ;
@@ -55,9 +63,21 @@ class CollisionManager;
 //  - "doors"  : portes interactives (classe Door) — largeur/hauteur/épaisseur
 //    surchargables par "width"/"height"/"thickness" (défauts constants/door.h).
 //
+//  - "models" : [ { "path": "./res/maps/x/x.obj", "position": [x,y,z], "yaw": deg, "scale": s } ]
+//    modele OBJ (v/vt + f, quads/n-gones triangules, normales plates calculees), une
+//    partie par couple (objet "o", materiau "usemtl") ; le .mtl (mtllib) fournit map_Kd
+//    (texture, chemin relatif au .mtl), Kd (couleur) et d (opacite). Collision precise par
+//    cellules de 4 m (pas de BVH de boites).
 //  - "trees"  : arbres (res/models/trees/tree_<type>.obj, base en (0,0,0)).
 //    Collision "mesh" systématique : la hitbox suit les triangles réels
 //    (tronc ET feuillage). Le mesh d'un type est chargé une seule fois.
+//    "scale" = échelle horizontale (et verticale par défaut) ; "scaleY" =
+//    échelle verticale seule (hauteur de l'arbre).
+//  - "leaves" (même fichier que "trees") : feuilles mortes au sol autour de
+//    chaque arbre, générées à la volée depuis une SEED (toujours aux mêmes
+//    endroits, rien de codé en dur dans la carte) :
+//    { "seed": 1337, "perTree": 30, "radius": 3.5, "size": [0.35, 0.7] }
+//    Planches res/models/trees/leaf_sheet_<0..2>.png (alpha), sans collision.
 //
 // Le loader possède les meshs et les portes qu'il crée ; la Scene n'en garde
 // que des vues non-propriétaires (même convention que ModelLoader). Les
@@ -73,6 +93,7 @@ enum class MapMaterial {
     Leaf,       // "leaf"      : terre/feuilles, sol extérieur (cube/severallights)
     GreyRoof,   // "grey_roof" : toit gris (shader cube/severallights)
     Riet,       // "riet"      : tapis d'entrée (shader cube/severallights)
+    Textured,   // modele OBJ : texture/couleur/alpha propres a la partie (MapPart::texturePath/color/alpha)
     Tree,       // arbres ("trees") : palette tree_palette.png (cube/severallights)
 };
 
@@ -83,7 +104,12 @@ struct MapPart {
     glm::mat4             model{ 1.0f };   // translate · rotate (pas d'échelle
                                            // : les meshs sont à taille réelle)
     bool                  triangleCollision = false;  // "collision": "mesh"
+    std::string           texturePath;      // modele OBJ : map_Kd du .mtl ("" = blanc teinte par color)
+    glm::vec3             color{ 1.0f };    // modele OBJ : Kd du .mtl
+    float                 alpha = 1.0f;     // modele OBJ : d du .mtl (< 1 = vitre transparente)
+    std::vector<glm::vec3> soup;  // modèle OBJ : triangles MONDE pour la collision précise (vidé après load)
     std::shared_ptr<Mesh> mesh;   // partagé entre les instances d'un même arbre
+    glm::vec3             tint{ 1.0f };   // arbres : delta de couleur par arbre (seed)
 };
 
 // Placement d'un écran de télévision (clé JSON "tvs") : quad centré dans le
@@ -148,6 +174,36 @@ struct MapSpawn {
     glm::vec3   position{ 0.0f };
 };
 
+// Brouillard de la carte (cle JSON "fog", racine uniquement, optionnelle) :
+// { "fog": { "color": [r,g,b], "density": 0.08 } } ; 0 = pas de brouillard.
+struct MapFog {
+    glm::vec3 color{ 0.22f, 0.24f, 0.28f };
+    float density = 0.08f;
+};
+
+// Tete de fropy dans le ciel (cle JSON "sunHead", racine) : soleil jaune le jour,
+// lune blanc-gris la nuit. distance = eloignement depuis le centre du village
+// (hauteur ~ 0.94 x distance), scale = echelle du modele, spotIntensity = force
+// de la spot qui eclaire la creature (couleur de la spot = color x intensite).
+struct MapSunHead {
+    glm::vec3 color{ 1.0f, 0.92f, 0.25f };
+    float distance = 210.0f;
+    float scale = 14.0f;
+    float spotIntensity = 6.0f;
+};
+
+// Bouton interactif (cle JSON "buttons") : fropy qui tourne (modele fropy_low_poly) ;
+// la Scene detecte le bouton vise et transmet son nom quand on appuie sur E.
+// { "buttons": [ { "name": "start", "label": "Lancer la partie",
+//                  "center": [x,y,z], "scale": 0.45 } ] }
+struct MapButton {
+    std::string name;
+    std::string label;
+    glm::vec3 position{ 0.0f };   // centre (monde) du fropy tournant
+    float scale = 0.45f;          // echelle du modele fropy
+    bool enabled = true;          // false : ni dessine ni visable (cf. Scene::setButtonEnabled)
+};
+
 class MapLoader {
 public:
     // collisionManager : requis pour enregistrer les collisions statiques.
@@ -170,9 +226,28 @@ public:
 
     // Soleil / ambiance de la carte (clé "sun" du JSON) — cf. MapSun.
     const MapSun& getSun() const { return m_sun; }
+    const MapFog& getFog() const { return m_fog; }
+    const MapSunHead& getSunHead() const { return m_sunHead; }
+    // Dossier du cubemap ("skybox", racine) ; vide = aucun ciel.
+    const std::string& getSkybox() const { return m_skybox; }
+    // Portee de vue de la creature en m ("creature": {"sightRange": n}) ; 0 = celle du brouillard.
+    float getCreatureSightRange() const { return m_creatureSight; }
+    // "creature": {"enabled": false} : pas de fropy sur cette carte (lobby).
+    bool isCreatureEnabled() const { return m_creatureEnabled; }
+    const std::vector<MapButton>& getButtons() const { return m_buttons; }
+    std::vector<MapButton>& getButtons() { return m_buttons; }
+    // "creature": {"patrol": {"min": [x,z], "max": [x,z]}} : zone des rondes ; absente = défaut Creature.
+    bool hasPatrolBounds() const { return m_hasPatrol; }
+    glm::vec2 getPatrolMin() const { return m_patrolMin; }
+    glm::vec2 getPatrolMax() const { return m_patrolMax; }
 
     const std::vector<MapRoom>&  getRooms()  const { return m_rooms; }
     const std::vector<MapLight>& getLights() const { return m_lights; }
+
+    // Feuilles au sol : un mesh (repère monde) par planche de texture, ou
+    // nullptr s'il n'y en a pas.
+    static constexpr int LEAF_SHEETS = 3;
+    const Mesh* getLeafMesh(int sheet) const { return m_leafMeshes[sheet].get(); }
 
     // Position du spawn nommé (nom complet, préfixe d'include compris).
     // Renvoie fallback si absent.
@@ -197,7 +272,22 @@ private:
     std::vector<MapScreen>            m_screens;
     std::vector<std::unique_ptr<Door>> m_doors;
     MapSun                            m_sun;
+    MapFog                            m_fog;
+    MapSunHead                        m_sunHead;
+    std::string                       m_skybox;
+    float                             m_creatureSight = 0.0f;
+    bool                              m_creatureEnabled = true;
+    bool                              m_hasPatrol = false;
+    glm::vec2                         m_patrolMin{ 0.0f }, m_patrolMax{ 0.0f };
+    std::vector<MapButton>            m_buttons;
     std::vector<MapRoom>              m_rooms;
     std::vector<MapLight>             m_lights;
     std::vector<MapSpawn>             m_spawns;
+
+    // Feuilles : géométrie accumulée pendant le chargement, meshes finaux
+    // construits à la fin de load().
+    std::vector<Vertex>               m_leafVerts[LEAF_SHEETS];
+    std::vector<unsigned int>         m_leafIdx[LEAF_SHEETS];
+    std::unique_ptr<Mesh>             m_leafMeshes[LEAF_SHEETS];
+    unsigned                          m_treeCounter = 0;   // graine par arbre
 };

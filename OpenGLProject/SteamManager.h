@@ -114,6 +114,13 @@ public:
     // État du lobby
     bool isInLobby() const { return m_inLobby; }
     CSteamID getCurrentLobbyID() const { return m_currentLobby; }
+    // Proprietaire (hote) du lobby courant.
+    CSteamID getLobbyOwner() const;
+    bool isLobbyOwner() const;
+    // Donnees cle/valeur du lobby (ecriture reservee au proprietaire ; lecture
+    // locale, mise a jour par Steam). "" si absente ou hors lobby.
+    void setLobbyData(const char* key, const char* value);
+    std::string getLobbyData(const char* key) const;
     CSteamID getLocalSteamID() const { return m_localSteamID; }
     const char* getLocalPersonaName() const;
     bool isInitialized() const { return m_initialized; }

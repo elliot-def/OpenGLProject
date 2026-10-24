@@ -1,4 +1,5 @@
 #include "VoiceChat.h"
+#include <chrono>
 
 #include "SteamManager.h"
 #include "Log.h"
@@ -114,6 +115,7 @@ struct VoiceChat::Stream {
     unsigned int source = 0;           // ALuint
     std::vector<unsigned int> buffers; // ALuint, buffers actuellement en file (FIFO)
     bool playing = false;
+    std::chrono::steady_clock::time_point lastPacket{};   // dernier paquet recu
 
     ~Stream() {
         if (source != 0) {
@@ -282,11 +284,14 @@ void VoiceChat::onVoicePacket(uint64_t senderID, const uint8_t* data, uint32_t s
         // IMPORTANT : source relative -> pas d'attenuation par distance
         // (le modele de distance du SoundManager s'appliquerait sinon).
         alSourcei(stream->source, AL_SOURCE_RELATIVE, AL_TRUE);
-        alSourcef(stream->source, AL_GAIN, m_settings.volume);
+        // AL_MAX_GAIN (defaut 1.0) plafonnerait le gain > 1 : le relever.
+        alSourcef(stream->source, AL_MAX_GAIN, PLAYBACK_BOOST);
+        alSourcef(stream->source, AL_GAIN, m_settings.volume * PLAYBACK_BOOST);
         alSourcef(stream->source, AL_PITCH, 1.0f);
         streamPtr = std::move(stream);
     }
     Stream& s = *streamPtr;
+    s.lastPacket = std::chrono::steady_clock::now();
 
     // Recycler les buffers deja joues (FIFO) : les retirer de la source et
     // du pool, puis les liberer. Sans cela, ils restaient en file et etaient
@@ -329,11 +334,24 @@ void VoiceChat::onVoicePacket(uint64_t senderID, const uint8_t* data, uint32_t s
 // Update : capture + VAD/PTT + envoi, et bookkeeping de lecture
 // ---------------------------------------------------------------------------
 
+std::vector<uint64_t> VoiceChat::getSpeakingPlayers() const {
+    std::vector<uint64_t> out;
+    const auto now = std::chrono::steady_clock::now();
+    for (const auto& [id, stream] : m_streams) {
+        if (std::chrono::duration<float>(now - stream->lastPacket).count() < SPEAKING_TIMEOUT_S) {
+            out.push_back(id);
+        }
+    }
+    return out;
+}
+
 void VoiceChat::update(float dt) {
     (void)dt;
 
     // ── Gestion du device de capture ──
-    const bool wantCapture = m_settings.enabled && m_inLobby && !m_settings.micMuted;
+    // Actif aussi en solo : la voix du joueur sert a attirer fropy. Hors lobby, rien
+    // n'est envoye (encodeAndSend teste isInLobby) : capture + VAD uniquement.
+    const bool wantCapture = m_settings.enabled && !m_settings.micMuted;
     if (wantCapture && !m_capture) {
         openCapture();
     } else if (!wantCapture && m_capture) {
@@ -346,7 +364,7 @@ void VoiceChat::update(float dt) {
     // ── Bookkeeping des streams (recyclage + reprendre si arrete) ──
     for (auto it = m_streams.begin(); it != m_streams.end();) {
         Stream& s = *it->second;
-        alSourcef(s.source, AL_GAIN, m_settings.volume);
+        alSourcef(s.source, AL_GAIN, m_settings.volume * PLAYBACK_BOOST);
         ALint state = AL_STOPPED;
         alGetSourcei(s.source, AL_SOURCE_STATE, &state);
         if (state != AL_PLAYING) {

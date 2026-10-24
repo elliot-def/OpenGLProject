@@ -46,6 +46,13 @@ public:
     // beginTextFrame() et flushTextFrame().
     void draw();
 
+    // Pseudos des joueurs qui parlent (chat vocal), affiches au-dessus du
+    // panneau. A renseigner chaque frame avant draw().
+    void setSpeakers(std::vector<std::string> names) { m_speakers = std::move(names); }
+    // Dessine les joueurs qui parlent (logo de son + pseudo) au-dessus du panneau,
+    // y compris en solo (pas de lobby Steam). A appeler entre beginTextFrame() et flushTextFrame().
+    void drawSpeakers();
+
     // Envoi : appele avec le texte saisi (branche par Game sur
     // MultiplayerManager::sendChatMessage).
     void setOnSend(std::function<void(const std::string&)> cb) { m_onSend = std::move(cb); }
@@ -72,6 +79,7 @@ private:
     std::string m_pendingChars;      // caracteres arrives via le char callback
     bool m_inputActive = false;
     std::string m_localName;
+    std::vector<std::string> m_speakers;   // joueurs en train de parler
 
     // Edge detection clavier (sondage glfwGetKey)
     bool m_enterDownPrev = false;
@@ -82,6 +90,7 @@ private:
 
     // Panneau (fond sombre semi-transparent)
     std::unique_ptr<Image> m_panel;
+    std::unique_ptr<Image> m_speakerIcon;   // res/textures/menu/speaker.png
     unsigned int m_panelTexture = 0; // texture 1x1 generee (detruite ici)
     float m_scale = 0.35f;
     float m_margin = 16.0f;

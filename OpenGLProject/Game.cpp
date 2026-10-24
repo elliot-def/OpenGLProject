@@ -8,6 +8,9 @@
 #include "MultiplayerManager.h"
 #include "LobbyChat.h"
 #include "VoiceChat.h"
+#include "CreatureVoice.h"
+#include "QuestManager.h"
+#include "LobbyManager.h"
 #include "TextRenderer.h"
 #include "FirstPersonArms.h"
 #include "Animator.h"
@@ -61,6 +64,7 @@ Game::~Game() {
     // Le chat vocal utilise des sources/buffers OpenAL : on le detruit avant
     // le SoundManager (qui possede le device/contexte AL), sinon les sources
     // seraient supprimees sur un contexte AL deja detruit.
+    m_lobbyManager.reset();
     m_voiceChat.reset();
 
     // La Scene possède les cubes et le skybox (ressources GPU) : même raison,
@@ -204,6 +208,8 @@ void Game::loadResources() {
     // OptionsMenu::loadJSON (constructeur) applique res/options.json dessus.
     m_voiceChat = std::make_unique<VoiceChat>(m_steamManager.get(),
                                               m_window->getGLFWwindow());
+    // Voice lines de fropy (spatialisees a sa tete, cf. CreatureVoice).
+    m_creatureVoice = std::make_unique<CreatureVoice>(m_soundManager.get());
 
     m_menuManager       = std::make_unique<MenuManager>(this, m_soundManager.get(), m_renderer.get(), m_textRenderers.get(), m_textureManager.get(), m_shaderManager.get(), m_cursorManager.get(), m_voiceChat.get());
     m_inputManager      = std::make_unique<InputManager>(this, m_menuManager.get(), m_window.get(), m_player.get());
@@ -249,6 +255,24 @@ void Game::loadResources() {
     m_lobbyChat = std::make_unique<LobbyChat>(m_shaderManager.get(),
                                               m_window->getGLFWwindow(),
                                               m_textRenderers.get());
+    // Lobby d'avant-partie : l'hote choisit difficulte / carte / mode, puis lance.
+    m_lobbyManager = std::make_unique<LobbyManager>(m_steamManager.get(), m_window->getGLFWwindow(),
+        m_shaderManager.get(), m_textRenderers.get(),
+        [this](const char* mapPath, const MatchSettings& s) {
+            m_scene->setMatchParams(s.creatureEnabled(), s.creatureSpeedMul(), s.creatureSenseMul());
+            m_scene->loadMap(mapPath);
+            m_questManager->beginMap(m_scene.get(), s.tasks(), s.seed);   // lobby : aucun poste, aucune tache
+        });
+    // Taches de la partie (mini-jeux sur les postes "quest:..." de la carte).
+    m_questManager = std::make_unique<QuestManager>(m_window->getGLFWwindow(), m_shaderManager.get(), m_textRenderers.get());
+    m_questManager->setOnAllDone([this]() { m_lobbyManager->onVictory(); });
+    m_scene->setButtonCallback([this](const std::string& name) {
+        if (!m_questManager->handleButton(name)) m_lobbyManager->onButton(name);
+    });
+    m_scene->setPlayerHitCallback([this]() {
+        m_questManager->close();   // attrape en plein mini-jeu : il se ferme
+        m_lobbyManager->onPlayerHit();
+    });
     if (m_steamManager && m_steamManager->isInitialized()) {
         m_lobbyChat->setLocalName(m_steamManager->getLocalPersonaName());
     }
@@ -280,7 +304,17 @@ void Game::loadResources() {
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
     if (!loadingTick()) return;
 
-    m_scene->loadMap(Constants::Resource::MAP_VILLAGE); // carte JSON composee : sol + 3 maisons (includes de house.json)
+    // Salle du lobby par defaut ; -day / -night / -batiment chargent directement une carte (debug).
+    const char* directMap = nullptr;
+    for (int i = 1; i < m_argc; ++i) {
+        if (!m_argv[i]) continue;
+        if (std::strcmp(m_argv[i], "-night") == 0 || std::strcmp(m_argv[i], "--night") == 0) directMap = Constants::Resource::MAP_VILLAGE_NIGHT;
+        if (std::strcmp(m_argv[i], "-day") == 0 || std::strcmp(m_argv[i], "--day") == 0) directMap = Constants::Resource::MAP_VILLAGE_DAY;
+        if (std::strcmp(m_argv[i], "-batiment") == 0 || std::strcmp(m_argv[i], "--batiment") == 0) directMap = Constants::Resource::MAP_BATIMENT;
+    }
+    m_lobbyManager->setOnLobbyMap(directMap == nullptr);
+    m_scene->loadMap(directMap ? directMap : LobbyManager::lobbyMapPath());
+    m_questManager->beginMap(m_scene.get(), MatchSettings().tasks(), 0u);   // carte directe (debug) : taches par defaut
 
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
     if (!loadingTick()) return;
@@ -326,7 +360,8 @@ void Game::loadResources() {
         });
 
         m_steamManager->setOnLobbyLeft([this]() {
-            LOG_INFO("[Game] Quitte le lobby.");
+            LOG_INFO("[Game] Quitte le lobby (etat du jeu : %d ; 0=menu 1=jeu 2=pause 3=options).",
+                     static_cast<int>(m_menuManager->getCurrentState()));
             // Pas de clear/message de chat ici : le callback LobbyLeft d'un
             // ANCIEN lobby peut arriver APRES l'entree dans le nouveau
             // (leave+rejoin — voir SteamManager::onGameLobbyJoinRequested) et
@@ -372,7 +407,7 @@ void Game::loadResources() {
     m_loadingScreen->setStep(++step, TOTAL_STEPS);
 
     // ── Skybox nocturne : cubemap chargé dans le contexte principal ──
-    m_scene->createSkybox(Constants::File::SKYBOX_NIGHT_PATH);
+    // Skybox : creee par Scene::loadMap selon la carte (jour / nuit).
 
     // Prépare la musique de jeu en streaming (Ogg Vorbis via stb_vorbis).
     // Seul le fichier compressé (~quelques Mo) est lu ici : le décodage PCM se
@@ -421,8 +456,6 @@ void Game::run() {
                     auto reloadMeshes = [](const std::vector<Mesh*>& meshes) {
                         for (Mesh* m : meshes) m->reloadGPUResources();
                     };
-                    if (m_modelEntity)   reloadMeshes(m_modelEntity->getModel()->getMeshes());
-                    if (m_fropyEntity)   reloadMeshes(m_fropyEntity->getModel()->getMeshes());
                     if (m_humanEntity)   reloadMeshes(m_humanEntity->getModel()->getMeshes());
                     if (m_firstPersonArms) reloadMeshes(m_firstPersonArms->getMeshes());
 
@@ -521,111 +554,26 @@ void Game::update() {
     // (WASD, Echap...) sont neutralisees et alimentent le chat a la place.
     const bool chatCapturesInput = m_lobbyChat && m_lobbyChat->isInputActive()
                                    && m_steamManager && m_steamManager->isInLobby();
-    if (!chatCapturesInput) {
+    // Panneau d'options du lobby ouvert : il capture le clavier (comme le chat).
+    const bool lobbyPanelOpen = m_lobbyManager && m_lobbyManager->isPanelOpen();
+    // Mini-jeu de tache ouvert : il capture aussi les commandes (le monde continue).
+    const bool questOpen = m_questManager && m_questManager->isOpen();
+    if (!chatCapturesInput && !lobbyPanelOpen && !questOpen) {
         m_inputManager->update();
     }
+    if (m_lobbyManager) m_lobbyManager->update(m_renderer->getDeltaTime());
+    if (m_questManager) m_questManager->update(m_renderer->getDeltaTime());
 
     // Monde 3D (physique/gravité, caméra, lumières) + audio + synchro P2P.
     // En jeu uniquement ; dans les menus, Game::run() appelle updateWorld()
     // pour que la simulation continue.
     updateWorld(m_renderer->getDeltaTime());
 
-    // Suivre l'os de tete du modele anime (1P ET 3P) : la lampe torche est
-    // attachee a la tete, avec le meme decalage avant que la camera 1P
-    // (CAMERA_FP_LOOK_OFFSET). En 1P, la camera suit aussi la tete.
-    if (m_humanEntity && m_humanEntity->hasAnimations()) {
-        Animator* anim = m_humanEntity->getAnimator();
-        if (anim) {
-            // Chercher le bone de tete dans la boneMap (insensible a la casse)
-            std::string headBone;
-            for (const auto& [name, info] : m_humanEntity->getModel()->getBoneInfoMap()) {
-                std::string lower = name;
-                for (auto& c : lower) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-                if (lower.find("head") != std::string::npos
-                    && lower.find("end") == std::string::npos) {
-                    headBone = name;
-                    break;
-                }
-            }
-            if (!headBone.empty()) {
-                // Position de la tete en espace modele, convertie en monde
-                glm::mat4 headMat = anim->getGlobalNodeTransform(headBone);
-                glm::vec3 worldHead = glm::vec3(
-                    m_humanEntity->getModelMatrix() * glm::vec4(glm::vec3(headMat[3]), 1.0f));
-
-                glm::vec3 frontFlat = glm::normalize(glm::vec3(
-                    m_camera->getFront().x, 0.0f, m_camera->getFront().z));
-                // Meme decalage avant que la camera 1P : la source sort du
-                // crane (plus de lumiere projetee a l'interieur du corps).
-                glm::vec3 lookOffset = frontFlat * Constants::Camera::CAMERA_FP_LOOK_OFFSET;
-
-                // ── Limite du lean avant de la tete ──────────────────────
-                // L'animation de marche/sprint penche la tete vers l'avant.
-                // Contre une hitbox, le corps s'arrete (collision) mais la
-                // tete continue d'avancer -> la camera 1P traverse le mur. On
-                // borne la composante AVANT de la tete par rapport au corps
-                // (strafe et recul inchanges).
-                {
-                    const glm::vec3 playerPos = m_player->getPosition();
-                    const glm::vec3 headRelXZ(worldHead.x - playerPos.x, 0.0f,
-                                              worldHead.z - playerPos.z);
-                    const float forwardRel = glm::dot(headRelXZ, frontFlat);
-                    const float clampedForward = glm::min(forwardRel,
-                        Constants::Camera::CAMERA_FP_HEAD_FORWARD_LIMIT);
-                    const glm::vec3 lateralXZ = headRelXZ - frontFlat * forwardRel;
-                    worldHead.x = playerPos.x + frontFlat.x * clampedForward + lateralXZ.x;
-                    worldHead.z = playerPos.z + frontFlat.z * clampedForward + lateralXZ.z;
-                }
-
-                // ── Lampe torche attachee a la tete (1P et 3P) ──────────
-                // update() (Scene) vient de la recaler sur les yeux ; on la
-                // repositionne sur l'os de tete + offset avant du regard.
-                m_lightManager->setFlashlightPosition(worldHead + lookOffset);
-
-                // ── Camera 1P : suit la tete (X/Z ; le Y reste gere par
-                // Camera::update()). Reapplique les offsets ecrases par le
-                // setPosition : mouvement lisse + regard statique. ─────────
-                if (!m_player->isThirdPerson()) {
-                    glm::vec3 camPos = m_camera->getPosition();
-                    glm::vec3 newCamPos = glm::vec3(worldHead.x, camPos.y, worldHead.z)
-                        + m_camera->getSmoothedMovementOffset()
-                        + lookOffset;
-
-                    // Garde anti-ecran-bleu : une position non finie (NaN/inf,
-                    // ex: transform de bone invalide) ou aberrante (> 10m du
-                    // joueur) rendrait la camera invisible -> seule la couleur
-                    // de clear est rastérisée. On retombe sur les yeux.
-                    const bool finite = std::isfinite(newCamPos.x)
-                        && std::isfinite(newCamPos.y) && std::isfinite(newCamPos.z);
-                    const float distToPlayer = glm::length(newCamPos - m_player->getPosition());
-                    if (finite && distToPlayer < 10.0f) {
-                        m_camera->setPosition(newCamPos);
-                    } else {
-                        m_camera->setPosition(m_player->getEyePosition());
-                        LOG_WARN("[Game] Position camera 1P invalide (bone='%s', "
-                                 "finite=%d dist=%.2f), fallback sur les yeux",
-                                 headBone.c_str(), finite ? 1 : 0, distToPlayer);
-                    }
-                }
-            }
-
-            // Diagnostic temporaire (ecran bleu 1P) : position cam/joueur
-            // toutes les ~5s pour verifier que la camera reste dans la scene.
-            static int fpDiagCounter = 0;
-            if (++fpDiagCounter % 300 == 0) {
-                glm::vec3 p = m_player->getPosition();
-                glm::vec3 c = m_camera->getPosition();
-                LOG_INFO("[Game] 1P diag: cam=(%.2f, %.2f, %.2f) player=(%.2f, %.2f, %.2f) "
-                         "thirdPerson=%d headBone='%s' human=%s",
-                         c.x, c.y, c.z, p.x, p.y, p.z,
-                         m_player->isThirdPerson() ? 1 : 0, headBone.c_str(),
-                         m_humanEntity ? "ok" : "null");
-            }
-        }
-    }
+    // Camera 1P et lampe torche attachees a l'os de tete du modele anime.
+    m_headCameraRig.update(m_humanEntity, m_camera.get(), m_player.get(), m_lightManager.get());
 
     // Chat du lobby (saisie Entree/Echap + messages entrants).
-    if (m_lobbyChat && m_steamManager && m_steamManager->isInLobby()) {
+    if (m_lobbyChat && m_steamManager && m_steamManager->isInLobby() && !lobbyPanelOpen) {
         m_lobbyChat->update(m_renderer->getDeltaTime());
     }
 
@@ -645,7 +593,20 @@ void Game::update() {
 void Game::updateWorld(float dt) {
     // Monde 3D : cubes, collisions, joueur, caméra, lumières, entités.
     if (m_multiplayerManager) m_scene->setRemoteTargets(m_multiplayerManager->getRemotePositions());
+    // Voix = bruit entendu par fropy : joueur local (solo compris) et joueurs distants.
+    if (m_voiceChat) {
+        if (m_voiceChat->isLocalTransmitting()) {
+            m_scene->addNoise(m_player->getPosition(), Constants::Player::PLAYER_VOICE_NOISE_RADIUS);
+        }
+        glm::vec3 speakerPos;
+        for (uint64_t id : m_voiceChat->getSpeakingPlayers()) {
+            if (m_multiplayerManager && m_multiplayerManager->getRemotePosition(id, speakerPos)) {
+                m_scene->addNoise(speakerPos, Constants::Player::PLAYER_VOICE_NOISE_RADIUS);
+            }
+        }
+    }
     m_scene->update(dt);
+    if (m_creatureVoice) m_creatureVoice->update(dt, m_scene->getCreature(), m_camera->getPosition(), m_collisionManager.get());
 
     m_soundManager->setListenerTransform(m_camera->getPosition(), m_camera->getFront(), m_camera->getUp());
     m_soundManager->update();
@@ -682,6 +643,29 @@ void Game::draw() {
     if (m_lobbyChat && m_steamManager && m_steamManager->isInLobby()) {
         m_lobbyChat->draw();
     }
+
+    // Joueurs qui parlent (solo ou multi) : logo de son + pseudo, au-dessus du chat.
+    if (m_lobbyChat && m_voiceChat) {
+        std::vector<std::string> speakers;
+        const bool steam = m_steamManager && m_steamManager->isInitialized();
+        if (m_voiceChat->isLocalTransmitting()) {
+            const std::string me = steam ? m_steamManager->getLocalPersonaName() : "";
+            speakers.push_back(me.empty() ? std::string("Vous") : me);
+        }
+        if (steam) {
+            for (uint64_t id : m_voiceChat->getSpeakingPlayers()) {
+                speakers.push_back(m_steamManager->getPersonaName(CSteamID(id)));
+            }
+        }
+        m_lobbyChat->setSpeakers(std::move(speakers));
+        m_lobbyChat->drawSpeakers();
+    }
+
+    // Taches : liste (HUD) + mini-jeu ouvert. Puis lobby : options de la partie (droite),
+    // panneau de l'hote, invite du bouton vise (masquee pendant un mini-jeu).
+    if (m_questManager) m_questManager->draw();
+    const bool questOpen = m_questManager && m_questManager->isOpen();
+    if (m_lobbyManager) m_lobbyManager->draw(questOpen ? std::string() : m_scene->getAimedButtonLabel());
 
     // Tout le texte de la frame (HUD, menus...) est dessiné en UN SEUL draw
     // call batche, au-dessus du reste de la scène.
@@ -760,13 +744,11 @@ void Game::changeState(GameState newState, bool restoreFocus) {
 
 void Game::adoptLoadedEntities() {
     // Vues non-propriétaires vers les entités possédées par le ModelLoader.
-    m_modelEntity     = m_modelLoader->getModelEntity();
-    m_fropyEntity     = m_modelLoader->getFropyEntity();
     m_humanEntity     = m_modelLoader->getHumanEntity();
     m_firstPersonArms = m_modelLoader->getFirstPersonArms();
 
     // Transmet les vues à la Scene (qui les utilise pour update/draw).
-    m_scene->adoptEntities(m_modelEntity, m_fropyEntity, m_humanEntity,
+    m_scene->adoptEntities(m_humanEntity,
                            m_modelLoader->getCharacterAnim());
 
     // Le MultiplayerManager lit l'animation du modèle local pour la diffuser.

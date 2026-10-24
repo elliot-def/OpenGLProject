@@ -8,6 +8,7 @@
 
 #include "constants/window.h"
 #include "constants/file.h"
+#include "constants/menu.h"
 
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -26,35 +27,39 @@ OptionsMenu::~OptionsMenu() {
 }
 
 void OptionsMenu::createOptions(bool isMuted, float volume, float musicVolume) {
+    constexpr float cx = Constants::Window::WINDOW_WIDTH / 2;
+    constexpr float W = Constants::Menu::ITEM_W, H = Constants::Menu::ITEM_H;
+    constexpr float T = Constants::Menu::OPTIONS_TOP, S = Constants::Menu::OPTIONS_STEP;
+
     // Sous-menu de reconfiguration des touches clavier/souris (res/keys.json)
     // Contient aussi le slider de sensibilite de la souris.
-    addItem("Clavier & Souris", Constants::Window::WINDOW_WIDTH / 2, 620, 200, 50, [this]() {
+    addItem("Clavier & Souris", cx, T + 0 * S, W, H, [this]() {
         m_game->getMenuManager()->showKeyBindings();
         });
 
     // Sous-menu de reconfiguration des boutons de manette + sensibilite camera
-    addItem("Manette", Constants::Window::WINDOW_WIDTH / 2, 690, 200, 50, [this]() {
+    addItem("Manette", cx, T + 1 * S, W, H, [this]() {
         m_game->getMenuManager()->showControllerBindings();
         });
 
     // Sous-menu Audio : chat vocal (micro, VAD/PTT, volume des voix)
-    addItem("Audio", Constants::Window::WINDOW_WIDTH / 2, 750, 200, 50, [this]() {
+    addItem("Audio", cx, T + 2 * S, W, H, [this]() {
         m_game->getMenuManager()->showAudioSettings();
         });
 
-    addCheckbox("Son", Constants::Window::WINDOW_WIDTH / 2, 810, 40, !isMuted, [this](bool isChecked) {
+    addCheckbox("Son", cx, T + 3 * S, 40, !isMuted, [this](bool isChecked) {
         m_soundManager->setMute(!isChecked);
         });
 
-    addRange("Volume", Constants::Window::WINDOW_WIDTH / 2, 870, 300, 25, 0, 2, volume, [this](float volume) {
+    addRange("Volume", cx, T + 4 * S, 300, 25, 0, 2, volume, [this](float volume) {
         m_soundManager->setMasterVolume(volume);
         });
 
-    addRange("Volume musique", Constants::Window::WINDOW_WIDTH / 2, 930, 300, 25, 0, 2, musicVolume, [this](float musicVolume) {
+    addRange("Volume musique", cx, T + 5 * S, 300, 25, 0, 2, musicVolume, [this](float musicVolume) {
         m_soundManager->setMusicVolume(musicVolume);
         });
 
-    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 990, 200, 50, [this]() {
+    addItem("Retour", cx, T + 6 * S, W, H, [this]() {
         // Retour vers le menu precedent : on restaure sa selection manette.
         m_game->changeState(m_previousState == STATE_PLAYING ? STATE_PAUSED : STATE_MENU, true);
         exportJSON();

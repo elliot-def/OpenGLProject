@@ -17,6 +17,9 @@ public:
 		const char* uniformName = "spotLight");
 	void update(glm::vec3 position, Direction* direction);
 	void update(Player* player);
+	void setColors(const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular) {
+		m_ambient = ambient; m_diffuse = diffuse; m_specular = specular;
+	}
 	// Spot fixe (ex: soleil) : position + direction monde, sans Player.
 	void aim(const glm::vec3& position, const glm::vec3& direction) {
 		m_position = position; m_fixedDir = glm::normalize(direction); m_hasFixedDir = true;

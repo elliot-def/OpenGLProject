@@ -51,6 +51,14 @@ public:
     void setHighlighted(bool highlighted) { m_isHighlighted = highlighted; }
     bool getIsOpen() const { return m_isOpen; }
 
+    // Le battant FERME coupe-t-il le segment [a, b] (plan XZ, meme etage) ?
+    // Sert a fropy : il n'ouvre que les portes qui barrent sa trajectoire.
+    bool blocksSegment(const glm::vec3& a, const glm::vec3& b) const {
+        return panelBlocksSegment(m_hingePos, m_facingYawDeg, m_width, m_height, a, b);
+    }
+    static bool panelBlocksSegment(const glm::vec3& hinge, float yawDeg, float width, float height,
+                                   const glm::vec3& a, const glm::vec3& b);
+
     // Repere monde : translate(charniere) * rotate(yaw + angle courant).
     glm::mat4 getModelMatrix() const;
     // Centre world de la porte (sert aux tests de distance / regard).

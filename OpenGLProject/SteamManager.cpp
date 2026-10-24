@@ -517,7 +517,8 @@ void SteamManager::onLobbyChatUpdate(LobbyChatUpdate_t* pCallback) {
         if (flags & (k_EChatMemberStateChangeLeft |
                      k_EChatMemberStateChangeDisconnected |
                      k_EChatMemberStateChangeKicked)) {
-            logPrintf("[SteamManager] Joueur local a quitte le lobby.\n");
+            logPrintf("[SteamManager] Joueur local a quitte le lobby (flags=0x%x, change par SteamID %llu).\n",
+                      flags, userMaking.ConvertToUint64());
             m_inLobby = false;
             m_currentLobby = CSteamID();
             if (m_onLobbyLeft) {
@@ -537,4 +538,24 @@ void SteamManager::onLobbyChatUpdate(LobbyChatUpdate_t* pCallback) {
 const char* SteamManager::getPersonaName(CSteamID steamID) const {
     if (!m_initialized) return "";
     return SteamFriends()->GetFriendPersonaName(steamID);
+}
+
+CSteamID SteamManager::getLobbyOwner() const {
+    if (!m_initialized || !m_inLobby) return CSteamID();
+    return SteamMatchmaking()->GetLobbyOwner(m_currentLobby);
+}
+
+bool SteamManager::isLobbyOwner() const {
+    return m_initialized && m_inLobby && getLobbyOwner() == m_localSteamID;
+}
+
+void SteamManager::setLobbyData(const char* key, const char* value) {
+    if (!isLobbyOwner()) return;
+    SteamMatchmaking()->SetLobbyData(m_currentLobby, key, value);
+}
+
+std::string SteamManager::getLobbyData(const char* key) const {
+    if (!m_initialized || !m_inLobby) return std::string();
+    const char* v = SteamMatchmaking()->GetLobbyData(m_currentLobby, key);
+    return v ? std::string(v) : std::string();
 }

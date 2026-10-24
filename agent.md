@@ -118,7 +118,12 @@ les transparents sont triés par distance caméra puis dessinés avec `glDepthMa
 ## 3. Système de coordonnées & unités
 
 - Monde 3D : mètres (échelle arbitraire, mais cohérente avec `DEFAULT_PLAYER_RADIUS=0.2f`, `DEFAULT_PLAYER_HEIGHT=1.6f`).
-- Caméra perspective 60° FOV, near 0.1 / far 100.
+- Caméra perspective 60° FOV, near 0.1 / far 500 (le soleil/la lune est à ~200 m ; Shader.cpp).
+- Au clic sur **Jouer** (ou a l'arrivee dans un lobby multijoueur), on apparait dans la carte du lobby : **"Lobby"** (`res/maps/lobby/lobby.json`), une maison geante ou l'hote choisit la difficulte, la carte (Village jour, Village nuit, Batiment) et le mode de jeu en visant les fropys qui tournent (touche E), puis lance la partie.
+- Lobby : le jeu demarre dans `lobby.json` (salle d'avant-partie, sans fropy). `LobbyManager` gere les boutons (cle `"buttons"` des cartes, touche E), le panneau d'options de l'hote, le resume a droite du HUD et la synchro via les donnees du lobby Steam (`opt_*`) ; le lancement recharge la carte choisie via `Scene::loadMap` (qui vide collisions et lumieres de la carte precedente).
+- Cartes : un sous-dossier par carte dans `res/maps/` (`village/`, `lobby/`, `batiment/`). `batiment/` : `batiment.json` + `batiment.obj`/`.mtl` + `textures/` (export Blender des plans `res/ETF_bat/`), charge par la cle `"models"` (UV, textures, couleurs et transparence du .mtl ; collision precise par cellules de 4 m via `CollisionManager::addStaticTriangleSoup`). Lancement direct : `-batiment` / `-day` / `-night`. Selectionnable dans le lobby (option Carte).
+- Lobby : boutons = fropys qui tournent (cle `"buttons"`) ; la difficulte regle vies, taches et vitesse/sens de fropy ; fropy qui touche le joueur (hors noclip) lui retire une vie.
+- Cartes : `village_day.json` (défaut) et `village_night.json` (argument `-night`) incluent le décor commun `village_common.json` ; elles portent ambiance (`sun`), `fog`, `skybox`, `sunHead` (jaune le jour, blanc-gris la nuit) et `creature.sightRange`.
 - Sprite 2D : projection ortho en pixels (`Constants::WINDOW_WIDTH=1920`, `HEIGHT=1080`).
 - Constantes tunables : **toutes** dans `OpenGLProject/constants.h` (namespace `Constants`).
   Ne pas hardcoder ailleurs — ajouter une constante et la référencer.
@@ -264,6 +269,9 @@ les transparents sont triés par distance caméra puis dessinés avec `glDepthMa
 - Ne jamais modifier la gestion du wrapper `_$AssimpFbx$_PreRotation` (`Animator::computeBoneTransform`) ni `repairRotationKeys` "a l'intuition" : les symptomes jambes en l'air / bras a 90 deg vers l'avant viennent d'une pre-rotation appliquee en double. Verifier avec le log `[DIAG POSE]` au lancement (lancer depuis `OpenGLProject/`) : pieds y~10, hanches y~100, mains y~90. Si ce n'est pas le cas, annuler la modif.
 
 - **Debug vs Release (Assimp)** : les deux configs lient des builds d'Assimp differentes (`assimp-vc143-mtd.lib` / `assimp-vc143-mt.lib`). La build Debug decomposait les canaux FBX en `..._$AssimpFbx$_Rotation` (pieds y=179 au lieu de 10, mains a 90 deg), pas la Release. `Model::loadExternalAnimations` force donc `AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS=false` pour obtenir des canaux non decomposes dans les deux configs. Ne pas retirer cette ligne. Toujours verifier `[DIAG POSE]` en Debug ET en Release.
+
+### Auto-tests
+- `OpenGLProject.exe -selftest` lance `SelfTest.cpp` (collisions, A* de fropy, options de partie) sans fenetre ; code de retour 0 = tout passe. A relancer apres toute modification de `CollisionManager`, `Creature` ou `MatchSettings`.
 
 ### Physique / collisions
 - `radius` est en mètres, pas en pixels.

@@ -10,6 +10,8 @@ uniform sampler2D texture_specular;
 
 uniform vec3 viewPos;
 
+#include "fog.glsl"
+
 // ===== DirLight =====
 struct DirLight {
     vec3 direction;
@@ -29,7 +31,6 @@ struct PointLight {
     float linear;
     float quadratic;
 };
-#define MAX_POINT_LIGHTS 32
 uniform PointLight lightSources[MAX_POINT_LIGHTS];
 uniform int numberLightSources;
 
@@ -37,7 +38,6 @@ uniform int numberLightSources;
 // uLightRoom[i] (LightManager) et n'éclaire que les fragments de CETTE
 // pièce — la lumière ne traverse pas les murs. -1 = lumière libre.
 // uRoomCount = nombre de pièces valides (0 = aucune).
-#define MAX_ROOMS 8
 uniform int   uRoomCount;
 uniform vec3  uRoomMin[MAX_ROOMS];
 uniform vec3  uRoomMax[MAX_ROOMS];
@@ -133,5 +133,5 @@ void main() {
     result += calcSpotLight(spotLight, norm, FragPos, viewDir, diffuseTex, specularTex);
     result += calcSpotLight(sunSpot, norm, FragPos, viewDir, diffuseTex, specularTex);
 
-    FragColor = vec4(result, 1.0);
+    FragColor = vec4(applyFog(result, length(viewPos - FragPos)), 1.0);
 }

@@ -66,16 +66,6 @@ void ModelLoader::load(GLFWwindow* loaderWindow) {
 }
 
 void ModelLoader::loadDecorModels() {
-    LOG_INFO("[ModelLoader]   -> Chargement du backpack...");
-    m_modelEntity = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
-                                                  Constants::Resource::MODEL_BACKPACK, m_textureManager);
-
-    LOG_INFO("[ModelLoader]   -> Chargement de fropy (low poly)...");
-    m_fropyEntity = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
-                                                  Constants::Resource::MODEL_FROPY, m_textureManager);
-    m_fropyEntity->setPosition(glm::vec3(3.0f, 5.0f, 0.0f));
-    m_fropyEntity->setSpin(20.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-
     LOG_INFO("[ModelLoader]   -> Chargement des bras (rigges)...");
     m_firstPersonArms = std::make_unique<FirstPersonArms>(m_camera, m_lightManager,
                                                           Constants::Resource::MODEL_ARMS_RIG, m_textureManager);
@@ -182,6 +172,12 @@ void ModelLoader::configureHumanCharacter(ModelEntity* entity) {
             animDir + "Falling To Landing.fbx",
         };
         model->loadExternalAnimations(animPaths);
+        // Modele sans pivots FBX (GLB, ex: fropy) : rotations seules, comme le chemin RrTt de
+        // Megan. Les clips de chute viennent d'un autre squelette Mixamo (proportions
+        // differentes) : leurs translations etireraient le maillage.
+        if (Animator* animator = entity->getAnimator(); animator && !animator->usesFbxRrTtHelpers()) {
+            animator->setRotationOnlyRetarget(true);
+        }
 
         // Toutes les animations Mixamo s'appellent "mixamo.com" -> impossible
         // de les distinguer par nom. On les identifie par leur ORDRE de

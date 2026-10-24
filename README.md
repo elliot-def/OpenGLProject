@@ -414,3 +414,7 @@ Généré avec les valeurs par défaut (volume maître par défaut effectif au d
 ## Licence
 
 *(à compléter selon les intentions du projet — aucune licence n'est actuellement spécifiée dans le dépôt)*
+
+## Demarrage
+
+Au clic sur **Jouer** (ou a l'arrivee dans un lobby multijoueur), on apparait dans la carte du lobby : **"Lobby"** (`res/maps/lobby/lobby.json`), une maison geante ou l'hote choisit la difficulte, la carte (Village jour, Village nuit, Batiment) et le mode de jeu en visant les fropys qui tournent (touche E), puis lance la partie.

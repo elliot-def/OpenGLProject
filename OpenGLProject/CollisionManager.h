@@ -102,6 +102,15 @@ public:
         const std::string& name = "");
 
     /**
+     * Ajoute une SOUPE de triangles monde (3 sommets par triangle) en collision
+     * precise, decoupee en cellules de `cell` metres (un groupe, donc une AABB
+     * serree, par cellule) : un gros modele (batiment) ne force plus chaque test
+     * a parcourir tous ses triangles.
+     */
+    void addStaticTriangleSoup(const std::vector<glm::vec3>& worldTriangles,
+        const std::string& name = "", float cell = 4.0f);
+
+    /**
      * Ajoute un ou plusieurs meshes dynamiques sous une clé commune.
      * L'AABB englobante de tous les sous-meshes est calculée immédiatement.
      */
@@ -164,8 +173,18 @@ public:
 
     void printInfo() const;
 
+    // Rayon : true si le segment [from, to] traverse un obstacle (boites statiques,
+    // triangles precis, colliders dynamiques). Test exact (pas d'echantillonnage) :
+    // un mur mince ne peut pas "passer entre deux points". Sert a la ligne de vue du
+    // soleil (eblouissement).
+    bool segmentBlocked(const glm::vec3& from, const glm::vec3& to) const;
+
     // Teste une sphère contre tous les colliders (statiques + dynamiques)
     CollisionResult testSphereAll(glm::vec3 center, float radius) const;
+    // Variantes : colliders STATIQUES seuls (boites + triangles, resultat stable tant
+    // que la carte ne change pas : cachable) / DYNAMIQUES seuls (portes, objets mobiles).
+    CollisionResult testSphereStatic(glm::vec3 center, float radius) const;
+    CollisionResult testSphereDynamic(glm::vec3 center, float radius) const;
 
     // Teste une sphère contre un triangle (winding CCW, n = normale de face
     // normalisée). Normale de résultat = direction de dépénétration (vers
@@ -188,6 +207,16 @@ private:
 
     BVH m_bvh; // Intégration du BVH
     bool m_useBVH = false;
+
+    // Grille 2D (XZ) des groupes de triangles : un test ne parcourt que les groupes
+    // des cellules touchees (au lieu de tous). Construite par buildBVH().
+    static constexpr float kTriGridCell = 8.0f;
+    std::unordered_map<long long, std::vector<int>> m_triGrid;
+    bool m_triGridBuilt = false;
+    mutable std::vector<unsigned int> m_groupStamp;   // anti-doublon par requete
+    mutable unsigned int m_queryStamp = 0;
+    static long long triGridKey(int cx, int cz) { return (static_cast<long long>(cx) << 32) ^ static_cast<unsigned int>(cz); }
+    template <typename Func> void forEachTriangleGroup(const glm::vec3& mn, const glm::vec3& mx, Func&& fn) const;
 
     float m_verticalVelocity = 0.0f;
     bool  m_isPlayerGrounded = false;

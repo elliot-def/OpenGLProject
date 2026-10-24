@@ -49,6 +49,9 @@ LobbyChat::LobbyChat(ShaderManager* shaderManager, GLFWwindow* window,
     m_panel = std::make_unique<Image>(shaderManager->getShader("image"),
                                       m_panelTexture, panelX, panelY,
                                       m_panelW, m_panelH, 0.55f);
+    m_speakerIcon = std::make_unique<Image>(shaderManager->getShader("image"),
+                                            "./res/textures/menu/speaker.png", 0.0f, 0.0f,
+                                            m_lineH * 0.85f, m_lineH * 0.85f, 1.0f);
 }
 
 LobbyChat::~LobbyChat() {
@@ -215,6 +218,26 @@ std::string LobbyChat::truncateToWidth(const std::string& s, float maxWidth,
         if (tr->getTextWidth(out + "...", m_scale) <= maxWidth) break;
     }
     return out + "...";
+}
+
+void LobbyChat::drawSpeakers() {
+    if (m_speakers.empty() || !m_textRenderers || m_textRenderers->empty()) return;
+    TextRenderer* tr = (*m_textRenderers)[0].get();
+    if (!tr) return;
+    const float panelTop = static_cast<float>(Constants::Window::WINDOW_HEIGHT) - m_margin - m_panelH;
+    const float icon = m_lineH * 0.85f;
+    float sy = panelTop - m_lineH * static_cast<float>(m_speakers.size()) - 6.0f;
+    for (const std::string& name : m_speakers) {
+        if (m_speakerIcon) {
+            m_speakerIcon->setPosition(m_margin, sy - icon * 0.8f);   // logo de son, aligne sur la ligne de texte
+            m_speakerIcon->draw();
+        }
+        const float x = m_margin + icon + 8.0f;
+        const std::string line = truncateToWidth(name, m_panelW - x, tr);
+        tr->renderText(line, x + 2.0f, sy + 2.0f, m_scale, kShadow, kShadow, kShadow);
+        tr->renderText(line, x, sy, m_scale, 0.35f, 1.0f, 0.45f);
+        sy += m_lineH;
+    }
 }
 
 void LobbyChat::draw() {

@@ -36,6 +36,9 @@
     "thickness": 0.15,
     "material": "grey_roof",
     "gableMaterial": "brickwall",
+    "gableInset": 0.3,
+    "gableThickness": 0.2,
+    "gableBase": 0.05,
     "collision": "mesh"
   },
 

@@ -51,6 +51,9 @@
     <ClCompile Include="SteamController.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="ControllerKey.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="Creature.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="CreatureVoice.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="MiniGames.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="QuestManager.cpp"><Filter>Core</Filter></ClCompile>
     <ClCompile Include="PlayerKey.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="Mouse.cpp"><Filter>Input</Filter></ClCompile>
     <ClCompile Include="LeftClick.cpp"><Filter>Input</Filter></ClCompile>
@@ -103,6 +106,12 @@
     <ClCompile Include="Socket.cpp"><Filter>Network</Filter></ClCompile>
     <ClCompile Include="SteamManager.cpp"><Filter>Network</Filter></ClCompile>
     <ClCompile Include="MultiplayerManager.cpp"><Filter>Network</Filter></ClCompile>
+    <ClCompile Include="LobbyManager.cpp"><Filter>Network</Filter></ClCompile>
+    <ClCompile Include="SelfTest.cpp"><Filter>Core</Filter></ClCompile>
+    <ClCompile Include="ObjLoader.cpp"><Filter>Resources</Filter></ClCompile>
+    <ClCompile Include="MapGeometry.cpp"><Filter>Resources</Filter></ClCompile>
+    <ClCompile Include="SkySystem.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="HeadCameraRig.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="Packet.cpp"><Filter>Network</Filter></ClCompile>
     <ClCompile Include="ReceiveBuffer.cpp"><Filter>Network</Filter></ClCompile>
     <ClCompile Include="constants\texture.h"><Filter>Constants</Filter></ClCompile>
@@ -111,6 +120,7 @@
     <ClCompile Include="MusicStream.cpp"><Filter>Sound</Filter></ClCompile>
     <ClCompile Include="OutlinePass.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="Skybox.cpp"><Filter>Graphics</Filter></ClCompile>
+    <ClCompile Include="FogParticles.cpp"><Filter>Graphics</Filter></ClCompile>
     <ClCompile Include="dependencies\stb\stb_vorbis.c"><Filter>Dependencies</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -135,6 +145,9 @@
     <ClInclude Include="SteamController.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="ControllerKey.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="Creature.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="CreatureVoice.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="MiniGames.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="QuestManager.h"><Filter>Core</Filter></ClInclude>
     <ClInclude Include="Key.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="configKeys.h"><Filter>Input</Filter></ClInclude>
     <ClInclude Include="PlayerKey.h"><Filter>Input</Filter></ClInclude>
@@ -191,6 +204,12 @@
     <ClInclude Include="Socket.h"><Filter>Network</Filter></ClInclude>
     <ClInclude Include="SteamManager.h"><Filter>Network</Filter></ClInclude>
     <ClInclude Include="MultiplayerManager.h"><Filter>Network</Filter></ClInclude>
+    <ClInclude Include="LobbyManager.h"><Filter>Network</Filter></ClInclude>
+    <ClInclude Include="SelfTest.h"><Filter>Core</Filter></ClInclude>
+    <ClInclude Include="ObjLoader.h"><Filter>Resources</Filter></ClInclude>
+    <ClInclude Include="MapGeometry.h"><Filter>Resources</Filter></ClInclude>
+    <ClInclude Include="SkySystem.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="HeadCameraRig.h"><Filter>Graphics</Filter></ClInclude>
     <ClInclude Include="Packet.h"><Filter>Network</Filter></ClInclude>
     <ClInclude Include="PacketBuilder.h"><Filter>Network</Filter></ClInclude>
     <ClInclude Include="ReceiveBuffer.h"><Filter>Network</Filter></ClInclude>
@@ -212,6 +231,7 @@
     <ClInclude Include="File.h"><Filter>Utils</Filter></ClInclude>
     <ClInclude Include="MusicStream.h"><Filter>Sound</Filter></ClInclude>
     <ClInclude Include="Skybox.h"><Filter>Graphics</Filter></ClInclude>
+    <ClInclude Include="FogParticles.h"><Filter>Graphics</Filter></ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="res\shaders\cube\cube.frag"><Filter>Resources\Shaders\Cube</Filter></None>

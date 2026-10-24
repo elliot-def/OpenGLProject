@@ -190,6 +190,8 @@ protected:
     // HIDE le nom de la classe au niveau global. Sans le specifier élabore,
     // `std::unique_ptr<Rectangle>` résout vers la FONCTION -> C2923.
     std::unique_ptr<class Rectangle> m_background; // Rectangle du fond, créé une fois
+    std::unique_ptr<class Rectangle> m_hoverBar;   // soulignement de l'option survolee
+    int m_lastHoverItem = -1;                      // pour ne jouer le son qu'a l'entree du survol
 
 
 public:
@@ -261,6 +263,8 @@ public:
     // Joue le son de clic partage des menus (bouton A, clic souris, bouton
     // B/Retour). Rendu public pour MenuManager::goBack() (retour manette).
     void playClickSound();
+    // Son leger de survol / deplacement de la selection manette.
+    void playHoverSound();
     // Repositionne la sélection sur la première ligne (entrée dans un menu).
     void resetFocus();
     // Position manette courante (index dans m_focusTargets) : MenuManager la
@@ -293,9 +297,14 @@ public:
         for (auto& w : m_inputs) if (w) w->setFocused(false);
         // Survol d'option dans les listes ouvertes (surbrillance du dropdown)
         for (auto& w : m_inputs) if (w) w->updateHover(mouseX, mouseY);
-        for (auto& item : m_items) {
-            item.isHovered = item.contains(mouseX, mouseY);
-
+        int hovered = -1;
+        for (size_t i = 0; i < m_items.size(); ++i) {
+            m_items[i].isHovered = m_items[i].contains(mouseX, mouseY);
+            if (m_items[i].isHovered && m_items[i].callback) hovered = static_cast<int>(i);
+        }
+        if (hovered != m_lastHoverItem) {
+            if (hovered >= 0) playHoverSound();
+            m_lastHoverItem = hovered;
         }
         for (auto& shape : m_shapes) {
             shape.second->isHovered = shape.second->contains(mouseX, mouseY);

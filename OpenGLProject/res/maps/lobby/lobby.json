@@ -1,0 +1,71 @@
+{
+  "name": "Lobby",
+  "description": "Salle d'avant-partie : une maison geante (24 x 16 m, murs de 6 m, toit a deux pans) ou les joueurs apparaissent. Contre le mur du fond, 4 fropys qui tournent (boutons) : l'hote les actionne avec E pour choisir la difficulte, la carte, le mode de jeu, puis lancer la partie (LobbyManager). Pas de fropy ici.",
+
+  "skybox": "./res/skybox/day/day",
+
+  "sun": {
+    "direction": [-0.3, -1.0, -0.2],
+    "ambient":  [0.40, 0.38, 0.34],
+    "diffuse":  [0.90, 0.85, 0.75],
+    "specular": [0.30, 0.30, 0.30]
+  },
+
+  "fog": { "color": [0.70, 0.80, 0.90], "density": 0.0 },
+
+  "creature": { "enabled": false },
+
+  "spawns": [
+    { "name": "player", "position": [0, 0.1, -4] }
+  ],
+
+  "boxes": [
+    { "name": "ground", "center": [0, -0.1, -8], "size": [60, 0.2, 60], "material": "leaf" },
+    { "name": "floor",  "center": [0, -0.1, -8], "size": [24.0, 0.24, 16.0], "material": "parquet" },
+    { "name": "rug",    "center": [0, 0.005, -8], "size": [8.0, 0.05, 5.0], "material": "riet" },
+
+    { "name": "wall_front_left",   "center": [-6.39, 3.0, 0.0], "size": [11.62, 6.1, 0.4], "material": "brickwall" },
+    { "name": "wall_front_right",  "center": [ 6.39, 3.0, 0.0], "size": [11.62, 6.1, 0.4], "material": "brickwall" },
+    { "name": "wall_front_lintel", "center": [ 0.0, 4.125, 0.0], "size": [1.16, 3.85, 0.4], "material": "brickwall" },
+
+    { "name": "wall_back", "center": [0, 3.0, -16.0], "size": [24.4, 6.1, 0.4], "material": "brickwall" },
+    { "name": "wall_west", "center": [-12.0, 3.0, -8.0], "size": [0.4, 6.1, 15.6], "material": "brickwall" },
+    { "name": "wall_east", "center": [ 12.0, 3.0, -8.0], "size": [0.4, 6.1, 15.6], "material": "brickwall" }
+  ],
+
+  "roof": {
+    "name": "roof",
+    "center": [0, 6.0, -8.0],
+    "span": [25.2, 17.2],
+    "height": 4.0,
+    "thickness": 0.2,
+    "material": "grey_roof",
+    "gableMaterial": "brickwall",
+    "gableInset": 0.4,
+    "gableThickness": 0.4,
+    "gableBase": 0.05,
+    "collision": "mesh"
+  },
+
+  "buttons": [
+    { "name": "difficulty", "label": "Difficulte",       "center": [-6.0, 1.5, -14.0], "scale": 0.5 },
+    { "name": "map",        "label": "Carte",            "center": [-2.0, 1.5, -14.0], "scale": 0.5 },
+    { "name": "mode",       "label": "Mode de jeu",      "center": [ 2.0, 1.5, -14.0], "scale": 0.5 },
+    { "name": "start",      "label": "Lancer la partie", "center": [ 6.0, 1.5, -14.0], "scale": 0.5 }
+  ],
+
+  "rooms": [
+    { "name": "hall", "min": [-11.8, 0.0, -15.8], "max": [11.8, 6.0, -0.2] }
+  ],
+
+  "lights": [
+    { "position": [-6.0, 5.0, -4.0],  "room": "hall", "ambient": [0.05, 0.04, 0.03], "diffuse": [1.0, 0.85, 0.6], "specular": [0.4, 0.4, 0.4], "attenuation": [1.0, 0.045, 0.0075], "color": [1.5, 1.3, 0.9] },
+    { "position": [ 6.0, 5.0, -4.0],  "room": "hall", "ambient": [0.05, 0.04, 0.03], "diffuse": [1.0, 0.85, 0.6], "specular": [0.4, 0.4, 0.4], "attenuation": [1.0, 0.045, 0.0075], "color": [1.5, 1.3, 0.9] },
+    { "position": [-6.0, 5.0, -12.0], "room": "hall", "ambient": [0.05, 0.04, 0.03], "diffuse": [1.0, 0.85, 0.6], "specular": [0.4, 0.4, 0.4], "attenuation": [1.0, 0.045, 0.0075], "color": [1.5, 1.3, 0.9] },
+    { "position": [ 6.0, 5.0, -12.0], "room": "hall", "ambient": [0.05, 0.04, 0.03], "diffuse": [1.0, 0.85, 0.6], "specular": [0.4, 0.4, 0.4], "attenuation": [1.0, 0.045, 0.0075], "color": [1.5, 1.3, 0.9] }
+  ],
+
+  "doors": [
+    { "name": "door_front", "hinge": [-0.58, 0.005, 0.0], "yaw": 0, "width": 1.16 }
+  ]
+}

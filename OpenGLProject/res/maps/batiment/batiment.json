@@ -1,0 +1,1283 @@
+{
+  "name": "Batiment (ecole) x3",
+  "description": "Batiment scolaire exporte de Blender (res/maps/batiment(2).obj : murs, vitres et dalles sur 3 niveaux, 162 x 108 m (echelle x3), rez-de-chaussee a y=0). Modele colore par palette (building_palette.png), collisions precises. Eclairage de jour, 16 lampes au rez-de-chaussee, fropy ronde dans l'emprise du batiment. Echelle x3 : le modele OBJ, les spawns, les lampes, la zone de ronde et le sol sont multiplies par 3. Etages ramenes a 1.5 m (scaleY 1.40625). Portes interactives aux ouvertures des murs.",
+  "skybox": "./res/skybox/day/day",
+  "sun": {
+    "direction": [
+      -0.3,
+      -1.0,
+      -0.2
+    ],
+    "ambient": [
+      0.22,
+      0.22,
+      0.21
+    ],
+    "diffuse": [
+      0.45,
+      0.43,
+      0.4
+    ],
+    "specular": [
+      0.15,
+      0.15,
+      0.15
+    ]
+  },
+  "fog": {
+    "color": [
+      0.7,
+      0.8,
+      0.9
+    ],
+    "density": 0.0
+  },
+  "sunHead": {
+    "color": [
+      1.0,
+      0.92,
+      0.25
+    ],
+    "distance": 210,
+    "scale": 14,
+    "spotIntensity": 6.0
+  },
+  "creature": {
+    "sightRange": 35,
+    "patrol": {
+      "min": [
+        -18.0,
+        -105.0
+      ],
+      "max": [
+        138.0,
+        -3.0
+      ]
+    }
+  },
+  "spawns": [
+    {
+      "name": "player",
+      "position": [
+        12.6,
+        0.1,
+        -59.4
+      ]
+    },
+    {
+      "name": "creature",
+      "position": [
+        107.4,
+        0,
+        -102.6
+      ]
+    }
+  ],
+  "boxes": [
+    {
+      "name": "ground",
+      "center": [
+        60,
+        -1.0,
+        -54
+      ],
+      "size": [
+        480,
+        0.2,
+        480
+      ],
+      "material": "leaf"
+    }
+  ],
+  "models": [
+    {
+      "path": "./res/maps/batiment/batiment.obj",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "yaw": 0,
+      "scale": 3.0,
+      "scaleY": 1.40625
+    }
+  ],
+  "lights": [
+    {
+      "position": [
+        -17.4,
+        1.22,
+        -102.6
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        26.4,
+        1.22,
+        -102.6
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        81.6,
+        1.22,
+        -102.6
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        107.4,
+        1.22,
+        -102.6
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        126.6,
+        1.22,
+        -102.6
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        62.4,
+        1.22,
+        -93.6
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        8.4,
+        1.22,
+        -68.4
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        41.4,
+        1.22,
+        -68.4
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        20.4,
+        1.22,
+        -54.6
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        41.4,
+        1.22,
+        -44.4
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        5.4,
+        1.22,
+        -42.6
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        23.4,
+        1.22,
+        -30.6
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        5.4,
+        1.22,
+        -23.4
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        41.4,
+        1.22,
+        -20.4
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        24.6,
+        1.22,
+        -12.6
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    },
+    {
+      "position": [
+        6.6,
+        1.22,
+        -5.4
+      ],
+      "ambient": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "diffuse": [
+        0.7,
+        0.64,
+        0.53
+      ],
+      "specular": [
+        0.15,
+        0.15,
+        0.15
+      ],
+      "attenuation": [
+        1.0,
+        0.0467,
+        0.0078
+      ],
+      "color": [
+        1.0,
+        0.95,
+        0.8
+      ]
+    }
+  ],
+  "doors": [
+    {
+      "name": "door_0",
+      "hinge": [
+        1.194,
+        0.028,
+        -47.463
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_1",
+      "hinge": [
+        1.194,
+        0.028,
+        -35.896
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_2",
+      "hinge": [
+        1.94,
+        0.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_3",
+      "hinge": [
+        9.776,
+        0.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_4",
+      "hinge": [
+        13.881,
+        0.028,
+        -35.896
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_5",
+      "hinge": [
+        17.239,
+        0.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_6",
+      "hinge": [
+        20.522,
+        0.028,
+        -29.627
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_7",
+      "hinge": [
+        20.522,
+        0.028,
+        -10.224
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_8",
+      "hinge": [
+        23.06,
+        0.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_9",
+      "hinge": [
+        24.627,
+        0.028,
+        -47.537
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_10",
+      "hinge": [
+        30.0,
+        0.028,
+        -66.567
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_11",
+      "hinge": [
+        30.0,
+        0.028,
+        -58.358
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_12",
+      "hinge": [
+        30.0,
+        0.028,
+        -50.896
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_13",
+      "hinge": [
+        30.0,
+        0.028,
+        -37.463
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_14",
+      "hinge": [
+        30.0,
+        0.028,
+        -32.239
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_15",
+      "hinge": [
+        30.0,
+        0.028,
+        -21.418
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_16",
+      "hinge": [
+        30.0,
+        0.028,
+        -5.746
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_17",
+      "hinge": [
+        36.119,
+        0.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_18",
+      "hinge": [
+        39.254,
+        0.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_19",
+      "hinge": [
+        49.627,
+        0.028,
+        -103.507
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_20",
+      "hinge": [
+        84.403,
+        0.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_21",
+      "hinge": [
+        99.328,
+        0.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_22",
+      "hinge": [
+        102.687,
+        0.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_23",
+      "hinge": [
+        1.194,
+        4.528,
+        -47.463
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_24",
+      "hinge": [
+        1.194,
+        4.528,
+        -35.896
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_25",
+      "hinge": [
+        4.627,
+        4.528,
+        -102.761
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_26",
+      "hinge": [
+        9.776,
+        4.528,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_27",
+      "hinge": [
+        13.657,
+        4.528,
+        -102.761
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_28",
+      "hinge": [
+        13.881,
+        4.528,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_29",
+      "hinge": [
+        24.627,
+        4.528,
+        -47.537
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_30",
+      "hinge": [
+        24.627,
+        4.528,
+        -32.985
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_31",
+      "hinge": [
+        24.627,
+        4.528,
+        -0.522
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_32",
+      "hinge": [
+        30.0,
+        4.528,
+        -66.567
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_33",
+      "hinge": [
+        30.0,
+        4.528,
+        -47.91
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_34",
+      "hinge": [
+        30.0,
+        4.528,
+        -22.313
+      ],
+      "yaw": 90.0,
+      "width": 2.761,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_35",
+      "hinge": [
+        30.0,
+        4.528,
+        -5.746
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_36",
+      "hinge": [
+        39.627,
+        4.528,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_37",
+      "hinge": [
+        49.627,
+        4.528,
+        -103.507
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_38",
+      "hinge": [
+        84.403,
+        4.528,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_39",
+      "hinge": [
+        104.478,
+        4.528,
+        -104.254
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_40",
+      "hinge": [
+        22.761,
+        9.028,
+        -102.388
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_41",
+      "hinge": [
+        23.582,
+        9.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_42",
+      "hinge": [
+        30.0,
+        9.028,
+        -19.95
+      ],
+      "yaw": 90.0,
+      "width": 2.85,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_43",
+      "hinge": [
+        84.03,
+        9.028,
+        -91.119
+      ],
+      "yaw": 0.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    },
+    {
+      "name": "door_44",
+      "hinge": [
+        113.06,
+        9.028,
+        -103.881
+      ],
+      "yaw": 90.0,
+      "width": 2.836,
+      "height": 2.925,
+      "thickness": 0.12
+    }
+  ],
+  "buttons": [
+    {
+      "name": "quest:wires:0",
+      "label": "Rebrancher le tableau electrique",
+      "center": [
+        1.5,
+        1.13,
+        -99.6
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:simon:1",
+      "label": "Pirater le digicode",
+      "center": [
+        107.1,
+        1.13,
+        -99.6
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:timing:2",
+      "label": "Calibrer la chaudiere",
+      "center": [
+        39.6,
+        1.13,
+        -58.8
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:wave:3",
+      "label": "Accorder la radio",
+      "center": [
+        12.0,
+        1.13,
+        -60.0
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:wave:4",
+      "label": "Brouiller le signal de fropy",
+      "center": [
+        82.5,
+        1.13,
+        -99.6
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:wires:5",
+      "label": "Reparer la console",
+      "center": [
+        -10.5,
+        5.63,
+        -99.0
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:simon:6",
+      "label": "Deverrouiller l'armoire",
+      "center": [
+        120.0,
+        5.63,
+        -99.0
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:timing:7",
+      "label": "Stabiliser le generateur",
+      "center": [
+        51.0,
+        5.63,
+        -58.5
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:wave:8",
+      "label": "Capter la frequence de secours",
+      "center": [
+        12.0,
+        5.63,
+        -15.0
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:wires:9",
+      "label": "Relancer le serveur",
+      "center": [
+        0.0,
+        10.13,
+        -99.0
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:simon:10",
+      "label": "Ouvrir le coffre-fort",
+      "center": [
+        123.0,
+        10.13,
+        -97.5
+      ],
+      "scale": 0.55
+    },
+    {
+      "name": "quest:timing:11",
+      "label": "Purger la ventilation",
+      "center": [
+        36.0,
+        10.13,
+        -99.0
+      ],
+      "scale": 0.55
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<materialx version="1.39" fileprefix="./">
+  <open_pbr_surface name="LeafSet009_1K_PNG_OpenPbrSurface" type="surfaceshader" xpos="6.159420" ypos="-1.879310">
+    <input name="base_color" type="color3" nodename="LeafSet009_1K_PNG_Color" />
+    <input name="geometry_normal" type="vector3" nodename="NormalMap" />
+    <input name="geometry_opacity" type="float" nodename="LeafSet009_1K_PNG_Opacity" />
+    <input name="specular_roughness" type="float" nodename="LeafSet009_1K_PNG_Roughness" />
+  </open_pbr_surface>
+  <surfacematerial name="LeafSet009_1K_PNG" type="material" xpos="8.695652" ypos="0.000000">
+    <input name="surfaceshader" type="surfaceshader" nodename="LeafSet009_1K_PNG_OpenPbrSurface" />
+    <input name="displacementshader" type="displacementshader" nodename="displacement" />
+  </surfacematerial>
+  <tiledimage name="LeafSet009_1K_PNG_Color" type="color3" xpos="3.623188" ypos="-3.103448">
+    <input name="file" type="filename" value="LeafSet009_1K-PNG_Color.png" colorspace="srgb_texture" />
+    <input name="uvtiling" type="vector2" value="1.0, 1.0" />
+  </tiledimage>
+  <tiledimage name="LeafSet009_1K_PNG_Displacement" type="float" xpos="3.623188" ypos="5.163793">
+    <input name="file" type="filename" value="LeafSet009_1K-PNG_Displacement.png" />
+    <input name="uvtiling" type="vector2" value="1.0, 1.0" />
+  </tiledimage>
+  <displacement name="displacement" type="displacementshader" xpos="6.159420" ypos="1.879310">
+    <input name="displacement" type="float" nodename="LeafSet009_1K_PNG_Displacement" />
+    <input name="scale" type="float" value="1.0" />
+  </displacement>
+  <tiledimage name="LeafSet009_1K_PNG_NormalGL" type="vector3" xpos="1.086957" ypos="0.879310">
+    <input name="file" type="filename" value="LeafSet009_1K-PNG_NormalGL.png" />
+    <input name="uvtiling" type="vector2" value="1.0, 1.0" />
+  </tiledimage>
+  <normalmap name="NormalMap" type="vector3" xpos="3.623188" ypos="3.586207">
+    <input name="in" type="vector3" nodename="LeafSet009_1K_PNG_NormalGL" />
+    <input name="scale" type="float" value="1.0" />
+  </normalmap>
+  <tiledimage name="LeafSet009_1K_PNG_Opacity" type="float" xpos="3.623188" ypos="2.250000">
+    <input name="file" type="filename" value="LeafSet009_1K-PNG_Opacity.png" />
+    <input name="uvtiling" type="vector2" value="1.0, 1.0" />
+  </tiledimage>
+  <tiledimage name="LeafSet009_1K_PNG_Roughness" type="float" xpos="3.623188" ypos="-0.413793">
+    <input name="file" type="filename" value="LeafSet009_1K-PNG_Roughness.png" />
+    <input name="uvtiling" type="vector2" value="1.0, 1.0" />
+  </tiledimage>
+</materialx>

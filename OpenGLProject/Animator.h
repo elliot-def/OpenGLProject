@@ -98,6 +98,13 @@ public:
     // glisser lateralement, (2) zero le yaw de la chaine spine (tete face avant).
     void setStrafeCompensation(bool enable) { m_strafeCompensation = enable; }
 
+    // Reciblage par rotations seules : les translations des canaux sont ignorees,
+    // les longueurs d'os restent celles du modele (bind). Permet de jouer des clips
+    // Mixamo exportes pour un autre personnage (proportions differentes) sans
+    // etirer le maillage. Deja le comportement des modeles FBX RrTt (Megan).
+    void setRotationOnlyRetarget(bool enable) { m_rotationOnly = enable; }
+    bool usesFbxRrTtHelpers() const { return m_usesFbxRrTtHelpers; }
+
     // Facteur de vitesse de lecture de l'animation (1.0 = cadence d'origine).
     // Sert a synchroniser la cadence des pas sur la vitesse reelle du joueur
     // (moins de glissement des pieds, pas sur place quand le joueur est bloque
@@ -139,6 +146,7 @@ private:
     // translation du canal s'ajoute à celle du wrapper → segments étirés. Les
     // canaux de rotation portent alors le suffixe "_$AssimpFbx$_Rotation".
     bool m_usesFbxRrTtHelpers = false;
+    bool m_rotationOnly = false;   // cf. setRotationOnlyRetarget
 
     // Les animations sont partagées entre plusieurs transitions fire -> idle.
     // Éviter de retrier/reparcourir leurs clés à chaque transition : ce travail

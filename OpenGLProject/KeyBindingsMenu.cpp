@@ -91,7 +91,7 @@ void KeyBindingsMenu::rebuildItems() {
 
     // Une ligne par action : libelle + touche courante
     const float startY = 400.0f;
-    const float step = 44.0f;
+    const float step = 46.0f;
     for (int i = 0; i < kActionCount; ++i) {
         const std::string action = kBindableActions[i].action;
         const std::string label = kBindableActions[i].label;
@@ -109,12 +109,12 @@ void KeyBindingsMenu::rebuildItems() {
     // Sensibilite de la souris (rotation de la camera 1P)
     float mouseSens = m_inputManager ? m_inputManager->getMouseSensitivity()
                                      : ConfigKeys::DEFAULT_MOUSE_SENSITIVITY;
-    addRange("Sensibilite de la souris", Constants::Window::WINDOW_WIDTH / 2, 940, 300, 25,
+    addRange("Sensibilite de la souris", Constants::Window::WINDOW_WIDTH / 2, startY + kActionCount * step, 300, 25,
         0.01f, 0.20f, mouseSens, [this](float value) {
             if (m_inputManager) m_inputManager->setMouseSensitivity(value);
         });
 
-    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 1000, 200, 50, [this]() {
+    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, startY + (kActionCount + 1) * step, Constants::Menu::ITEM_W, Constants::Menu::ITEM_H, [this]() {
         // Une capture en cours est abandonnee en quittant le menu
         if (m_inputManager) m_inputManager->cancelKeyCapture();
         m_pendingAction.clear();

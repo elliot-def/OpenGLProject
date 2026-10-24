@@ -56,6 +56,8 @@ public:
     // Positions monde des joueurs distants actifs (hors pairs silencieux
     // depuis STALE_TIMEOUT) : cibles possibles de la creature.
     std::vector<glm::vec3> getRemotePositions() const;
+    // Position d'un joueur distant precis (SteamID) ; false s'il est inconnu/silencieux.
+    bool getRemotePosition(uint64_t steamID, glm::vec3& out) const;
 
     // Définit le modèle local (personnage Megan) dont on lit l'animation
     // courante. Appelé par Game::adoptLoadedEntities() une fois le chargement

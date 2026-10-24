@@ -18,26 +18,29 @@ AudioSettingsMenu::AudioSettingsMenu(Game* game, SoundManager* soundManager,
     const VoiceChat::Settings& s = m_voiceChat ? m_voiceChat->settings()
                                                : VoiceChat::Settings{};
 
+    constexpr float cx = Constants::Window::WINDOW_WIDTH / 2;
+    constexpr float T = Constants::Menu::AUDIO_TOP, S = Constants::Menu::AUDIO_STEP;
+
     // Chat vocal active / desactive
-    addCheckbox("Chat vocal", Constants::Window::WINDOW_WIDTH / 2, 400, 40,
+    addCheckbox("Chat vocal", cx, T + 0 * S, 40,
                 s.enabled, [this](bool checked) {
                     if (m_voiceChat) m_voiceChat->settings().enabled = checked;
                 });
 
     // Activation vocale (VAD) ou push-to-talk (touche V)
-    addCheckbox("Activation vocale (VAD)", Constants::Window::WINDOW_WIDTH / 2,
-                460, 40, s.voiceActivation, [this](bool checked) {
+    addCheckbox("Activation vocale (VAD)", cx,
+                T + 1 * S, 40, s.voiceActivation, [this](bool checked) {
                     if (m_voiceChat) m_voiceChat->settings().voiceActivation = checked;
                 });
 
     // Seuil de la detection vocale
-    addRange("Sensibilite vocale", Constants::Window::WINDOW_WIDTH / 2, 520,
+    addRange("Sensibilite vocale", cx, T + 2 * S,
              300, 25, 0.0f, 1.0f, s.sensitivity, [this](float value) {
                  if (m_voiceChat) m_voiceChat->settings().sensitivity = value;
              });
 
     // Volume des voix des autres joueurs
-    addRange("Volume des voix", Constants::Window::WINDOW_WIDTH / 2, 580,
+    addRange("Volume des voix", cx, T + 3 * S,
              300, 25, 0.0f, 1.0f, s.volume, [this](float value) {
                  if (m_voiceChat) m_voiceChat->settings().volume = value;
              });
@@ -57,7 +60,7 @@ AudioSettingsMenu::AudioSettingsMenu(Game* game, SoundManager* soundManager,
         for (size_t i = 1; i < devices.size(); ++i) {
             if (devices[i] == s.device) { defaultIndex = static_cast<int>(i); break; }
         }
-        addSelect("Micro", Constants::Window::WINDOW_WIDTH / 2, 640, 420, 30,
+        addSelect("Micro", cx, T + 4 * S, 420, 30,
                   labels, defaultIndex, [this, devices](int index) {
                       if (!m_voiceChat) return;
                       m_voiceChat->settings().device =
@@ -66,16 +69,16 @@ AudioSettingsMenu::AudioSettingsMenu(Game* game, SoundManager* soundManager,
     }
 
     // Micro coupe (on n'envoie plus rien, on continue d'ecouter)
-    addCheckbox("Micro coupe", Constants::Window::WINDOW_WIDTH / 2, 700, 40,
+    addCheckbox("Micro coupe", cx, T + 5 * S, 40,
                 s.micMuted, [this](bool checked) {
                     if (m_voiceChat) m_voiceChat->settings().micMuted = checked;
                 });
 
     // Rappel de la touche push-to-talk (texte statique, non actionnable)
     addItem("Touche parler (mode PTT) : " + std::string(VoiceChat::PTT_KEY_NAME),
-            Constants::Window::WINDOW_WIDTH / 2, 760, 600, 40, nullptr);
+            cx, T + 6 * S, 600, 40, nullptr);
 
-    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 830, 200, 50,
+    addItem("Retour", cx, T + 7 * S, Constants::Menu::ITEM_W, Constants::Menu::ITEM_H,
             [this]() {
                 m_game->getMenuManager()->showOptions();
             });

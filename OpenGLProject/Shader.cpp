@@ -1,5 +1,6 @@
 #include "Shader.h"
 #include "constants/window.h"
+#include "constants/shader.h"
 #include "Camera.h"
 
 
@@ -29,7 +30,7 @@ Shader::Shader(const std::string& vertexSource, const std::string& fragmentSourc
     m_projection = glm::perspective(
         glm::radians(60.0f),
         (float)Constants::Window::WINDOW_WIDTH / (float)Constants::Window::WINDOW_HEIGHT,
-        0.1f, 100.0f
+        0.1f, 500.0f
     );
 
     m_projection2D = glm::ortho(
@@ -83,15 +84,37 @@ GLuint Shader::getID() const {
     return m_id;
 }
 
+// Lit un fichier shader et le pre-traite :
+//  - `#include "x.glsl"` est remplace par res/shaders/common/x.glsl (code GLSL partage :
+//    brouillard, anti-repetition...), recursivement ;
+//  - apres `#version`, les tailles des tableaux de lumieres sont injectees depuis le C++
+//    (Constants::Shader) : plus de #define a garder synchronises a la main.
 std::string Shader::loadFromFile(const std::string& path) {
     std::ifstream file(path);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open shader file: " + path);
     }
 
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
+    std::stringstream out;
+    std::string line;
+    bool first = true;
+    while (std::getline(file, line)) {
+        const size_t inc = line.find("#include");
+        if (inc != std::string::npos && line.find_first_not_of(" \t") == inc) {
+            const size_t q0 = line.find('"'), q1 = line.rfind('"');
+            if (q0 == std::string::npos || q1 <= q0) throw std::runtime_error("#include invalide dans " + path);
+            out << loadFromFile("./res/shaders/common/" + line.substr(q0 + 1, q1 - q0 - 1)) << '\n';
+            continue;
+        }
+        out << line << '\n';
+        if (first && line.rfind("#version", 0) == 0) {
+            out << "#define MAX_POINT_LIGHTS " << Constants::Shader::MAX_LIGHTS_SOURCES << '\n'
+                << "#define MAX_LIGHTS " << Constants::Shader::MAX_LIGHTS_SOURCES << '\n'
+                << "#define MAX_ROOMS " << Constants::Shader::MAX_ROOMS << '\n';
+        }
+        first = false;
+    }
+    return out.str();
 }
 
 void Shader::setTexture(const std::string& name, unsigned int textureID, unsigned int unit) {

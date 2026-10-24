@@ -85,12 +85,12 @@ void ControllerBindingsMenu::rebuildItems() {
     // Sensibilite du stick droit (camera) de la manette
     float lookSens = m_inputManager ? m_inputManager->getControllerLookSensitivity()
                                     : ConfigKeys::CONTROLLER_LOOK_SENSITIVITY;
-    addRange("Sensibilite du joystick", Constants::Window::WINDOW_WIDTH / 2, 800, 300, 25,
+    addRange("Sensibilite du joystick", Constants::Window::WINDOW_WIDTH / 2, startY + kControllerActionCount * step, 300, 25,
         0.0f, 3.0f, lookSens, [this](float value) {
             if (m_inputManager) m_inputManager->setControllerLookSensitivity(value);
         });
 
-    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, 860, 200, 50, [this]() {
+    addItem("Retour", Constants::Window::WINDOW_WIDTH / 2, startY + (kControllerActionCount + 1) * step, Constants::Menu::ITEM_W, Constants::Menu::ITEM_H, [this]() {
         if (m_inputManager) m_inputManager->cancelControllerCapture();
         m_pendingAction.clear();
         m_game->getMenuManager()->showOptions();

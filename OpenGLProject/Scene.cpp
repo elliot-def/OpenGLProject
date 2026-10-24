@@ -20,12 +20,18 @@
 #include "CharacterAnimationController.h"
 #include "Creature.h"
 #include "Renderer.h"
+#include "FogParticles.h"
+#include "SkySystem.h"
 #include "Log.h"
 
 #include "constants/texture.h"
 #include "constants/material.h"
 #include "constants/door.h"
 #include "constants/resource.h"
+#include "constants/creature.h"
+#include "Model.h"
+#include "Animator.h"
+#include <algorithm>
 
 #include <cmath>
 #include <string>
@@ -53,8 +59,8 @@ Scene::Scene(Camera* camera, Player* player, CollisionManager* collisionManager,
     // (loadResources, thread principal), donc la création du VAO/VBO/EBO du
     // cube unitaire est sûre.
     m_cubeRenderer = std::make_unique<CubeRenderer>();
-    m_glareShader = m_shaderManager->getShader("glare");
-    glGenVertexArrays(1, &m_glareVao);
+    m_sky = std::make_unique<SkySystem>(m_camera, m_lightManager, m_renderer, m_textureManager,
+                                        m_shaderManager, m_collisionManager);
 }
 
 Scene::~Scene() = default;
@@ -68,6 +74,14 @@ Scene::~Scene() = default;
 // sont enregistrées par le loader ; les colliders dynamiques des portes sont
 // ajoutés ici (dirty-flag dans update()).
 void Scene::loadMap(const char* jsonPath) {
+    // Rechargement (lobby -> partie) : on repart d'un monde vide. Sans effet au
+    // premier chargement.
+    m_collisionManager->clear();
+    m_lightManager->clearMapLights();
+    m_map.reset();
+    m_hitCooldown = 0.0f;
+    m_aimedButton = -1;
+
     m_wallShader      = m_shaderManager->getShader("cube/wall");
     m_severallightsShader = m_shaderManager->getShader("cube/severallights");
     m_containerTexture = m_textureManager->getTexture("container");
@@ -80,6 +94,12 @@ void Scene::loadMap(const char* jsonPath) {
     // TextureManager ne parcourt que les .png (dossier/fichier.png).
     m_wallDiffuse = std::make_unique<Texture>("./res/textures/brickwall/brickwall.jpg",
         Constants::Texture::FIRST_TEXTURE_ID + 100, Constants::Material::STONE, false);
+    m_leavesShader = m_shaderManager->getShader("leaves");
+    for (int i = 0; i < 3; ++i) {
+        m_leafTextures[i] = std::make_unique<Texture>(
+            "./res/models/trees/leaf_sheet_" + std::to_string(i) + ".png",
+            Constants::Texture::FIRST_TEXTURE_ID + 110 + i, Constants::Material::STONE, false);
+    }
     m_treeTexture = std::make_unique<Texture>("./res/models/trees/tree_palette.png",
         Constants::Texture::FIRST_TEXTURE_ID + 102, Constants::Material::STONE, false);
     m_wallNormal  = std::make_unique<Texture>("./res/textures/brickwall/brickwall_normal.jpg",
@@ -95,6 +115,18 @@ void Scene::loadMap(const char* jsonPath) {
     // réglage d'ambiance par map (cf. MapSun / LightManager::setDirLight).
     const MapSun& sun = m_map->getSun();
     m_lightManager->setDirLight({ sun.direction, sun.ambient, sun.diffuse, sun.specular });
+    m_lightManager->setFog(m_map->getFog().color, m_map->getFog().density);
+    // Brume en particules seulement s'il y a du brouillard (pas de jour).
+    if (m_map->getFog().density > 1e-4f) {
+        m_fogParticles = std::make_unique<FogParticles>(m_shaderManager->getShader("fogparticles"));
+    } else {
+        m_fogParticles.reset();
+    }
+    // Portee de vue de fropy : valeur de la carte, sinon visibilite du brouillard.
+    m_creatureSight = m_map->getCreatureSightRange() > 0.0f ? m_map->getCreatureSightRange()
+                                                           : m_lightManager->getFogVisibility();
+    // Ciel de la carte (jour / nuit)
+    if (!m_map->getSkybox().empty()) createSkybox(m_map->getSkybox().c_str());
 
     // ── Pièces + lumières ponctuelles de la carte ("rooms", "lights") ─────
     std::unordered_map<std::string, int> roomIndex;
@@ -116,48 +148,35 @@ void Scene::loadMap(const char* jsonPath) {
         }
     }
 
-    // Soleil VISIBLE : tête de fropy JAUNE dans le ciel, placée à l'opposé du
-    // rayonnement (le dir light pointe vers la scène, le soleil est en haut).
-    // Shader "door" = couleur unie (uColor) → jaune sans texture, quelle que
-    // soit l'ambiance de la map.
-    glm::vec3 sunDir = sun.direction;
-    if (glm::length(sunDir) < 1e-4f) sunDir = glm::vec3(0.0f, -1.0f, 0.0f);
-    sunDir = glm::normalize(sunDir);
-    const glm::vec3 mapCenter(0.0f, 0.0f, -10.0f);          // centre du village
-    m_sunHead = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
-                                              Constants::Resource::MODEL_FROPY_HEAD,
-                                              m_textureManager);
-    m_sunHead->setScale(24.0f);                              // tête géante, vue de loin
-    m_sunHead->setPosition(mapCenter - sunDir * 60.0f);
-    // Face (local +Z) tournée vers la scène : yaw = atan2(fz, fx) en degrés.
-    m_sunHead->setDirection(Direction(glm::degrees(std::atan2(-sunDir.z, -sunDir.x)), 0.0));
-    LOG_INFO("[Map] Soleil visible: tete de fropy jaune a (%.1f, %.1f, %.1f)",
-             (mapCenter - sunDir * 60.0f).x, (mapCenter - sunDir * 60.0f).y,
-             (mapCenter - sunDir * 60.0f).z);
+    // Tete de fropy dans le ciel (soleil / lune) et sa spot.
+    m_sky->load(sun, m_map->getSunHead());
 
-    // ── Créature qui poursuit le joueur (corps sombre + tête de fropy) ─────
-    m_creatureHead = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
-                                                   Constants::Resource::MODEL_FROPY_HEAD,
-                                                   m_textureManager);
-    m_creatureBodyShader = m_shaderManager->getShader("cube/lightsource");
-    const glm::vec3 creatureSpawn = m_map->getSpawn("creature", glm::vec3(10.0f, 0.0f, -8.0f));
-    m_creature = std::make_unique<Creature>(m_creatureHead.get(), creatureSpawn);
-    LOG_INFO("[Creature] spawn (%.1f, %.1f, %.1f) : poursuit le joueur (%.1f u/s, s'arrete a 1.2 m)",
-             creatureSpawn.x, creatureSpawn.y, creatureSpawn.z, m_creature->getSpeed());
-
-    // [DIAG] auto-test de la poursuite (une fois au chargement) : la créature
-    // doit se rapprocher du joueur. Repart ensuite de son spawn.
-    {
-        const glm::vec3 target(0.0f, 0.0f, 3.0f);
-        const float d0 = glm::length(m_creature->getPosition() - target);
-        for (int i = 0; i < 300; ++i) {
-            m_creature->update(1.0f / 60.0f, target, nullptr);
-        }
-        const float d1 = glm::length(m_creature->getPosition() - target);
-        LOG_INFO("[Creature][DIAG] auto-test poursuite: distance %.2f -> %.2f en 5s (doit decroitre)",
-                 d0, d1);
-        m_creature->setPosition(creatureSpawn);
+    // ── Créature qui poursuit le joueur (modele articule de fropy) ─────────
+    // Options de partie : pas de fropy sur la carte (lobby) ou en mode
+    // Exploration ; sinon difficulte (vitesse, vue, ouie).
+    m_creature.reset();
+    if (m_map->isCreatureEnabled() && m_matchCreature) {
+        ensureCreatureModel();
+        const glm::vec3 creatureSpawn = m_map->getSpawn("creature", glm::vec3(10.0f, 0.0f, -8.0f));
+        m_creature = std::make_unique<Creature>(m_creatureModel.get(), creatureSpawn);
+        m_creature->setDifficulty(m_matchSpeedMul, m_matchSenseMul);
+        if (m_map->hasPatrolBounds()) m_creature->setPatrolBounds(m_map->getPatrolMin(), m_map->getPatrolMax());
+        LOG_INFO("[Creature] spawn (%.1f, %.1f, %.1f) : poursuit le joueur (%.1f u/s, s'arrete a 1.2 m)",
+                 creatureSpawn.x, creatureSpawn.y, creatureSpawn.z, m_creature->getSpeed());
     }
+
+    // Boutons de la carte = fropys qui tournent : UN modele partage, dessine a chaque bouton.
+    if (!m_map->getButtons().empty() && !m_buttonModel) {
+        m_buttonModel = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
+                                                      Constants::Resource::MODEL_FROPY, m_textureManager);
+        m_buttonModel->setSpin(30.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+    }
+
+    buildPartIndex();
+
+    // Joueur au point d'apparition "player" de la carte (s'il existe).
+    m_player->setPosition(m_map->getSpawn("player", m_player->getPosition()));
+    m_collisionManager->setVerticalVelocity(0.0f);
 
     // Colliders dynamiques des portes : l'AABB suit la rotation via
     // updateDynamic dans update() (même principe que backpack/fropy plus bas).
@@ -186,78 +205,109 @@ void Scene::loadMap(const char* jsonPath) {
 
 // Ouvre/ferme la porte interactive la plus proche parmi celles que le joueur
 // est en train de regarder (portee + cone de regard, voir Door::canInteract).
-// La tete du soleil regarde la creature en permanence et l'eclaire d'un spot.
-void Scene::updateSunGaze() {
-    if (!m_sunHead || !m_creature) return;
-    const glm::vec3 from = m_sunHead->getPosition();
-    const glm::vec3 target = m_creature->getPosition() + glm::vec3(0.0f, 1.0f, 0.0f);   // torse
-    const glm::vec3 d = glm::normalize(target - from);
-    m_sunHead->setDirection(Direction(glm::degrees(std::atan2(d.z, d.x)), 0.0));
-    m_sunHead->setPitchDeg(glm::degrees(std::asin(-d.y)));
-    m_lightManager->aimSunSpot(from, target);
+std::string Scene::getAimedButtonLabel() const {
+    if (!m_map || m_aimedButton < 0 || m_aimedButton >= static_cast<int>(m_map->getButtons().size())) return "";
+    return m_map->getButtons()[m_aimedButton].label;
 }
 
-// Eblouissement : intensite selon l'angle entre le regard et le soleil, annulee
-// si un obstacle (toit, mur) coupe la ligne camera -> soleil. Lissee pour
-// eviter les sauts quand on passe une porte ou qu'on tourne la tete.
-void Scene::updateSunGlare(float deltaTime) {
-    m_glareTime += deltaTime;
-    float target = 0.0f, targetDazzle = 0.0f;
-    if (m_sunHead) {
-        const glm::vec3 cam = m_camera->getPosition();
-        const glm::vec3 toSun = m_sunHead->getPosition() - cam;
-        const float dist = glm::length(toSun);
-        const float facing = dist > 1e-3f ? glm::dot(m_camera->getFront(), toSun / dist) : 0.0f;
-        const float wide = glm::smoothstep(std::cos(glm::radians(55.0f)), std::cos(glm::radians(6.0f)), facing);
-        if (wide > 0.0f) {
-            bool visible = true;
-            const glm::vec3 dir = toSun / dist;
-            for (float t = 0.5f; t < dist - 10.0f && visible; t += 1.5f) {   // -10 : on s'arrete avant la tete (pas de collider)
-                visible = !m_collisionManager->testSphereAll(cam + dir * t, 0.15f).hit;
-            }
-            if (visible) {
-                target = wide;
-                targetDazzle = glm::smoothstep(std::cos(glm::radians(22.0f)), std::cos(glm::radians(2.0f)), facing);
-            }
+// Origine de la visee (boutons, portes) : les yeux du joueur. En 3e personne la
+// camera est CAMERA_THIRD_PERSON_DISTANCE derriere : mesurer la portee depuis elle
+// mettait tout bouton hors de portee. La direction reste celle de la camera (elle
+// passe par les yeux du joueur en 3P).
+static glm::vec3 interactOrigin(const Camera* camera, const Player* player) {
+    if (camera->isThirdPerson() && player) return player->getPosition() + Constants::Player::PLAYER_EYE_HEIGHT;
+    return camera->getPosition();
+}
+
+// Modele articule de fropy : charge UNE fois (garde d'une carte a l'autre), 3 clips Mixamo
+// (repos, marche, course) rejoues par rotations seules (squelette des clips, cf. Animator).
+void Scene::ensureCreatureModel() {
+    if (m_creatureModel) return;
+    m_creatureModel = std::make_unique<ModelEntity>(m_camera, m_lightManager, m_renderer,
+                                                    Constants::Resource::MODEL_FROPY_RIG, m_textureManager);
+    Model* model = m_creatureModel->getModel();
+    const float h = model->getBoundingBox().getSize().y;
+    if (h > 0.001f) m_creatureModel->setScale(Constants::Creature::MODEL_HEIGHT / h);
+    const std::string dir = Constants::Resource::MIXAMO_ANIM_DIR;
+    model->loadExternalAnimations({ dir + "idle.fbx", dir + "walking.fbx", dir + "standard run.fbx" });
+    const int base = static_cast<int>(model->getNumAnimations() - model->getNumExternalAnimations());
+    m_creatureModel->setIdleAnimIndex(base + 0);
+    m_creatureModel->setWalkAnimIndex(base + 1);
+    m_creatureModel->setRunAnimIndex(base + 2);
+    if (Animator* anim = m_creatureModel->getAnimator()) anim->setRotationOnlyRetarget(true);
+    m_creatureModel->playAnimation(base + 0, true);
+    m_creatureAnim = base + 0;
+    LOG_INFO("[Creature] modele articule charge (%zu os, echelle %.4f)", model->getBoneInfoMap().size(), m_creatureModel->getScale());
+}
+
+// Animation de fropy selon sa vitesse reelle : repos / marche (ronde) / course (poursuite),
+// cadence calee sur la vitesse pour que les pieds ne glissent pas.
+void Scene::updateCreatureAnimation(float deltaTime) {
+    if (!m_creature || !m_creatureModel) return;
+    using namespace Constants::Creature;
+    const float v = m_creature->getMoveSpeed();
+    const int want = v < 0.15f ? m_creatureModel->getIdleAnimIndex()
+                   : (v < RUN_THRESHOLD ? m_creatureModel->getWalkAnimIndex() : m_creatureModel->getRunAnimIndex());
+    if (want != m_creatureAnim) {
+        m_creatureModel->playAnimation(want, true);
+        m_creatureAnim = want;
+    }
+    if (Animator* anim = m_creatureModel->getAnimator()) {
+        const float natural = want == m_creatureModel->getRunAnimIndex() ? RUN_ANIM_SPEED
+                            : (want == m_creatureModel->getWalkAnimIndex() ? WALK_ANIM_SPEED : 0.0f);
+        anim->setSpeedScale(natural > 0.0f ? std::clamp(v / natural, 0.6f, 1.8f) : 1.0f);
+    }
+    m_creatureModel->updateAnimation(deltaTime);
+}
+
+// Fropy ouvre les portes comme un joueur : une porte FERMEE qui barre sa trajectoire
+// immediate (DOOR_LOOKAHEAD m vers son prochain point), a portee et dans son regard
+// (meme regle que la touche E : Door::canInteract). Elle bascule loin de lui (poussee).
+void Scene::openDoorsForCreature() {
+    if (!m_creature || !m_map || !m_creature->isSteering()) return;
+    const glm::vec3 p = m_creature->getPosition();
+    glm::vec3 to = m_creature->getSteerTarget() - p;
+    to.y = 0.0f;
+    const float len = glm::length(to);
+    if (len < 1e-3f) return;
+    const glm::vec3 ahead = p + to * (std::min(len, Constants::Creature::DOOR_LOOKAHEAD) / len);
+    const glm::vec3 eye = p + glm::vec3(0.0f, Constants::Creature::EYE_HEIGHT, 0.0f);
+    for (auto& door : m_map->getDoors()) {
+        if (!door->getIsOpen() && door->blocksSegment(p, ahead) && door->canInteract(eye, m_creature->getFaceDir())) {
+            door->toggle(p);
         }
     }
-    const float k = std::min(1.0f, deltaTime * 6.0f);
-    m_glare  += (target - m_glare) * k;
-    m_dazzle += (targetDazzle - m_dazzle) * k;
 }
 
-void Scene::drawSunGlare() {
-    if (!m_glareShader || !m_sunHead || !(m_glare >= 0.003f)) return;   // !(>=) : rejette aussi NaN
-    const glm::mat4 proj = m_doorShader->getProjection();
-    const glm::vec4 clip = proj * m_camera->getViewMatrix() * glm::vec4(m_sunHead->getPosition(), 1.0f);
-    if (clip.w <= 0.01f) return;   // derriere la camera
+const std::vector<MapButton>& Scene::getMapButtons() const {
+    static const std::vector<MapButton> none;
+    return m_map ? m_map->getButtons() : none;
+}
 
-    glDisable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_COLOR);   // melange "screen" : ne sature jamais au-dela de 1
-    m_glareShader->use();
-    m_glareShader->setVec2("sunNdc", glm::vec2(clip.x / clip.w, clip.y / clip.w));
-    m_glareShader->setFloat("aspect", proj[1][1] / proj[0][0]);
-    m_glareShader->setFloat("intensity", m_glare);
-    m_glareShader->setFloat("dazzle", m_dazzle);
-    m_glareShader->setFloat("time", m_glareTime);
-    glBindVertexArray(m_glareVao);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-    glDisable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
+void Scene::setButtonEnabled(const std::string& name, bool enabled) {
+    if (!m_map) return;
+    for (MapButton& b : m_map->getButtons()) {
+        if (b.name == name) b.enabled = enabled;
+    }
 }
 
 void Scene::tryToggleDoor() {
     if (!m_map) return;
+    const glm::vec3 eye = interactOrigin(m_camera, m_player);
+
+    // Bouton vise : prioritaire sur les portes.
+    if (m_aimedButton >= 0 && m_buttonCallback) {
+        m_buttonCallback(m_map->getButtons()[m_aimedButton].name);
+        return;
+    }
 
     Door* best = nullptr;
     float bestDist = 0.0f;
     for (auto& door : m_map->getDoors()) {
-        if (!door->canInteract(m_camera->getPosition(), m_camera->getFront())) {
+        if (!door->canInteract(eye, m_camera->getFront())) {
             continue;
         }
-        const float dist = glm::length(door->getCenter() - m_camera->getPosition());
+        const float dist = glm::length(door->getCenter() - eye);
         if (!best || dist < bestDist) {
             best = door.get();
             bestDist = dist;
@@ -265,18 +315,54 @@ void Scene::tryToggleDoor() {
     }
     if (best) {
         // Le joueur pousse la porte : elle bascule du cote oppose a sa position.
-        best->toggle(m_camera->getPosition());
+        best->toggle(eye);
     }
+}
+
+// Texture d'un modèle OBJ (cache par chemin ; "" = blanc, teinté par la couleur Kd).
+Texture* Scene::getModelTexture(const std::string& path) {
+    const std::string key = path.empty() ? "./res/textures/white.png" : path;
+    auto it = m_modelTextures.find(key);
+    if (it == m_modelTextures.end()) {
+        it = m_modelTextures.emplace(key, std::make_unique<Texture>(key,
+            Constants::Texture::FIRST_TEXTURE_ID + 130 + static_cast<int>(m_modelTextures.size()),
+            Constants::Material::STONE, false)).first;
+    }
+    return it->second.get();
+}
+
+// Index des parties de carte par materiau + sphere englobante monde (culling).
+void Scene::buildPartIndex() {
+    m_partsByMaterial.assign(16, {});
+    m_partSpheres.clear();
+    const auto& parts = m_map->getParts();
+    for (size_t i = 0; i < parts.size(); ++i) {
+        m_partsByMaterial[static_cast<int>(parts[i].material)].push_back(i);
+        glm::vec3 mn(1e30f), mx(-1e30f);
+        for (const Vertex& v : parts[i].mesh->getVertices()) {
+            const glm::vec3 w = glm::vec3(parts[i].model * glm::vec4(v.getPositions(), 1.0f));
+            mn = glm::min(mn, w);
+            mx = glm::max(mx, w);
+        }
+        const glm::vec3 c = (mn + mx) * 0.5f;
+        m_partSpheres.push_back(glm::vec4(c, glm::length(mx - c)));
+    }
+}
+
+bool Scene::partVisible(size_t i) const {
+    if (i >= m_partSpheres.size()) return true;
+    const glm::vec4& sp = m_partSpheres[i];
+    for (const glm::vec4& p : m_frustum) {
+        if (glm::dot(glm::vec3(p), glm::vec3(sp)) + p.w < -sp.w) return false;   // entierement derriere un plan
+    }
+    return true;
 }
 
 void Scene::createSkybox(const char* path) {
     m_skybox = std::make_unique<Skybox>(path);
 }
 
-void Scene::adoptEntities(ModelEntity* modelEntity, ModelEntity* fropyEntity,
-                          ModelEntity* humanEntity, CharacterAnimationController* characterAnim) {
-    m_modelEntity    = modelEntity;
-    m_fropyEntity    = fropyEntity;
+void Scene::adoptEntities(ModelEntity* humanEntity, CharacterAnimationController* characterAnim) {
     m_humanEntity    = humanEntity;
     m_characterAnim  = characterAnim;
 }
@@ -286,12 +372,12 @@ void Scene::adoptEntities(ModelEntity* modelEntity, ModelEntity* fropyEntity,
 void Scene::update(float deltaTime) {
     // Portes : glow d'interaction (portee + regard), animation d'ouverture /
     // fermeture, et collider dynamique si la matrice a change (dirty-flag).
+    const glm::vec3 eye = interactOrigin(m_camera, m_player);
     if (m_map) {
         auto& doors = m_map->getDoors();
         for (size_t i = 0; i < doors.size(); ++i) {
             Door* door = doors[i].get();
-            door->setHighlighted(door->canInteract(m_camera->getPosition(),
-                                                   m_camera->getFront()));
+            door->setHighlighted(door->canInteract(eye, m_camera->getFront()));
             door->update(deltaTime);
 
             const glm::mat4 mat = door->getModelMatrix();
@@ -310,46 +396,60 @@ void Scene::update(float deltaTime) {
 
     m_player->update();
 
+    // Bouton vise : le plus proche a portee (2.5 m) dans le cone de regard.
+    m_aimedButton = -1;
+    if (m_map) {
+        float bestDist = 2.5f;
+        const auto& buttons = m_map->getButtons();
+        for (size_t i = 0; i < buttons.size(); ++i) {
+            if (!buttons[i].enabled) continue;
+            const glm::vec3 to = buttons[i].position - eye;
+            const float d = glm::length(to);
+            if (d < 1e-4f || d > bestDist) continue;
+            if (glm::dot(to / d, glm::normalize(m_camera->getFront())) < 0.8f) continue;
+            bestDist = d;
+            m_aimedButton = static_cast<int>(i);
+        }
+    }
+
     // Créature : poursuite du joueur (glissement contre les murs via le
     // sweepSphere du CollisionManager, s'arrête à sa portée).
     if (m_creature) {
-        // Cible = joueur (local ou distant) le plus proche en XZ.
-        const glm::vec3 cpos = m_creature->getPosition();
-        glm::vec3 target = m_player->getPosition();
-        float best = glm::distance(glm::vec2(cpos.x, cpos.z), glm::vec2(target.x, target.z));
-        for (const glm::vec3& p : m_remoteTargets) {
-            const float d = glm::distance(glm::vec2(cpos.x, cpos.z), glm::vec2(p.x, p.z));
-            if (d < best) { best = d; target = p; }
+        // L'IA de la creature gere elle-meme cible, vision (portee = brouillard +
+        // ligne de vue), perte d'agro et rondes. Cibles : joueur local + distants.
+        std::vector<glm::vec3> targets;
+        targets.reserve(1 + m_remoteTargets.size());
+        targets.push_back(m_player->getPosition());
+        targets.insert(targets.end(), m_remoteTargets.begin(), m_remoteTargets.end());
+        m_creature->update(deltaTime, targets, m_creatureSight, m_noises, m_collisionManager);
+        updateCreatureAnimation(deltaTime);
+        openDoorsForCreature();
+
+        // Fropy trop pres du joueur (hors noclip) : coup. Invulnerabilite courte, fropy etourdi.
+        m_hitCooldown = std::max(0.0f, m_hitCooldown - deltaTime);
+        const glm::vec3 cp = m_creature->getPosition(), pp = m_player->getPosition();
+        if (m_hitCooldown <= 0.0f && m_player->isGravityEnabled() && m_playerHitCallback &&
+            glm::length(glm::vec2(cp.x - pp.x, cp.z - pp.z)) < Constants::Player::CREATURE_ATTACK_RANGE &&
+            std::abs(pp.y - cp.y) < 2.0f) {
+            m_hitCooldown = Constants::Player::PLAYER_HIT_COOLDOWN;
+            m_creature->stun(Constants::Player::CREATURE_STUN_TIME);
+            m_playerHitCallback();
         }
-        m_creature->update(deltaTime, target, m_collisionManager);
-        updateSunGaze();
     }
-    updateSunGlare(deltaTime);
+    m_noises.clear();   // les bruits ne durent qu'une frame (re-emis tant que ca dure)
+    // Ciel : la tete regarde la creature (torse) ; eblouissement.
+    {
+        glm::vec3 gaze(0.0f);
+        if (m_creature) gaze = m_creature->getPosition() + glm::vec3(0.0f, 1.0f, 0.0f);
+        m_sky->update(deltaTime, m_creature ? &gaze : nullptr);
+    }
+    if (m_fogParticles) m_fogParticles->update(deltaTime, m_camera->getPosition());
 
     m_camera->update(m_player);
     m_lightManager->update();
 
-    // Collisions dynamiques : AABB world recalculée uniquement si la matrice
-    // modèle de l'entité a changé (dirty-flag).
-    if (m_modelEntity) {
-        const glm::mat4 mat = m_modelEntity->getModelMatrix();
-        if (m_backpackDirty || mat != m_lastBackpackMatrix) {
-            m_collisionManager->updateDynamic("backpack", m_modelEntity->getMeshes(), mat);
-            m_lastBackpackMatrix = mat;
-            m_backpackDirty = false;
-        }
-    }
-    if (m_fropyEntity) {
-        const glm::mat4 mat = m_fropyEntity->getModelMatrix();
-        if (m_fropyDirty || mat != m_lastFropyMatrix) {
-            m_collisionManager->updateDynamic("fropy_low_poly", m_fropyEntity->getMeshes(), mat);
-            m_lastFropyMatrix = mat;
-            m_fropyDirty = false;
-        }
-    }
-    if (m_fropyEntity) {
-        m_fropyEntity->update();
-    }
+    // Fropys-boutons (lobby) : rotation + leger grossissement du bouton vise.
+    if (m_buttonModel && m_map && !m_map->getButtons().empty()) m_buttonModel->update();
 
     // Humain 3ème personne : suit la position et la direction du joueur.
     if (m_humanEntity) {
@@ -393,6 +493,18 @@ void Scene::update(float deltaTime) {
 // ── Rendu du monde ──────────────────────────────────────────────────────────
 
 void Scene::draw() {
+    // Plans du frustum (Gribb-Hartmann) pour le culling des parties de carte.
+    {
+        const glm::mat4 pv = (m_severallightsShader ? m_severallightsShader->getProjection() : glm::mat4(1.0f))
+                           * m_camera->getViewMatrix();
+        for (int i = 0; i < 3; ++i) {
+            for (int sgn = 0; sgn < 2; ++sgn) {
+                glm::vec4 p;
+                for (int c = 0; c < 4; ++c) p[c] = pv[c][3] + (sgn ? -pv[c][i] : pv[c][i]);
+                m_frustum[i * 2 + sgn] = p / glm::length(glm::vec3(p));
+            }
+        }
+    }
     // 0. Ciel : rendu en premier (depth LEQUAL + mask off), la géométrie de
     // la scène le recouvre ensuite naturellement grâce au depth test.
     if (m_skybox && m_skyboxShader) {
@@ -411,19 +523,10 @@ void Scene::draw() {
         m_cubeRenderer->submit(lightCube->getShader(), {}, lightCube->getModelMatrix(),
                                light->getLightColor());
     }
-    // Corps de la créature (cubes émissifs sombres) : même lot instancié.
-    if (m_creature && m_creatureBodyShader) {
-        m_creature->submitBody(m_cubeRenderer.get(), m_creatureBodyShader);
-    }
     m_cubeRenderer->draw(m_camera, m_lightManager);
 
-    // Soleil : tête de fropy JAUNE (shader "door" = couleur unie uColor,
-    // éclairée par la lumière directionnelle de la map).
-    if (m_sunHead && m_doorShader) {
-        m_doorShader->use();
-        m_doorShader->setVec3("uColor", glm::vec3(1.0f, 0.92f, 0.25f));
-        m_sunHead->draw(m_doorShader);
-    }
+    // Tete du ciel (couleur unie, sans brouillard).
+    m_sky->drawHead(m_doorShader);
 
     // 2. Carte — matériau brique (murs + pignons du toit) : shader dédié "cube/wall"
     // (TBN reconstruit par dérivées dans le fragment shader). Mêmes uniforms
@@ -445,8 +548,9 @@ void Scene::draw() {
         m_wallShader->setInt("material.normal", 1);
         m_wallShader->setFloat("material.shininess", m_wallDiffuse->getShininess());
 
-        for (const auto& part : m_map->getParts()) {
-            if (part.material != MapMaterial::BrickWall) continue;
+        for (size_t pi : m_partsByMaterial[static_cast<int>(MapMaterial::BrickWall)]) {
+            const MapPart& part = m_map->getParts()[pi];
+            if (!partVisible(pi)) continue;
             m_wallShader->setMat4("model", part.model);
             part.mesh->draw();
         }
@@ -475,11 +579,61 @@ void Scene::draw() {
         for (const auto& entry : texturedMaterials) {
             if (!entry.texture) continue;
             entry.texture->applyToShader(m_severallightsShader);
-            for (const auto& part : m_map->getParts()) {
-                if (part.material != entry.material) continue;
+            m_severallightsShader->setFloat("uPlainTexture", entry.material == MapMaterial::Tree ? 1.0f : 0.0f);
+            for (size_t pi : m_partsByMaterial[static_cast<int>(entry.material)]) {
+                const MapPart& part = m_map->getParts()[pi];
+                if (!partVisible(pi)) continue;
                 m_severallightsShader->setMat4("model", part.model);
+                if (entry.material == MapMaterial::Tree) m_severallightsShader->setVec3("uTreeTint", part.tint);
                 part.mesh->draw();
             }
+        }
+    }
+
+    // 3.ter Modèles OBJ (bâtiment) : opaques puis transparents (vitres, alpha < 1 : blending,
+    // sans écriture de profondeur). Texture directe (UV du fichier, pas d'anti-répétition).
+    if (m_map && m_severallightsShader) {
+        m_severallightsShader->use();
+        m_severallightsShader->setFloat("useInstanceModel", 0.0f);
+        m_severallightsShader->setFloat("uPlainTexture", 1.0f);
+        for (int pass = 0; pass < 2; ++pass) {
+            if (pass == 1) {
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                glDepthMask(GL_FALSE);
+            }
+            for (size_t pi : m_partsByMaterial[static_cast<int>(MapMaterial::Textured)]) {
+                const MapPart& part = m_map->getParts()[pi];
+                if (!partVisible(pi)) continue;
+                const bool glass = part.alpha < 0.99f;
+                if (glass != (pass == 1)) continue;
+                if (Texture* tex = getModelTexture(part.texturePath)) tex->applyToShader(m_severallightsShader);
+                m_severallightsShader->setMat4("model", part.model);
+                m_severallightsShader->setVec3("uTreeTint", part.color);
+                m_severallightsShader->setFloat("uAlpha", glass ? part.alpha : 0.0f);
+                part.mesh->draw();
+            }
+        }
+        glDisable(GL_BLEND);
+        glDepthMask(GL_TRUE);
+        m_severallightsShader->setFloat("uAlpha", 0.0f);
+        m_severallightsShader->setFloat("uPlainTexture", 0.0f);
+    }
+
+    // 3.bis Feuilles au sol (alpha test, geometrie deja en repere monde).
+    if (m_map && m_leavesShader) {
+        m_leavesShader->use();
+        m_leavesShader->setMat4("view", m_camera->getViewMatrix());
+        m_leavesShader->setMat4("projection", m_leavesShader->getProjection());
+        m_lightManager->applyToShader(m_leavesShader);   // dirLight
+        m_leavesShader->setInt("uTex", 0);
+        m_leavesShader->setVec3("viewPos", m_camera->getPosition());
+        for (int i = 0; i < MapLoader::LEAF_SHEETS; ++i) {
+            const Mesh* mesh = m_map->getLeafMesh(i);
+            if (!mesh || !m_leafTextures[i]) continue;
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, m_leafTextures[i]->getID());
+            mesh->draw();
         }
     }
 
@@ -498,11 +652,18 @@ void Scene::draw() {
     }
 
     if (m_modelShader) {
-        if (m_modelEntity) m_modelEntity->draw(m_modelShader);
-        if (m_fropyEntity) m_fropyEntity->draw(m_modelShader);
-        // Créature : tête de fropy (le corps sombre est instancié plus haut).
-        if (m_creatureHead) m_creatureHead->draw(m_modelShader);
+        if (m_buttonModel && m_map) {
+            for (size_t i = 0; i < m_map->getButtons().size(); ++i) {
+                const MapButton& b = m_map->getButtons()[i];
+                if (!b.enabled) continue;
+                m_buttonModel->setPosition(b.position);
+                m_buttonModel->setScale(b.scale * (static_cast<int>(i) == m_aimedButton ? 1.25f : 1.0f));
+                m_buttonModel->draw(m_modelShader);
+            }
+        }
     }
+    // Créature : modele articule de fropy (skinning).
+    if (m_creature && m_creatureModel && m_skinnedShader) m_creatureModel->draw(m_skinnedShader);
 
     // 5. Écrans TV : fond noir + logo DVD (blending, depth test actif — les
     // murs occultent correctement l'écran). Le logo n'est dessiné qu'à
@@ -523,5 +684,11 @@ void Scene::draw() {
     // (cf. bloc ci-dessus) ; les joueurs distants restent visibles dans les
     // deux vues (MultiplayerManager).
 
-    drawSunGlare();
+    // Brume en particules (transparente : apres tout l'opaque, avant l'eblouissement)
+    if (m_fogParticles) {
+        m_fogParticles->draw(m_camera->getViewMatrix(), m_leavesShader ? m_leavesShader->getProjection() : glm::mat4(1.0f),
+                             m_camera->getPosition());
+    }
+
+    m_sky->drawGlare(m_doorShader);
 }

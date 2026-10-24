@@ -40,10 +40,23 @@ void Entity::updatePositionFromEnvironment(float deltaTime) {
     // Sauvegarde la direction de deplacement (normalisee, horizontale seulement
     // pour ne pas influencer la hauteur de la camera) avant de reset m_frameMovement.
     // Utilise par Camera pour decaler la vue 1P dans la direction de marche.
-    if (glm::length(m_frameMovement) > 0.0001f) {
-        m_lastMovementDirection = glm::normalize(glm::vec3(m_frameMovement.x, 0.0f, m_frameMovement.z));
+    // Test sur la composante HORIZONTALE : un deplacement purement vertical (vol en
+    // noclip) donnait normalize(0) = NaN, qui restait ensuite dans le lissage camera.
+    const glm::vec3 horizontal(m_frameMovement.x, 0.0f, m_frameMovement.z);
+    if (glm::length(horizontal) > 0.0001f) {
+        m_lastMovementDirection = glm::normalize(horizontal);
     } else {
         m_lastMovementDirection = glm::vec3(0.0f);
+    }
+
+    // No-clip (gravite desactivee) : deplacement LIBRE, aucune collision (murs,
+    // sol, objets traverses). En quittant le no-clip, la depenetration normale
+    // (pushPlayerAway, ci-dessous) ressort le joueur d'un mur dans lequel il serait.
+    if (!m_useGravity) {
+        m_position += m_frameMovement;
+        m_frameMovement = glm::vec3(0.0f);
+        m_collisionManager->setVerticalVelocity(0.0f);   // pas de chute residuelle a la reprise de la gravite
+        return;
     }
 
     // 1. On résout tout le mouvement de la frame d'un coup (Clavier + Gravité éventuelle)

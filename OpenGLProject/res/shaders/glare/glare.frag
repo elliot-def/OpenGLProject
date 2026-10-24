@@ -10,7 +10,7 @@ uniform float intensity;   // 0..1 : halo + rayons (large cone de regard)
 uniform float dazzle;      // 0..1 : voile d'eblouissement (regard quasi centre)
 uniform float time;
 
-const vec3 WARM = vec3(1.0, 0.88, 0.55);
+uniform vec3  glareTint;   // couleur de l'eblouissement : jaune chaud (soleil) / blanc (lune)
 
 void main() {
     vec2 p = (ndc - sunNdc) * vec2(aspect, 1.0);
@@ -37,11 +37,11 @@ void main() {
         ghosts += vec3(0.5 + 0.15 * float(i), 0.7, 1.0 - 0.2 * float(i)) * (ring + 0.25 * (1.0 - smoothstep(0.0, size, d))) * 0.25;
     }
 
-    vec3 col = WARM * (core + halo + rays) * intensity + ghosts * intensity;
+    vec3 col = glareTint * (core + halo + rays) * intensity + ghosts * intensity;
 
     // Voile : tout l'ecran blanchit, plus fort vers le soleil.
     float veil = dazzle * (0.45 + 0.55 * exp(-r * 0.9));
-    col += vec3(1.0, 0.96, 0.85) * veil;
+    col += mix(vec3(1.0), glareTint, 0.5) * veil;
 
     // Garde-fou : un NaN avec le blend "screen" noircirait tout l'ecran.
     if (any(isnan(col)) || any(isinf(col))) col = vec3(0.0);

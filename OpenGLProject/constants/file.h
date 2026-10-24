@@ -11,5 +11,6 @@ namespace Constants {
 
 		// Skybox : dossier contenant les 6 faces du cubemap (px/nx/py/ny/pz/nz)
 		inline constexpr const char* SKYBOX_NIGHT_PATH = "./res/skybox/night/night";
+		inline constexpr const char* SKYBOX_DAY_PATH   = "./res/skybox/day/day";
 	}
 }

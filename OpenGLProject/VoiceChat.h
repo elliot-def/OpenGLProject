@@ -79,6 +79,12 @@ public:
     // Ferme la capture + coupe les voix (pause, menu, options).
     void shutdown();
 
+    // Joueurs distants qui parlent (dernier paquet < SPEAKING_TIMEOUT_S) :
+    // SteamIDs, pour afficher leur pseudo dans le HUD.
+    std::vector<uint64_t> getSpeakingPlayers() const;
+    // Le micro local est en train de transmettre.
+    bool isLocalTransmitting() const { return m_transmitting; }
+
 private:
     // Source OpenAL d'un joueur distant (defini dans le .cpp pour ne pas
     // exposer les types OpenAL ici).
@@ -121,5 +127,7 @@ private:
     static constexpr uint32_t FRAME_BYTES = FRAME_SAMPLES * 2;
     static constexpr uint32_t CAPTURE_LATENCY = FRAME_SAMPLES * 4;
     static constexpr int HANGOVER_FRAMES = 3;         // ~60 ms apres la parole
+    static constexpr float PLAYBACK_BOOST = 2.5f;     // gain applique aux voix distantes (x volume)
+    static constexpr float SPEAKING_TIMEOUT_S = 0.3f; // "parle" tant qu'un paquet est recu < 300 ms
     static constexpr int STREAM_BUFFERS = 8;          // ~160 ms de latence max
 };

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "HeadCameraRig.h"
+
 #define NOMINMAX
 #define GLM_ENABLE_EXPERIMENTAL
 
@@ -34,6 +36,9 @@ class Scene;
 class MultiplayerManager;
 class LobbyChat;
 class VoiceChat;
+class CreatureVoice;
+class LobbyManager;
+class QuestManager;
 
 class Game {
 public:
@@ -81,8 +86,6 @@ private:
 
     // Vues non-propriétaires : le ModelLoader possède les entités et les
     // détruit ; Game ne garde que des pointeurs (remplis via adoptLoadedEntities()).
-    ModelEntity* m_modelEntity = nullptr;
-    ModelEntity* m_fropyEntity = nullptr;
     ModelEntity* m_humanEntity = nullptr;
     FirstPersonArms* m_firstPersonArms = nullptr;
     std::unique_ptr<SteamManager> m_steamManager;
@@ -95,6 +98,11 @@ private:
 
     // Chat vocal du lobby Steam (capture micro + lecture des voix distantes).
     std::unique_ptr<VoiceChat> m_voiceChat;
+    // Voice lines de fropy (sons possedes par m_soundManager).
+    std::unique_ptr<CreatureVoice> m_creatureVoice;
+    std::unique_ptr<LobbyManager> m_lobbyManager;
+    std::unique_ptr<QuestManager> m_questManager;   // taches (mini-jeux) de la partie
+    HeadCameraRig m_headCameraRig;   // camera 1P / lampe sur l'os de tete   // salle d'avant-partie (options de l'hote)
 
     bool m_isRunning = true;
 

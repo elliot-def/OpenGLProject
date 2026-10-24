@@ -619,7 +619,7 @@ glm::mat4 Animator::interpolateNodeTransform(const aiNode* node, const aiNodeAni
     const glm::quat bindRotation = glm::quat_cast(rot3);
 
     glm::vec3 translation;
-    if (m_usesFbxRrTtHelpers) {
+    if (m_usesFbxRrTtHelpers || m_rotationOnly) {   // rotation seule : cf. setRotationOnlyRetarget
         // FBX RrTt : la position est portee par le nœud wrapper
         // "bone_$AssimpFbx$_Translation" (bind). Appliquer la translation du
         // canal (ex: 0,55.13,0 pour l'avant-bras) en PLUS de celle du wrapper

@@ -1,0 +1,79 @@
+newmtl Mat_mur
+Ka 0.300 0.300 0.300
+Kd 1.000 1.000 1.000
+map_Kd textures/mur_peinture.png
+Ks 0.05 0.05 0.05
+Ns 10
+d 1.00
+Tr 0.00
+illum 1
+
+newmtl Mat_dalle
+Ka 0.300 0.300 0.300
+Kd 1.000 1.000 1.000
+map_Kd textures/beton_brut.png
+Ks 0.05 0.05 0.05
+Ns 10
+d 1.00
+Tr 0.00
+illum 1
+
+newmtl Mat_verre
+Ka 0.165 0.225 0.270
+Kd 0.550 0.750 0.900
+Ks 0.50 0.50 0.50
+Ns 200
+d 0.35
+Tr 0.65
+illum 2
+
+newmtl Mat_toit
+Ka 0.300 0.300 0.300
+Kd 1.000 1.000 1.000
+map_Kd textures/toit_gravier.png
+Ks 0.05 0.05 0.05
+Ns 10
+d 1.00
+Tr 0.00
+illum 1
+
+newmtl Mat_esc
+Ka 0.300 0.300 0.300
+Kd 1.000 1.000 1.000
+map_Kd textures/bois.png
+Ks 0.05 0.05 0.05
+Ns 10
+d 1.00
+Tr 0.00
+illum 1
+
+newmtl Mat_facade
+Ka 0.300 0.300 0.300
+Kd 1.000 1.000 1.000
+map_Kd textures/facade_enduit.png
+Ks 0.05 0.05 0.05
+Ns 10
+d 1.00
+Tr 0.00
+illum 1
+
+newmtl Mat_sol
+Ka 0.300 0.300 0.300
+Kd 1.000 1.000 1.000
+map_Kd textures/sol_carrelage.png
+Ks 0.05 0.05 0.05
+Ns 10
+d 1.00
+Tr 0.00
+illum 1
+
+newmtl Mat_ext
+Ka 0.300 0.300 0.300
+Kd 1.000 1.000 1.000
+map_Kd textures/ext_dalles.png
+Ks 0.05 0.05 0.05
+Ns 10
+d 1.00
+Tr 0.00
+illum 1
+

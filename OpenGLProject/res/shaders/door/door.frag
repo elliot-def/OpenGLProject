@@ -43,14 +43,12 @@ struct SpotLight {
     vec3 specular;
 };
 
-#define MAX_POINT_LIGHTS 32
 uniform int numberLightSources;
 
 // Pièces intérieures : chaque lumière est assignée à une pièce par
 // uLightRoom[i] (LightManager) et n'éclaire que les fragments de CETTE
 // pièce — la lumière ne traverse pas les murs. -1 = lumière libre.
 // uRoomCount = nombre de pièces valides (0 = aucune).
-#define MAX_ROOMS 8
 uniform int   uRoomCount;
 uniform vec3  uRoomMin[MAX_ROOMS];
 uniform vec3  uRoomMax[MAX_ROOMS];
@@ -66,6 +64,9 @@ in vec3 FragPos;
 in vec3 Normal;
 
 uniform vec3 viewPos;
+
+#include "fog.glsl"
+uniform float uNoFog;   // 1 = pas de brouillard (tete du soleil, visible de loin)
 uniform DirLight dirLight;
 uniform PointLight lightSources[MAX_POINT_LIGHTS];
 uniform SpotLight spotLight;
@@ -101,7 +102,7 @@ void main()
     result += calcSpotLight(spotLight, norm, FragPos, viewDir);
     result += calcSpotLight(sunSpot, norm, FragPos, viewDir);
 
-    FragColor = vec4(result, 1.0);
+    FragColor = vec4(uNoFog > 0.5 ? result : applyFog(result, length(viewPos - FragPos)), 1.0);
 }
 
 vec3 calcDirLight(DirLight light, vec3 normal, vec3 viewDir)

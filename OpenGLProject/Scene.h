@@ -1,10 +1,15 @@
 #pragma once
 
+#include <functional>
+#include <map>
+#include <string>
+
 #include <vector>
 #include <memory>
 #include <glm/glm.hpp>
 
 #include "MapLoader.h"
+#include "Creature.h"
 
 // Déclarations anticipées (services détenus par Game)
 class Camera;
@@ -47,22 +52,22 @@ public:
 
     // ── Construction du monde (appelé pendant loadResources) ─────────────
     // Séparés pour conserver la progression visuelle du loading screen.
-    void loadMap(const char* jsonPath);  // carte JSON (sol, murs, toit, portes)
+    void loadMap(const char* jsonPath);
+    // Emet un bruit (position monde + portee en m) entendu par fropy cette frame :
+    // voix des joueurs, plus tard quetes, objets... A appeler avant update().
+    void addNoise(const glm::vec3& position, float radius) { m_noises.push_back({ position, radius }); }  // carte JSON (sol, murs, toit, portes)
 
     // Skybox (contexte GL principal — à appeler après le thread de chargement).
     void createSkybox(const char* path);
 
     // Adopte les entités 3D chargées par ModelLoader (vues non-propriétaires).
-    void adoptEntities(ModelEntity* modelEntity, ModelEntity* fropyEntity,
-                       ModelEntity* humanEntity, CharacterAnimationController* characterAnim);
+    void adoptEntities(ModelEntity* humanEntity, CharacterAnimationController* characterAnim);
 
     // ── Boucle du monde (STATE_PLAYING) ───────────────────────────────────
     void update(float deltaTime);
     void draw();
 
     // ── Accesseurs pour Game (HUD, reload GPU post-loading) ──────────────
-    ModelEntity* getModelEntity() const { return m_modelEntity; }
-    ModelEntity* getFropyEntity() const { return m_fropyEntity; }
     ModelEntity* getHumanEntity() const { return m_humanEntity; }
 
 private:
@@ -110,6 +115,12 @@ private:
     // severallights (LightManager::applyToShader).
     Shader*                  m_wallShader   = nullptr;
     std::unique_ptr<Texture> m_wallDiffuse;   // brickwall.jpg
+    std::unique_ptr<class FogParticles> m_fogParticles;      // brume en particules (nuit)
+    float m_creatureSight = 20.0f;                            // portee de vue de la creature (m)
+    Shader* m_leavesShader = nullptr;                       // "leaves" : feuilles au sol (alpha)
+    std::unique_ptr<Texture> m_leafTextures[3];             // leaf_sheet_<n>.png
+    std::map<std::string, std::unique_ptr<Texture>> m_modelTextures;   // textures des modeles OBJ (cache)
+    Texture* getModelTexture(const std::string& path);
     std::unique_ptr<Texture> m_treeTexture;   // tree_palette.png (tronc + feuillage)
     std::unique_ptr<Texture> m_wallNormal;    // brickwall_normal.jpg
     // "container" / "parquet" / "leaf" / "grey_roof" / "riet" (caisses,
@@ -124,8 +135,6 @@ private:
     Texture* m_rietTexture      = nullptr;
 
     // Entités 3D (vues non-propriétaires, possédées par ModelLoader)
-    ModelEntity*                m_modelEntity = nullptr;
-    ModelEntity*                m_fropyEntity = nullptr;
     ModelEntity*                m_humanEntity = nullptr;
     CharacterAnimationController* m_characterAnim = nullptr;
 
@@ -133,35 +142,58 @@ private:
     // L'AABB world n'est recalculée que si la matrice modèle de l'entité a
     // changé depuis la dernière frame (gros gain pour des entités statiques :
     // évite de retransformer les 8 coins × tous les sous-meshes chaque frame).
-    glm::mat4 m_lastBackpackMatrix{ 1.0f };
-    bool      m_backpackDirty = true;
-    glm::mat4 m_lastFropyMatrix{ 1.0f };
-    bool      m_fropyDirty = true;
 
-    // ── Soleil & créature ────────────────────────────────────────────────
-    // Soleil visible : tête de fropy JAUNE (shader "door" = couleur unie),
-    // placée à l'opposé du rayonnement du dir light (ambiance de la map).
-    std::unique_ptr<ModelEntity> m_sunHead;
+    // ── Ciel (tete du soleil/lune + eblouissement) & creature ─────────────
+    std::unique_ptr<class SkySystem> m_sky;
     // Créature qui poursuit le joueur : corps sombre en cubes (instancié via
     // CubeRenderer + shader "cube/lightsource") + tête de fropy (Creature.h).
-    std::unique_ptr<ModelEntity> m_creatureHead;
+    std::unique_ptr<ModelEntity> m_creatureModel;   // fropy articule (charge une fois, garde entre les cartes)
     std::unique_ptr<Creature>    m_creature;
-    Shader* m_creatureBodyShader = nullptr;   // "cube/lightsource" (émissif)
+    int m_creatureAnim = -1;                        // clip en cours (repos / marche / course)
+    void ensureCreatureModel();
+    void updateCreatureAnimation(float deltaTime);
+    void openDoorsForCreature();   // fropy pousse les portes qui barrent sa trajectoire
 
     // E (touche Grab / RB manette) : ouvre/ferme la porte visee la plus proche.
     void tryToggleDoor();
 public:
+    // Options de partie appliquees au prochain loadMap (fropy actif, difficulte).
+    void setMatchParams(bool creatureEnabled, float speedMul, float senseMul) {
+        m_matchCreature = creatureEnabled; m_matchSpeedMul = speedMul; m_matchSenseMul = senseMul;
+    }
+    // Bouton de carte actionne (E) : nom du bouton (cf. MapLoader "buttons").
+    void setButtonCallback(std::function<void(const std::string&)> cb) { m_buttonCallback = std::move(cb); }
+    // Fropy touche le joueur (hors noclip) : la partie decide des vies.
+    void setPlayerHitCallback(std::function<void()> cb) { m_playerHitCallback = std::move(cb); }
+    // Libelle du bouton vise ("" si aucun) : invite "[E] ..." du HUD.
+    std::string getAimedButtonLabel() const;
+    // Fropy de la partie (null dans le lobby / en mode Exploration).
+    const Creature* getCreature() const { return m_creature.get(); }
+    // Boutons de la carte (postes de quete compris). Un bouton desactive n'est ni
+    // dessine ni visable (poste de quete non tire ou deja fait).
+    const std::vector<MapButton>& getMapButtons() const;
+    void setButtonEnabled(const std::string& name, bool enabled);
+private:
+    bool  m_matchCreature = true;
+    float m_matchSpeedMul = 1.0f;
+    float m_matchSenseMul = 1.0f;
+    int   m_aimedButton = -1;
+    std::unique_ptr<ModelEntity> m_buttonModel;   // fropy tournant partage : dessine a chaque bouton de la carte
+    // Rendu des parties de carte : indices par materiau (tries au chargement) et
+    // sphere englobante (xyz centre, w rayon) pour le frustum culling.
+    std::vector<std::vector<size_t>> m_partsByMaterial;
+    std::vector<glm::vec4> m_partSpheres;
+    glm::vec4 m_frustum[6];
+    void buildPartIndex();
+    bool partVisible(size_t partIndex) const;
+    float m_hitCooldown = 0.0f;                                 // invulnerabilite apres un coup de fropy
+    std::function<void()> m_playerHitCallback;
+    std::function<void(const std::string&)> m_buttonCallback;
+public:
     // Positions des joueurs distants, mises a jour chaque frame par Game.
     void setRemoteTargets(std::vector<glm::vec3> targets) { m_remoteTargets = std::move(targets); }
 private:
-    void updateSunGaze();
-    void updateSunGlare(float deltaTime);
-    void drawSunGlare();
-    Shader* m_glareShader = nullptr;   // "glare" : eblouissement plein ecran
-    unsigned int m_glareVao = 0;       // VAO vide (quad genere par gl_VertexID)
-    float m_glare = 0.0f;              // halo + rayons, lisse 0..1
-    float m_dazzle = 0.0f;             // voile d eblouissement, lisse 0..1
-    float m_glareTime = 0.0f;
+    std::vector<NoiseEvent> m_noises;         // bruits emis depuis la derniere update
     std::vector<glm::vec3> m_remoteTargets;   // joueurs distants (multijoueur)
 
     // Etat no-clip de la frame precedente : sert a detecter la TRANSITION

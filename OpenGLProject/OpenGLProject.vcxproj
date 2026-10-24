@@ -165,6 +165,7 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClCompile Include="Creature.cpp" />
     <ClCompile Include="Cube.cpp" />
     <ClCompile Include="CubeRenderer.cpp" />
+    <ClCompile Include="FogParticles.cpp" />
     <ClCompile Include="CursorManager.cpp" />
     <ClCompile Include="Direction.cpp" />
     <ClCompile Include="DVDShape.cpp" />
@@ -204,6 +205,15 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClCompile Include="MapLoader.cpp" />
     <ClCompile Include="Mouse.cpp" />
     <ClCompile Include="MultiplayerManager.cpp" />
+    <ClCompile Include="LobbyManager.cpp" />
+    <ClCompile Include="SelfTest.cpp" />
+    <ClCompile Include="CreatureVoice.cpp" />
+    <ClCompile Include="MiniGames.cpp" />
+    <ClCompile Include="QuestManager.cpp" />
+    <ClCompile Include="ObjLoader.cpp" />
+    <ClCompile Include="MapGeometry.cpp" />
+    <ClCompile Include="SkySystem.cpp" />
+    <ClCompile Include="HeadCameraRig.cpp" />
     <ClCompile Include="MusicStream.cpp" />
     <ClCompile Include="OptionsMenu.cpp" />
     <ClCompile Include="Packet.cpp" />
@@ -262,6 +272,7 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="Creature.h" />
     <ClInclude Include="Cube.h" />
     <ClInclude Include="CubeRenderer.h" />
+    <ClInclude Include="FogParticles.h" />
     <ClInclude Include="CursorManager.h" />
     <ClInclude Include="Direction.h" />
     <ClInclude Include="DVDShape.h" />
@@ -297,6 +308,15 @@ xcopy /Y /D "$(ProjectDir)dependencies\bin\debug\*.dll" "$(OutDir)"</Command>
     <ClInclude Include="MapLoader.h" />
     <ClInclude Include="Mouse.h" />
     <ClInclude Include="MultiplayerManager.h" />
+    <ClInclude Include="LobbyManager.h" />
+    <ClInclude Include="SelfTest.h" />
+    <ClInclude Include="CreatureVoice.h" />
+    <ClInclude Include="MiniGames.h" />
+    <ClInclude Include="QuestManager.h" />
+    <ClInclude Include="ObjLoader.h" />
+    <ClInclude Include="MapGeometry.h" />
+    <ClInclude Include="SkySystem.h" />
+    <ClInclude Include="HeadCameraRig.h" />
     <ClInclude Include="MusicStream.h" />
     <ClInclude Include="OptionsMenu.h" />
     <ClInclude Include="Packet.h" />

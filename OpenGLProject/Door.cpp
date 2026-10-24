@@ -130,6 +130,22 @@ void Door::toggle(const glm::vec3& playerPos) {
 
 // ── Interaction ──────────────────────────────────────────────────────────────
 
+bool Door::panelBlocksSegment(const glm::vec3& hinge, float yawDeg, float width, float height,
+                              const glm::vec3& a, const glm::vec3& b) {
+    // Etage : le segment doit passer a hauteur du battant (pieds entre le bas et le haut).
+    if (a.y < hinge.y - 1.0f || a.y > hinge.y + height - 0.5f) return false;
+    // Battant ferme : de la charniere a charniere + width * R_y(yaw) * (1,0,0) = (cos, 0, -sin).
+    const float yaw = glm::radians(yawDeg);
+    const glm::vec2 p(hinge.x, hinge.z), r(width * std::cos(yaw), -width * std::sin(yaw));
+    const glm::vec2 q(a.x, a.z), s(b.x - a.x, b.z - a.z);
+    const float den = r.x * s.y - r.y * s.x;
+    if (std::abs(den) < 1e-6f) return false;   // paralleles
+    const glm::vec2 qp = q - p;
+    const float t = (qp.x * s.y - qp.y * s.x) / den;   // position sur le battant
+    const float u = (qp.x * r.y - qp.y * r.x) / den;   // position sur le segment
+    return t >= 0.0f && t <= 1.0f && u >= 0.0f && u <= 1.0f;
+}
+
 bool Door::canInteract(const glm::vec3& eyePos, const glm::vec3& viewDir) const {
     const glm::vec3 toDoor = getCenter() - eyePos;
     const float dist = glm::length(toDoor);

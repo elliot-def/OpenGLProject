@@ -339,3 +339,10 @@ std::vector<glm::vec3> MultiplayerManager::getRemotePositions() const {
     }
     return out;
 }
+
+bool MultiplayerManager::getRemotePosition(uint64_t steamID, glm::vec3& out) const {
+    const auto it = m_remotePlayers.find(steamID);
+    if (it == m_remotePlayers.end() || !it->second->hasPrev || it->second->timeSincePacket >= STALE_TIMEOUT) return false;
+    out = it->second->targetPos;
+    return true;
+}

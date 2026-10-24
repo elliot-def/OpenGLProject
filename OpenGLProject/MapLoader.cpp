@@ -2,9 +2,11 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <random>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <sstream>
 #include <cstdio>
 
@@ -14,6 +16,8 @@ using json = nlohmann::json;
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Mesh.h"
+#include "MapGeometry.h"
+#include "ObjLoader.h"
 #include "Door.h"
 #include "CollisionManager.h"
 #include "Log.h"
@@ -55,236 +59,12 @@ static glm::mat4 rotationMatrix(const glm::vec3& rotDeg) {
     return m;
 }
 
-// ── Génération de géométrie (UV en mètres : la texture se répète 1×/m) ──────
+// Planches de feuilles : colonnes x lignes (cellules = une feuille chacune).
+static const int kLeafCols[3] = { 3, 3, 2 };
+static const int kLeafRows[3] = { 2, 2, 3 };
 
-static void pushQuad(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
-                     const glm::vec3& v0, const glm::vec3& v1,
-                     const glm::vec3& v2, const glm::vec3& v3,
-                     float uSpan, float vSpan) {
-    // Normale de face depuis le winding (v0,v1,v2) — faces CCW vues de l'extérieur.
-    const glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
-    const unsigned int base = static_cast<unsigned int>(vertices.size());
-
-    vertices.push_back(Vertex(v0.x, v0.y, v0.z, normal.x, normal.y, normal.z, 0.0f, 0.0f));
-    vertices.push_back(Vertex(v1.x, v1.y, v1.z, normal.x, normal.y, normal.z, uSpan, 0.0f));
-    vertices.push_back(Vertex(v2.x, v2.y, v2.z, normal.x, normal.y, normal.z, uSpan, vSpan));
-    vertices.push_back(Vertex(v3.x, v3.y, v3.z, normal.x, normal.y, normal.z, 0.0f, vSpan));
-
-    indices.insert(indices.end(), { base, base + 1, base + 2,
-                                    base + 2, base + 3, base });
-}
-
-static void pushTriangle(std::vector<Vertex>& vertices, std::vector<unsigned int>& indices,
-                         const glm::vec3& v0, const glm::vec2& uv0,
-                         const glm::vec3& v1, const glm::vec2& uv1,
-                         const glm::vec3& v2, const glm::vec2& uv2) {
-    const glm::vec3 normal = glm::normalize(glm::cross(v1 - v0, v2 - v0));
-    const unsigned int base = static_cast<unsigned int>(vertices.size());
-
-    vertices.push_back(Vertex(v0.x, v0.y, v0.z, normal.x, normal.y, normal.z, uv0.x, uv0.y));
-    vertices.push_back(Vertex(v1.x, v1.y, v1.z, normal.x, normal.y, normal.z, uv1.x, uv1.y));
-    vertices.push_back(Vertex(v2.x, v2.y, v2.z, normal.x, normal.y, normal.z, uv2.x, uv2.y));
-
-    indices.insert(indices.end(), { base, base + 1, base + 2 });
-}
-
-// Pavé droit centré sur l'origine, taille réelle (pas de mise à l'échelle
-// dans la matrice modèle). 6 faces × 4 sommets, UV en mètres.
-static std::unique_ptr<Mesh> buildBoxMesh(const glm::vec3& size, const glm::mat4& model) {
-    const glm::vec3 h = size * 0.5f;
-
-    std::vector<Vertex> vertices;
-    std::vector<unsigned int> indices;
-    vertices.reserve(24);
-    indices.reserve(36);
-
-    pushQuad(vertices, indices,
-             {-h.x, -h.y,  h.z}, { h.x, -h.y,  h.z}, { h.x,  h.y,  h.z}, {-h.x,  h.y,  h.z},
-             size.x, size.y);  // +Z
-    pushQuad(vertices, indices,
-             {-h.x,  h.y, -h.z}, { h.x,  h.y, -h.z}, { h.x, -h.y, -h.z}, {-h.x, -h.y, -h.z},
-             size.x, size.y);  // -Z
-    pushQuad(vertices, indices,
-             { h.x, -h.y,  h.z}, { h.x, -h.y, -h.z}, { h.x,  h.y, -h.z}, { h.x,  h.y,  h.z},
-             size.z, size.y);  // +X
-    pushQuad(vertices, indices,
-             {-h.x, -h.y, -h.z}, {-h.x, -h.y,  h.z}, {-h.x,  h.y,  h.z}, {-h.x,  h.y, -h.z},
-             size.z, size.y);  // -X
-    pushQuad(vertices, indices,
-             {-h.x,  h.y,  h.z}, { h.x,  h.y,  h.z}, { h.x,  h.y, -h.z}, {-h.x,  h.y, -h.z},
-             size.x, size.z);  // +Y (dessus)
-    pushQuad(vertices, indices,
-             {-h.x, -h.y, -h.z}, { h.x, -h.y, -h.z}, { h.x, -h.y,  h.z}, {-h.x, -h.y,  h.z},
-             size.x, size.z);  // -Y (dessous)
-
-    // UV projetés en repère monde (selon la normale dominante de la face) :
-    // deux faces coplanaires de boîtes différentes deviennent texel-identiques
-    // → pas de z-fighting visible aux jonctions (le culling est désactivé), et
-    // la texture est continue d'une boîte à l'autre sur toute la carte.
-    // ATTENTION : la normale doit être TRANSFORMÉE par la matrice modèle avant
-    // de choisir les axes UV. Avec la normale locale, une boîte tournée (les
-    // maisons instanciées avec "yaw" dans village.json) choisit les mauvais
-    // axes : un axe UV devient constant sur la face → la texture s'écrase sur
-    // une bande de 1 texel (les murs en briques "disparaissent").
-    for (auto& v : vertices) {
-        const glm::vec3 world = glm::vec3(model * glm::vec4(v.getPositions(), 1.0f));
-        const glm::vec3 n = glm::abs(glm::mat3(model) * v.getNormals());
-        glm::vec2 uv;
-        if (n.x >= n.y && n.x >= n.z) uv = glm::vec2(world.z, world.y);
-        else if (n.y >= n.z)          uv = glm::vec2(world.x, world.z);
-        else                          uv = glm::vec2(world.x, world.y);
-        v = Vertex(v.getPositions(), v.getNormals(), v.getColor(), uv);
-    }
-
-    return std::make_unique<Mesh>(vertices, indices,
-        (unsigned int)VertexAttribute::POSITION |
-        (unsigned int)VertexAttribute::NORMAL |
-        (unsigned int)VertexAttribute::TEXCOORD);
-}
-
-// Toit à deux pentes = 2 dalles inclinées jointives au faîtage, chacune avec
-// une épaisseur `thickness` (verticale) : visu « couverture » au lieu du
-// prisme plein. Le pignon est porté par buildGablesMesh.
-//
-// Par dalle (côté s, s=-1 ou +1, hauteur h) :
-//   dessus  (s·hx, 0) → (0, h)
-//   dessous (s·hx, -t) → (0, h-t)  (décalage vertical)
-//   tranche d'égout verticale à x=s·hx entre y=0 et y=-t
-//   2 tranches d'extrémité (caps) aux bouts z=±hz : la coupe de la dalle,
-//   parallélogramme (s·hx,0)-(0,h)-(0,h-t)-(s·hx,-t) → la bordure de la
-//   couverture reste TEXTURÉE et garde toute son épaisseur t jusqu'au faîtage
-//   (sans ces caps, l'extrémité est ouverte : la dalle dépasse du pignon d'un
-//   lambeau dont l'épaisseur visible tombe à 0 au faîtage, et ce bord n'a
-//   aucune face → pas de texture).
-// Les 2 dessus partagent l'arête du faîtage, les 2 dessous celle en (0,h-t) :
-// le volume est fermé, aucune face coplanaire entre les 2 dalles.
-static std::unique_ptr<Mesh> buildRoofMesh(const glm::vec2& span, float height,
-                                           float thickness) {
-    const float hx = span.x * 0.5f;
-    const float hz = span.y * 0.5f;
-    const float t  = thickness;
-
-    const glm::vec3 A(-hx, 0.0f, -hz);   // coins de la base (y=0)
-    const glm::vec3 B( hx, 0.0f, -hz);
-    const glm::vec3 C( hx, 0.0f,  hz);
-    const glm::vec3 D(-hx, 0.0f,  hz);
-    const glm::vec3 R0(0.0f, height, -hz);   // extrémités du faîtage
-    const glm::vec3 R1(0.0f, height,  hz);
-
-    // Notation X2 = point X décalé vers le bas de l'épaisseur.
-    const glm::vec3 down(0.0f, -t, 0.0f);
-    const glm::vec3 A2 = A + down, B2 = B + down, C2 = C + down, D2 = D + down;
-    const glm::vec3 R02 = R0 + down, R12 = R1 + down;
-
-    const float slopeLen = std::sqrt(hx * hx + height * height);
-
-    std::vector<Vertex> vertices;
-    std::vector<unsigned int> indices;
-    vertices.reserve(40);   // 2 dalles × (8 sommets dessus/dessous + 4 égout
-                            // + 8 sommets pour les 2 caps d'extrémité)
-    indices.reserve(60);
-
-    // Dalle -X
-    pushQuad(vertices, indices, A, D, R1, R0, span.y, slopeLen);       // dessus
-    pushQuad(vertices, indices, A2, R02, R12, D2, span.y, slopeLen);   // dessous
-    pushQuad(vertices, indices, A, A2, D2, D, t, span.y);              // égout (-X)
-    pushQuad(vertices, indices, A, R0, R02, A2, slopeLen, t);          // cap z=-hz
-    pushQuad(vertices, indices, D, D2, R12, R1, slopeLen, t);          // cap z=+hz
-
-    // Dalle +X
-    pushQuad(vertices, indices, R1, C, B, R0, span.y, slopeLen);       // dessus
-    pushQuad(vertices, indices, R02, B2, C2, R12, span.y, slopeLen);   // dessous
-    pushQuad(vertices, indices, C, C2, B2, B, t, span.y);              // égout (+X)
-    pushQuad(vertices, indices, B, B2, R02, R0, slopeLen, t);          // cap z=-hz
-    pushQuad(vertices, indices, C, R1, R12, C2, slopeLen, t);          // cap z=+hz
-
-    return std::make_unique<Mesh>(vertices, indices,
-        (unsigned int)VertexAttribute::POSITION |
-        (unsigned int)VertexAttribute::NORMAL |
-        (unsigned int)VertexAttribute::TEXCOORD);
-}
-
-// Pignons : 2 triangles verticaux aux extrémités du faîtage (la façade
-// continue les murs jusqu'au toit). Le triangle remplit exactement la zone
-// SOUS le dessous des 2 dalles de couverture : base en y=-thickness, sommet
-// en (0, height-thickness) — les arêtes suivent le dessous des dalles
-// ((-hx,-t) → (0,h-t) → (hx,-t)). Les caps d'extrémité des dalles (cf.
-// buildRoofMesh) couvrent au-dessus : chaque face est dans son plan, aucune
-// coplanaire, et la coupe de la couverture reste visible et texturée.
-// UV = coordonnées locales en mètres (u = x + hx, v = y + thickness).
-static std::unique_ptr<Mesh> buildGablesMesh(const glm::vec2& span, float height,
-                                             float thickness) {
-    const float hx = span.x * 0.5f;
-    const float hz = span.y * 0.5f;
-    const float baseY = -thickness;
-
-    const glm::vec3 A(-hx, baseY, -hz);   // base abaissée
-    const glm::vec3 B( hx, baseY, -hz);
-    const glm::vec3 C( hx, baseY,  hz);
-    const glm::vec3 D(-hx, baseY,  hz);
-    // Sommet sous le faîtage (dessous des dalles), pas au faîtage lui-même :
-    // au-dessus, ce sont les caps des dalles (matériau couverture) qui
-    // ferment, avec l'épaisseur t visible jusqu'en haut.
-    const glm::vec3 R0(0.0f, height - thickness, -hz);
-    const glm::vec3 R1(0.0f, height - thickness,  hz);
-
-    std::vector<Vertex> vertices;
-    std::vector<unsigned int> indices;
-    vertices.reserve(6);
-    indices.reserve(6);
-
-    pushTriangle(vertices, indices,
-                 D, {0.0f, 0.0f}, C, {span.x, 0.0f},
-                 R1, {hx, height});   // +Z
-    pushTriangle(vertices, indices,
-                 B, {span.x, 0.0f}, A, {0.0f, 0.0f},
-                 R0, {hx, height});   // -Z
-
-    return std::make_unique<Mesh>(vertices, indices,
-        (unsigned int)VertexAttribute::POSITION |
-        (unsigned int)VertexAttribute::NORMAL |
-        (unsigned int)VertexAttribute::TEXCOORD);
-}
-
-// Charge un OBJ simple (v/vt/vn, faces v/vt/vn triangulées) en Mesh.
-// nullptr si le fichier est absent ou vide.
-static std::shared_ptr<Mesh> loadObjMesh(const std::string& path) {
-    std::ifstream in(path);
-    if (!in.is_open()) return nullptr;
-
-    std::vector<glm::vec3> pos, nor;
-    std::vector<glm::vec2> uv;
-    std::vector<Vertex> vertices;
-    std::vector<unsigned int> indices;
-    std::string line;
-    while (std::getline(in, line)) {
-        std::istringstream ss(line);
-        std::string tag;
-        ss >> tag;
-        if (tag == "v")       { glm::vec3 p; ss >> p.x >> p.y >> p.z; pos.push_back(p); }
-        else if (tag == "vn") { glm::vec3 n; ss >> n.x >> n.y >> n.z; nor.push_back(n); }
-        else if (tag == "vt") { glm::vec2 t; ss >> t.x >> t.y; uv.push_back(t); }
-        else if (tag == "f") {
-            std::string tok;
-            while (ss >> tok) {
-                int vi = 0, ti = 0, ni = 0;
-                std::sscanf(tok.c_str(), "%d/%d/%d", &vi, &ti, &ni);
-                if (vi < 1 || ti < 1 || ni < 1 || vi > (int)pos.size() ||
-                    ti > (int)uv.size() || ni > (int)nor.size()) continue;
-                const glm::vec3& p = pos[vi - 1];
-                const glm::vec3& n = nor[ni - 1];
-                const glm::vec2& t = uv[ti - 1];
-                indices.push_back((unsigned int)vertices.size());
-                vertices.push_back(Vertex(p.x, p.y, p.z, n.x, n.y, n.z, t.x, t.y));
-            }
-        }
-    }
-    if (vertices.empty()) return nullptr;
-    return std::make_shared<Mesh>(vertices, indices,
-        (unsigned int)VertexAttribute::POSITION |
-        (unsigned int)VertexAttribute::NORMAL |
-        (unsigned int)VertexAttribute::TEXCOORD);
-}
+// Aleatoire portable (mt19937 est deterministe, pas les distributions std).
+static float rnd01(std::mt19937& rng) { return (rng() >> 8) / 16777216.0f; }
 
 // ── MapLoader ────────────────────────────────────────────────────────────────
 
@@ -304,6 +84,18 @@ bool MapLoader::load(const std::string& jsonPath) {
     m_rooms.clear();
     m_lights.clear();
     m_spawns.clear();
+    m_buttons.clear();
+    m_hasPatrol = false;
+    m_sun = MapSun();
+    m_fog = MapFog();
+    m_sunHead = MapSunHead();
+    m_creatureEnabled = true;
+    m_creatureSight = 0.0f;
+    m_skybox.clear();
+    m_treeCounter = 0;
+    for (int i = 0; i < LEAF_SHEETS; ++i) {
+        m_leafVerts[i].clear(); m_leafIdx[i].clear(); m_leafMeshes[i].reset();
+    }
 
     std::vector<std::string> stack;
     if (!loadMapFile(jsonPath, glm::mat4(1.0f), 0.0f, 0, "", stack)) {
@@ -316,11 +108,23 @@ bool MapLoader::load(const std::string& jsonPath) {
         return false;
     }
 
+    for (int i = 0; i < LEAF_SHEETS; ++i) {
+        if (m_leafIdx[i].empty()) continue;
+        m_leafMeshes[i] = std::make_unique<Mesh>(m_leafVerts[i], m_leafIdx[i],
+            (unsigned int)VertexAttribute::POSITION |
+            (unsigned int)VertexAttribute::NORMAL |
+            (unsigned int)VertexAttribute::TEXCOORD);
+    }
+
     // Collisions statiques (les portes gèrent leurs colliders dynamiques
     // côté Scene) puis construction du BVH du niveau. "collision": "mesh" →
     // triangles (la hitbox suit la géométrie : pente du toit...), sinon AABB.
-    for (const auto& part : m_parts) {
-        if (part.triangleCollision) {
+    for (auto& part : m_parts) {
+        if (!part.soup.empty()) {
+            m_collisionManager->addStaticTriangleSoup(part.soup, part.name);
+            part.soup.clear();
+            part.soup.shrink_to_fit();
+        } else if (part.triangleCollision) {
             m_collisionManager->addStaticTriangleMesh(part.mesh.get(), part.model, part.name);
         } else {
             m_collisionManager->addStaticMesh(part.mesh.get(), part.model, part.name);
@@ -395,6 +199,35 @@ bool MapLoader::loadMapFile(const std::string& jsonPath, const glm::mat4& transf
                      m_sun.direction.x, m_sun.direction.y, m_sun.direction.z,
                      m_sun.ambient.r, m_sun.ambient.g, m_sun.ambient.b,
                      m_sun.diffuse.r, m_sun.diffuse.g, m_sun.diffuse.b);
+        }
+
+        // -0.5. Brouillard (racine uniquement)
+        if (depth == 0 && data.contains("fog") && data["fog"].is_object()) {
+            const json& fog = data["fog"];
+            m_fog.color   = readVec3(fog.value("color", json()), m_fog.color);
+            m_fog.density = fog.value("density", m_fog.density);
+        }
+
+        // -0.4. Ciel, tete du soleil/lune, portee de vue de la creature (racine uniquement)
+        if (depth == 0) {
+            if (data.contains("skybox") && data["skybox"].is_string()) m_skybox = data["skybox"].get<std::string>();
+            if (data.contains("sunHead") && data["sunHead"].is_object()) {
+                const json& sh = data["sunHead"];
+                m_sunHead.color          = readVec3(sh.value("color", json()), m_sunHead.color);
+                m_sunHead.distance       = sh.value("distance", m_sunHead.distance);
+                m_sunHead.scale          = sh.value("scale", m_sunHead.scale);
+                m_sunHead.spotIntensity  = sh.value("spotIntensity", m_sunHead.spotIntensity);
+            }
+            if (data.contains("creature") && data["creature"].is_object()) {
+                m_creatureSight = data["creature"].value("sightRange", 0.0f);
+                m_creatureEnabled = data["creature"].value("enabled", true);
+                if (data["creature"].contains("patrol") && data["creature"]["patrol"].is_object()) {
+                    const json& pt = data["creature"]["patrol"];
+                    m_patrolMin = readVec2(pt.value("min", json()), m_patrolMin);
+                    m_patrolMax = readVec2(pt.value("max", json()), m_patrolMax);
+                    m_hasPatrol = m_patrolMax.x > m_patrolMin.x && m_patrolMax.y > m_patrolMin.y;
+                }
+            }
         }
 
         // 0. Includes : instancie d'autres cartes (prefabs factorisés, ex. N
@@ -476,7 +309,10 @@ bool MapLoader::loadMapFile(const std::string& jsonPath, const glm::mat4& transf
             gable.material = readMaterial(roof.value("gableMaterial", json()));
             gable.triangleCollision = triCol;
             gable.model    = roofModel;
-            gable.mesh     = buildGablesMesh(span, roofHeight, roofThickness);
+            gable.mesh     = buildGablesMesh(span, roofHeight, roofThickness,
+                                             roof.value("gableInset", 0.0f),
+                                             roof.value("gableBase", -roofThickness),
+                                             roof.value("gableThickness", 0.0f), roofModel);
             m_parts.push_back(std::move(gable));
         }
 
@@ -511,8 +347,49 @@ bool MapLoader::loadMapFile(const std::string& jsonPath, const glm::mat4& transf
             }
         }
 
+        // 7.bis Modeles OBJ
+        if (data.contains("models") && data["models"].is_array()) {
+            for (const auto& md : data["models"]) {
+                const std::string mpath = md.value("path", "");
+                const float ms = md.value("scale", 1.0f);
+                const float msy = md.value("scaleY", ms);
+                const glm::mat4 mm = transform
+                    * glm::translate(glm::mat4(1.0f), readVec3(md.value("position", json()), glm::vec3(0.0f)))
+                    * glm::rotate(glm::mat4(1.0f), glm::radians(md.value("yaw", 0.0f)), glm::vec3(0.0f, 1.0f, 0.0f))
+                    * glm::scale(glm::mat4(1.0f), glm::vec3(ms, msy, ms));
+                std::vector<ObjPart> objParts = loadObjParts(mpath, mm);
+                if (objParts.empty()) {
+                    LOG_WARN("[Map] Modele OBJ introuvable ou vide : %s", mpath.c_str());
+                    continue;
+                }
+                for (auto& op : objParts) {
+                    if (op.idx.empty()) continue;
+                    MapPart part;
+                    part.name     = prefix + "model_" + op.name;
+                    part.material = MapMaterial::Textured;
+                    part.texturePath = op.mat.texture;
+                    part.color    = op.mat.kd;
+                    part.alpha    = op.mat.alpha;
+                    part.model    = glm::mat4(1.0f);   // sommets deja en repere monde
+                    part.soup     = std::move(op.soup);
+                    part.mesh     = std::make_shared<Mesh>(op.verts, op.idx,
+                        (unsigned int)VertexAttribute::POSITION |
+                        (unsigned int)VertexAttribute::NORMAL |
+                        (unsigned int)VertexAttribute::TEXCOORD);
+                    m_parts.push_back(std::move(part));
+                }
+                LOG_INFO("[Map] Modele charge : %s (%zu objets)", mpath.c_str(), objParts.size());
+            }
+        }
+
         // 8. Arbres : mesh OBJ partagé par type, collision triangles (hitbox fidèle).
         if (data.contains("trees") && data["trees"].is_array()) {
+            const json leaves = data.value("leaves", json::object());
+            const int leafCount = leaves.value("perTree", 0);
+            const float leafRadius = leaves.value("radius", 3.5f);
+            const unsigned leafSeed = leaves.value("seed", 1337u);
+            const glm::vec2 leafSize = readVec2(leaves.value("size", json()), glm::vec2(0.35f, 0.7f));
+            const float leafSizeMin = leafSize.x, leafSizeMax = std::max(leafSize.x, leafSize.y);
             for (const auto& tr : data["trees"]) {
                 const int type = tr.value("type", 0);
                 auto it = m_treeMeshes.find(type);
@@ -525,6 +402,7 @@ bool MapLoader::loadMapFile(const std::string& jsonPath, const glm::mat4& transf
                     it = m_treeMeshes.emplace(type, std::move(mesh)).first;
                 }
                 const float s = tr.value("scale", 1.0f);
+                const float sy = tr.value("scaleY", s);
                 MapPart part;
                 part.name     = prefix + "tree" + std::to_string(type);
                 part.material = MapMaterial::Tree;
@@ -534,9 +412,50 @@ bool MapLoader::loadMapFile(const std::string& jsonPath, const glm::mat4& transf
                                    readVec3(tr.value("position", json()), glm::vec3(0.0f)))
                               * glm::rotate(glm::mat4(1.0f), glm::radians(tr.value("yaw", 0.0f)),
                                             glm::vec3(0.0f, 1.0f, 0.0f))
-                              * glm::scale(glm::mat4(1.0f), glm::vec3(s));
+                              * glm::scale(glm::mat4(1.0f), glm::vec3(s, sy, s));
                 part.mesh     = it->second;
+                {   // delta de teinte propre a l'arbre (+-18 %), derive de la seed -> toujours le meme
+                    std::mt19937 trng(leafSeed * 2654435761u ^ (m_treeCounter * 40503u + 1u));
+                    const float d = (rnd01(trng) - 0.5f) * 0.36f;
+                    part.tint = glm::vec3(1.0f + d * 0.9f, 1.0f + d, 1.0f + d * 0.8f);
+                }
+                const glm::vec3 treePos = glm::vec3(part.model * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
                 m_parts.push_back(std::move(part));
+
+                // Feuilles au sol : seed + index d'arbre -> toujours les memes positions.
+                if (leafCount > 0) {
+                    std::mt19937 rng(leafSeed + 7919u * m_treeCounter);
+                    for (int i = 0; i < leafCount; ++i) {
+                        const int sheet = (int)(rnd01(rng) * LEAF_SHEETS) % LEAF_SHEETS;
+                        const int cols = kLeafCols[sheet], rows = kLeafRows[sheet];
+                        const int cell = (int)(rnd01(rng) * cols * rows) % (cols * rows);
+                        const float ang = rnd01(rng) * 6.2831853f;
+                        const float r = 0.6f + leafRadius * s * std::pow(rnd01(rng), 0.7f);
+                        const float yaw = rnd01(rng) * 6.2831853f;
+                        const float h = leafSizeMin + (leafSizeMax - leafSizeMin) * rnd01(rng);
+                        const float w = h * rows / cols;   // aspect de la cellule
+                        const glm::vec3 c(treePos.x + r * std::cos(ang),
+                                          0.02f + 0.0004f * (float)(m_leafIdx[sheet].size() / 6 % 100),   // evite le z-fighting entre feuilles
+                                          treePos.z + r * std::sin(ang));
+                        const float u0 = (cell % cols) / (float)cols + 0.02f, u1 = (cell % cols + 1) / (float)cols - 0.02f;
+                        const float rowTop = (float)(cell / cols);
+                        const float v0 = 1.0f - (rowTop + 1.0f) / rows + 0.02f, v1 = 1.0f - rowTop / rows - 0.02f;
+                        const float cy = std::cos(yaw), sn = std::sin(yaw);
+                        auto corner = [&](float lx, float lz, float u, float v) {
+                            return Vertex(c.x + lx * cy - lz * sn, c.y, c.z + lx * sn + lz * cy,
+                                          0.0f, 1.0f, 0.0f, u, v);
+                        };
+                        auto& vs = m_leafVerts[sheet];
+                        const unsigned int base = (unsigned int)vs.size();
+                        vs.push_back(corner(-w * 0.5f, -h * 0.5f, u0, v0));
+                        vs.push_back(corner( w * 0.5f, -h * 0.5f, u1, v0));
+                        vs.push_back(corner( w * 0.5f,  h * 0.5f, u1, v1));
+                        vs.push_back(corner(-w * 0.5f,  h * 0.5f, u0, v1));
+                        m_leafIdx[sheet].insert(m_leafIdx[sheet].end(),
+                            { base, base + 1, base + 2, base + 2, base + 3, base });
+                    }
+                }
+                ++m_treeCounter;
             }
         }
 
@@ -574,6 +493,19 @@ bool MapLoader::loadMapFile(const std::string& jsonPath, const glm::mat4& transf
                 light.attenuation = readVec3(l.value("attenuation", json()), light.attenuation);
                 light.color       = readVec3(l.value("color", json()),       light.diffuse);
                 m_lights.push_back(std::move(light));
+            }
+        }
+
+        // 6.bis Boutons interactifs (pave + collision boite)
+        if (data.contains("buttons") && data["buttons"].is_array()) {
+            for (const auto& bt : data["buttons"]) {
+                const glm::vec3 center = readVec3(bt.value("center", json()), glm::vec3(0.0f));
+                MapButton button;
+                button.name = bt.value("name", "button");
+                button.label = bt.value("label", button.name);
+                button.scale = bt.value("scale", 0.45f);
+                button.position = glm::vec3(transform * glm::vec4(center, 1.0f));
+                m_buttons.push_back(std::move(button));
             }
         }
 

@@ -18,6 +18,8 @@ namespace Resource {
     inline constexpr const char* MODEL_FROPY_HEAD   = "./res/models/fropy/fropy_head.obj";
     inline constexpr const char* MODEL_ARMS_RIG     = "./res/rigging/arm/arms_rig.glb";
     inline constexpr const char* MODEL_MEGAN        = "./res/rigging/mixamo/models/Megan.fbx";
+    // Creature fropy : corps articule + tete (squelette Mixamo, cf. res/models/fropy/make_fropy_player.py).
+    inline constexpr const char* MODEL_FROPY_RIG    = "./res/models/fropy/fropy_player.glb";
     inline constexpr const char* MIXAMO_ANIM_DIR    = "./res/rigging/mixamo/animation/";
 
     // ── Sons / musiques ───────────────────────────────────────────────────
@@ -29,7 +31,9 @@ namespace Resource {
     inline constexpr const char* SOUND_MENU_SILENCE_INVESTIGATION  = "./res/sounds/menu/musical-horror-silence-investigation-01.wav";
     inline constexpr const char* SOUND_MENU_FISHMAN_GRUNT          = "./res/sounds/menu/creature-humanoid-fishman-grunt-02.wav";
     inline constexpr const char* SOUND_MENU_CLICK                  = "./res/sounds/menu/ui-click-generic-plastic-01.wav";
+    inline constexpr const char* SOUND_MENU_HOVER                  = "./res/sounds/menu/menu-hover-16bit.wav";
     inline constexpr const char* SOUND_MUSIC_ON_AND_ON             = "res/sounds/on&on.ogg";
+    inline constexpr const char* SOUND_FROPY_VOICELINES_DIR        = "./res/sounds/fropy/voicelines";   // cf. make_voicelines.py
 
     // ── Textures ──────────────────────────────────────────────────────────
     inline constexpr const char* TEXTURE_LOGO     = "./res/textures/logo.jpeg";
@@ -46,7 +50,10 @@ namespace Resource {
 
     // ── Cartes ────────────────────────────────────────────────────────────────
     inline constexpr const char* MAP_HOUSE   = "./res/maps/house.json";
-    inline constexpr const char* MAP_VILLAGE = "./res/maps/village.json";
+    inline constexpr const char* MAP_LOBBY         = "./res/maps/lobby/lobby.json";   // salle d'avant-partie
+    inline constexpr const char* MAP_BATIMENT      = "./res/maps/batiment/batiment.json";   // batiment (export Blender, 3 niveaux)
+    inline constexpr const char* MAP_VILLAGE_DAY   = "./res/maps/village/village_day.json";
+    inline constexpr const char* MAP_VILLAGE_NIGHT = "./res/maps/village/village_night.json";
 
     // ── Polices ───────────────────────────────────────────────────────────
     inline constexpr const char* FONT_ARMANA           = "res/fonts/armana/Amarna-Bold.ttf";

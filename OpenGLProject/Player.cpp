@@ -29,7 +29,8 @@ void Player::processDirectionKey(int direction, float speedFactor) {
     // on retombe sur la vitesse de marche même si la touche est tenue.
     // Le facteur post-atterrissage ralenti le joueur brievement apres une
     // chute ou un saut (CharacterAnimationController::getPostLandSpeedFactor).
-    float velocity = getIsSprinting() ? Constants::Player::PLAYER_SPRINTING_SPEED : Constants::Player::PLAYER_WALKING_SPEED;
+    const float sprint = m_useGravity ? Constants::Player::PLAYER_SPRINTING_SPEED : Constants::Player::PLAYER_NOCLIP_SPRINT_SPEED;
+    float velocity = getIsSprinting() ? sprint : Constants::Player::PLAYER_WALKING_SPEED;
     velocity *= m_postLandSpeedFactor;
     float deltaTime = m_renderer->getDeltaTime();
     // speedFactor (0..1) : mouvement analogique au stick gauche de la manette

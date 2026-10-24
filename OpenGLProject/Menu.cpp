@@ -72,24 +72,41 @@ void Menu::draw() {
 	// Draw background — Rectangle créé une seule fois, réutilisé chaque frame
     ensureBackground();
     m_background->draw();
-    // Dessiner le titre si présent
+    // Dessiner le titre si présent (ombre portee + police Gnocchi)
     if (!m_title.empty()) {
-        drawTextCentered(m_title, m_titleX, m_titleY, 1, Constants::Color::LINEN);
+        drawTextCentered(m_title, m_titleX + Constants::Menu::SHADOW_OFFSET, m_titleY + Constants::Menu::SHADOW_OFFSET,
+                         1, glm::vec3(0.0f), Constants::Menu::TITLE_SCALE);
+        drawTextCentered(m_title, m_titleX, m_titleY, 1, Constants::Color::LINEN, Constants::Menu::TITLE_SCALE);
     }
 
     // Dessiner les items du menu
     for (const auto& item : m_items) {
-               
-        // Texte centré
-        float centerX = item.x + item.width / 2.0f;
-        float centerY = item.y + item.height / 2.0f;
+        const float centerX = item.x + item.width / 2.0f;
+        const float centerY = item.y + item.height / 2.0f;
+
+        if (!item.callback) {
+            // Texte d'aide (non actionnable) : plus petit, teinte froide
+            drawTextCentered(item.text, centerX, centerY, 0, Constants::Color::TROPICAL_TEAL, Constants::Menu::HELP_TEXT_SCALE);
+            continue;
+        }
+
+        const float scale = item.isHovered ? Constants::Menu::ITEM_HOVER_SCALE : Constants::Menu::ITEM_TEXT_SCALE;
+        const glm::vec3 color = item.isHovered ? Constants::Color::VANILLA_CUSTARD : Constants::Color::LINEN;
+        drawTextCentered(item.text, centerX + Constants::Menu::SHADOW_OFFSET, centerY + Constants::Menu::SHADOW_OFFSET,
+                         0, glm::vec3(0.0f), scale);
+        drawTextCentered(item.text, centerX, centerY, 0, color, scale);
 
         if (item.isHovered) {
-            drawTextCentered(item.text, centerX, centerY, 0, Constants::Color::TOMATO_JAM);
-        }
-        else {
-            drawTextCentered(item.text, centerX, centerY, 0, Constants::Color::LINEN);
-
+            // Soulignement de l'option survolee / selectionnee a la manette
+            if (!m_hoverBar) {
+                m_hoverBar = std::make_unique<Rectangle>(m_shaderManager->getShader("shape"),
+                    0.0f, 0.0f, 10.0f, Constants::Menu::HOVER_BAR_H, Constants::Color::TOMATO_JAM);
+            }
+            const float w = m_textRenderers->at(0)->getTextWidth(item.text, scale) + 48.0f;
+            const float h = m_textRenderers->at(0)->getTextHeight(item.text, scale);
+            m_hoverBar->setSize(w, Constants::Menu::HOVER_BAR_H);
+            m_hoverBar->setPosition(centerX, centerY + h / 2.0f + 10.0f);
+            m_hoverBar->draw();
         }
     }
     for (const auto& shape : m_shapes) {
@@ -231,6 +248,7 @@ void Menu::navigate(int direction) {
     if (n == 0) return;
     m_focusIndex = ((m_focusIndex + direction) % n + n) % n;
     applyFocusHighlight();
+    playHoverSound();
 }
 
 void Menu::activateSelected() {
@@ -276,6 +294,13 @@ void Menu::setFocusIndex(int index) {
     // avoir change entre-temps, ex: rebuildItems d'un menu de bindings).
     m_focusIndex = (index < 0) ? 0 : (index >= n ? n - 1 : index);
     applyFocusHighlight();
+}
+
+void Menu::playHoverSound() {
+    Sound* hoverSound = m_soundManager->get("menu_hover_sound");
+    if (hoverSound) {
+        hoverSound->play();
+    }
 }
 
 void Menu::playClickSound() {

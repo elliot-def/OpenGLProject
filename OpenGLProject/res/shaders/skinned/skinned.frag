@@ -35,7 +35,6 @@ struct SpotLight {
     float outerCutOff;
 };
 
-#define MAX_LIGHTS 32
 
 in vec3 FragPos;
 in vec3 Normal;
@@ -48,6 +47,8 @@ uniform sampler2D texture_diffuse;
 uniform sampler2D texture_specular;
 
 uniform vec3 viewPos;
+
+#include "fog.glsl"
 uniform DirLight dirLight;
 uniform SpotLight spotLight;
 uniform SpotLight sunSpot;   // soleil (LightManager::aimSunSpot)
@@ -58,7 +59,6 @@ uniform PointLight lightSources[MAX_LIGHTS];
 // uLightRoom[i] (LightManager) et n'éclaire que les fragments de CETTE
 // pièce — la lumière ne traverse pas les murs. -1 = lumière libre.
 // uRoomCount = nombre de pièces valides (0 = aucune).
-#define MAX_ROOMS 8
 uniform int   uRoomCount;
 uniform vec3  uRoomMin[MAX_ROOMS];
 uniform vec3  uRoomMax[MAX_ROOMS];
@@ -101,7 +101,7 @@ void main()
     // deviennent transparents au lieu d'etre brutalement tronques.
     float distToCamera = length(viewPos - FragPos);
     float alpha = smoothstep(uNearFadeStart, uNearFadeEnd, distToCamera);
-    FragColor = vec4(result, alpha);
+    FragColor = vec4(applyFog(result, distToCamera), alpha);
 }
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, vec3 diffTex, vec3 specTex)

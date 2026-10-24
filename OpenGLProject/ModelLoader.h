@@ -35,8 +35,6 @@ public:
     void load(GLFWwindow* loaderWindow);
 
     // Accès aux entités chargées (détenues par le loader, valides après load())
-    ModelEntity* getModelEntity() const { return m_modelEntity.get(); }
-    ModelEntity* getFropyEntity() const { return m_fropyEntity.get(); }
     ModelEntity* getHumanEntity() const { return m_humanEntity.get(); }
     FirstPersonArms* getFirstPersonArms() const { return m_firstPersonArms.get(); }
     CharacterAnimationController* getCharacterAnim() const { return m_characterAnim.get(); }
@@ -57,8 +55,6 @@ private:
     TextureManager* m_textureManager;
     InputManager* m_inputManager;
 
-    std::unique_ptr<ModelEntity> m_modelEntity;
-    std::unique_ptr<ModelEntity> m_fropyEntity;
     std::unique_ptr<ModelEntity> m_humanEntity;
     std::unique_ptr<FirstPersonArms> m_firstPersonArms;
     std::unique_ptr<CharacterAnimationController> m_characterAnim;
