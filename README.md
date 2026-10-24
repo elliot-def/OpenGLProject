@@ -1,139 +1,248 @@
 # OpenGLProject
 
-Moteur de jeu 3D "maison" écrit en C++20 / OpenGL 4.5, développé sous Visual Studio (Windows). Le projet part d'un rendu OpenGL bas niveau (via GLAD) et construit par-dessus un petit moteur complet : chargement de modèles riggés (Assimp), animation squelettique avec crossfade, collisions AABB/OBB accélérées par BVH, audio 3D (OpenAL + EFX), un système de menus navigable à la souris et à la manette, une intégration Steamworks (lobbies, invitations, Steam Input), et une couche réseau (sockets bruts) encore expérimentale.
+Moteur de jeu 3D "maison" écrit en C++20 / OpenGL 4.5, développé sous Visual Studio (Windows), sur lequel est construit un **jeu d'horreur / de poursuite solo et multijoueur** : des joueurs enfermés dans une carte doivent accomplir des tâches (mini-jeux) tout en échappant à **fropy**, une créature qui les chasse, les écoute et ouvre les portes. Le projet part d'un rendu OpenGL bas niveau (via GLAD) et construit par-dessus un petit moteur complet : chargement de modèles riggés (Assimp), animation squelettique avec crossfade, collisions AABB/OBB accélérées par BVH, audio 3D (OpenAL + EFX), cartes décrites en JSON, IA avec pathfinding A*, un système de menus navigable à la souris et à la manette, une intégration Steamworks (lobbies, invitations, Steam Input) et le multijoueur temps réel (positions, chat textuel, **chat vocal**) en P2P Steam.
 
-> La quasi-totalité des commentaires du code source sont en français ; ce README suit la même convention.
+> La quasi-totalité des commentaires du code source sont en français ; ce README suit la même convention. Le guide technique à destination des développeurs/IA est dans [`agent.md`](agent.md).
 
 ---
 
 ## Table des matières
 
-1. [Aperçu](#aperçu)
-2. [Fonctionnalités](#fonctionnalités)
-3. [Architecture du projet](#architecture-du-projet)
-4. [Arborescence des dossiers](#arborescence-des-dossiers)
-5. [Dépendances](#dépendances)
-6. [Compilation](#compilation)
-7. [Lancement et arguments](#lancement-et-arguments)
-8. [Contrôles](#contrôles)
-9. [Fichiers de configuration persistants](#fichiers-de-configuration-persistants)
-10. [Système de rendu](#système-de-rendu)
-11. [Animation squelettique](#animation-squelettique)
-12. [Collisions et physique](#collisions-et-physique)
-13. [Audio](#audio)
-14. [Entrées (clavier / souris / manette)](#entrées-clavier--souris--manette)
-15. [Menus et UI](#menus-et-ui)
-16. [Réseau](#réseau)
-17. [Intégration Steam](#intégration-steam)
+1. [Vision globale](#vision-globale)
+2. [Le jeu en pratique](#le-jeu-en-pratique)
+3. [La créature (fropy)](#la-créature-fropy)
+4. [Quêtes et mini-jeux](#quêtes-et-mini-jeux)
+5. [Multijoueur](#multijoueur)
+6. [Fonctionnalités du moteur](#fonctionnalités-du-moteur)
+7. [Architecture du projet](#architecture-du-projet)
+8. [Arborescence des dossiers](#arborescence-des-dossiers)
+9. [Dépendances](#dépendances)
+10. [Compilation](#compilation)
+11. [Lancement et arguments](#lancement-et-arguments)
+12. [Contrôles](#contrôles)
+13. [Fichiers de configuration persistants](#fichiers-de-configuration-persistants)
+14. [Cartes JSON (MapLoader)](#cartes-json-maploader)
+15. [Animation squelettique](#animation-squelettique)
+16. [Collisions et physique](#collisions-et-physique)
+17. [Audio](#audio)
 18. [Écran de chargement et threading](#écran-de-chargement-et-threading)
-19. [Points d'attention / pièges connus](#points-dattention--pièges-connus)
-20. [Pistes d'amélioration](#pistes-damélioration)
+19. [Outils et auto-tests](#outils-et-auto-tests)
+20. [Points d'attention / pièges connus](#points-dattention--pièges-connus)
+21. [Pistes d'amélioration](#pistes-damélioration)
 
 ---
 
-## Aperçu
+## Vision globale
 
-Le projet est une petite scène de jeu en vue première/troisième personne :
+**Le jeu.** Un groupe de joueurs (solo ou lobby Steam) apparaît dans une carte fermée — un village de nuit, un village de jour ou un bâtiment. Leur objectif : accomplir toutes les tâches de la partie (des mini-jeux répartis sur des postes de la carte) avant que **fropy**, une créature qui rôde, ne leur retire toutes leurs vies. Fropy voit, entend (la **voix des joueurs en chat vocal émet du bruit qu'elle capte**), ouvre les portes qui barrent sa route et se repère sur toute la carte. La difficulté, la carte et le mode de jeu (chasse ou exploration paisible) sont choisis par l'hôte dans une salle de lobby avant de lancer la partie.
 
-- Un joueur capsule avec gravité, saut, sprint, accroupissement et un mode **no-clip** (vol libre sans collisions).
-- Un monde composé de cubes texturés (rendu instancié), de sources de lumière ponctuelles, d'une skybox nocturne et de modèles 3D (sac à dos, personnage low-poly, personnage riggé animé façon Mixamo).
-- Des bras en vue première personne (viewmodel) avec animations de tir, poussée et attrape.
-- Un système de menus complet (principal, pause, options, rebinding clavier/souris et manette) navigable à la souris **et** à la manette.
-- Une intégration Steamworks (lobbies multijoueur, invitations, overlay) avec repli automatique en mode hors-ligne.
+**Le moteur.** Tout est écrit à la main pour apprendre : fenêtrage et entrées (GLFW), rendu (OpenGL 4.5 via GLAD), mathématiques (GLM), import de modèles et d'animations (Assimp), audio 3D avec réverbération (OpenAL + EFX), physique simple (capsule, sweep de sphère, BVH), UI 2D (atlas de glyphes stb_truetype, rendu de texte batché), réseau P2P (Steam Networking Messages) et voix (capture OpenAL, compression IMA ADPCM). Le gameplay (poursuite, quêtes, lobby, multijoueur) est posé par-dessus, dans des managers séparés de l'orchestration (`Game` ne fait que de l'orchestration, cf. [`agent.md`](agent.md)).
+
+**La direction artistique.** Low-poly assumé, ambiance horrifique "maison hantée" (sons d'ambiance étouffés, voicelines de fropy bitcrushées, brume volumétrique la nuit), et une signature visuelle : le **soleil et la lune sont une tête de fropy géante** dans le ciel qui regarde la créature et l'éclaire — avec éblouissement plein écran quand on la regarde en face. Les écrans de télévision des cartes diffusent en boucle le logo DVD rebondissant du menu principal.
+
+**Où le projet va.** (cf. [`todo.md`](todo.md)) Vrai multijoueur abouti, éditeur de cartes, PNJ avec dialogues, personnalisation visuelle des personnages (torche, sac à dos...), normal mapping étendu, support de modding communautaire, et une DA toujours plus cohérente (modèles low-poly, sons bitcrushés).
 
 Le jeu tourne actuellement **exclusivement sous Windows** (Win32, Winsock, XInput, Steamworks).
 
 ---
 
-## Fonctionnalités
+## Le jeu en pratique
+
+### Boucle d'une partie
+
+1. **Menu principal** → clic sur **Jouer** (ou arrivée dans un lobby Steam après une invitation).
+2. **Salle du lobby** (`res/maps/lobby/lobby.json`) : une maison géante où tous les joueurs apparaissent. Contre le mur du fond, **4 fropys qui tournent** font office de boutons : l'hôte les actionne avec `E` pour choisir la **difficulté**, la **carte**, le **mode de jeu**, puis **lancer la partie**.
+3. **Partie** : les joueurs apparaissent sur la carte choisie. Un panneau HUD liste les tâches à accomplir ; chaque tâche est un poste (fropy tournant) à activer avec `E`, qui ouvre un mini-jeu. Pendant ce temps, fropy chasse (en mode Chasse).
+4. **Fin de partie** :
+   - **Victoire** : toutes les tâches accomplies → message, puis retour à la salle du lobby.
+   - **Défaite** : un joueur touché par fropy perd une vie ; plus aucune vie → fin de partie, puis retour au lobby.
+
+Le mode **Exploration** (choisi par l'hôte) désactive fropy : on visite la carte sans menace, utile pour découvrir les maps ou jouer aux mini-jeux tranquillement.
+
+### Options de partie (l'hôte)
+
+Les options sont choisies dans le lobby, synchronisées vers tous les joueurs via les données du lobby Steam, et affichées dans un résumé à droite du HUD. Une graine (`seed`) tirée par l'hôte détermine les postes de tâches tirés à chaque carte — **identiques chez tous les joueurs** d'une même partie.
+
+| Option | Valeurs | Effets |
+|---|---|---|
+| **Difficulté** | Facile / Normal / Difficile | Vies (5 / 3 / 1), nombre de tâches (3 / 5 / 8), vitesse de fropy (×0.8 / ×1.0 / ×1.3) et ses sens (vue+ouïe : ×0.75 / ×1.0 / ×1.35) |
+| **Carte** | Village (jour) / Village (nuit) / Bâtiment | La carte chargée (`res/maps/...`) |
+| **Mode de jeu** | Chasse / Exploration | Fropy actif ou non |
+| **Lancer la partie** | — | Recharge la carte choisie chez tous les joueurs |
+
+En solo, le joueur est son propre hôte : mêmes boutons, même déroulé.
+
+### Cartes
+
+Les cartes sont des fichiers **JSON** (géométrie, matériaux, lumières, portes, boutons, spawns, ambiance) chargés par `MapLoader` — cf. [Cartes JSON](#cartes-json-maploader).
+
+| Carte | Fichier | Particularités |
+|---|---|---|
+| **Lobby** | `res/maps/lobby/lobby.json` | Maison géante (24×16 m), 4 boutons fropy, pas de créature |
+| **Village (jour)** | `res/maps/village/village_day.json` | Ciel de jour, tête-fropy soleil jaune ; inclut `village_common.json` + `house.json` (maisons instanciées plusieurs fois) |
+| **Village (nuit)** | `res/maps/village/village_night.json` | Brouillard + brume en particules, tête-fropy lune blanc-gris, portée de vue de fropy réduite |
+| **Bâtiment** | `res/maps/batiment/batiment.json` | Export Blender (`batiment.obj`/`.mtl` + textures), collision précise par triangles, étages et escaliers |
+
+### Déroulé concret en jeu
+
+- **Tâches** : postes nommés `quest:<type>:<id>` dans la carte (clés `"buttons"`). À chaque partie, `count` postes sont tirés (graine commune) et les autres sont masqués. Un poste réussi disparaît et se coche dans le HUD.
+- **Fropy** : poursuit, ouvre les portes, perd l'agro si on lui échappe, retourne en ronde. Un joueur touché perd une vie (courte invulnérabilité après un coup, et fropy est brièvement étourdi).
+- **Portes** : `E` ouvre/ferme la porte visée (elle s'ouvre toujours du côté opposé au joueur). Un contour pulsé signale les portes interactives ; fropy pousse celles qui barrent sa trajectoire.
+- **HUD** : liste des tâches, vies restantes, invite `[E] ...` sur l'élément visé, chat, joueurs qui parlent en vocal.
+- **Interactions** : tout ce qui est "actionnable" (options du lobby, postes de quête, boutons) est un **fropy qui tourne**, visé au centre de l'écran et activé avec `E`.
+
+---
+
+## La créature (fropy)
+
+`Creature` est un ennemi complet, réutilisable sur toutes les cartes :
+
+- **Aspect** : modèle articulé basse-poly (`res/models/fropy/fropy_player.glb`, squelette Mixamo construit par `res/models/fropy/make_fropy_player.py`), animé en repos / marche / course selon sa vitesse réelle.
+- **Perception** : **vue** (portée configurable par carte, test de ligne de vue échantillonné avec occlusion) et **ouïe** (chaque bruit émis — voix des joueurs en chat vocal, etc. — est un `NoiseEvent` avec une position et une portée ; les murs réduisent la portée d'un bruit non vu).
+- **États** : *Patrol* (ronde sur toute la carte via une grille de cellules, en visant toujours la zone la plus ancienne), *Chase* (poursuite du joueur le plus proche visible), *Investigate* (se rend au dernier bruit entendu et cherche sur place).
+- **Déplacement** : **A\* sur grille** (XZ + hauteur du sol : monte les escaliers, marche par marche), recalculé périodiquement, lissage des waypoints par visibilité, repli en ligne droite si dégagé. Le corps passe par `sweepSphere` : fropy **glisse le long des murs** au lieu de les traverser, et **ouvre les portes fermées** qui barrent son chemin (avec un surcoût dans l'A\*).
+- **Réglages** : tous dans `OpenGLProject/constants/creature.h` (vitesses, portées, temporisations, taille de grille A\*...). La difficulté applique des multiplicateurs de vitesse et de sens.
+- **Voix** : `CreatureVoice` joue des voicelines bitcrushées (`res/sounds/fropy/voicelines`, générées par `make_voicelines.py`) **spatialisées à sa tête** : atténuées par la distance, étouffées (passe-bas) derrière un mur.
+
+Côté ciel, `SkySystem` place la **tête de fropy géante** (soleil jaune le jour, lune blanc-gris la nuit) qui oriente son regard vers la créature et l'éclaire d'un spot ; regarder le soleil sans obstacle provoque un éblouissement plein écran (halo + rayons + voile).
+
+---
+
+## Quêtes et mini-jeux
+
+`QuestManager` gère les tâches de la partie ; `MiniGames` contient la **logique pure** des mini-jeux (aucun appel OpenGL — testée par `-selftest`), le rendu passant par une interface `QuestPainter`. Quatre types de postes :
+
+| Type | Nom | Principe |
+|---|---|---|
+| `wires` | Rebrancher les câbles | Relier chaque couleur de gauche à sa prise de droite |
+| `simon` | Pirater le digicode | Mémoriser puis rejouer une séquence de flèches (3 manches) |
+| `timing` | Calibrer la chaudière | Bloquer un curseur dans une zone qui rétrécit (3 réussites) |
+| `wave` | Accorder la radio | Caler fréquence et amplitude sur une onde cible |
+
+Un mini-jeu s'ouvre en panneau plein écran (touche `E` sur le poste) qui capture les commandes — **fropy continue de chasser pendant ce temps**. Commandes : flèches/ZQSD + `Entrée`/`Espace` au clavier, croix directionnelle + `A` à la manette. Réussi : le poste disparaît, la tâche se coche ; si fropy vous attrape pendant un mini-jeu, il se ferme. Toutes les tâches faites → victoire.
+
+Les visuels du HUD des quêtes sont générés par `res/textures/quests/make_quest_ui.py` (panneaux, icônes, coches).
+
+---
+
+## Multijoueur
+
+Le multijoueur repose sur les **lobbies Steam** et la **P2P fiable `ISteamNetworkingMessages`** (la couche TCP historique `Socket`/`Packet` existe encore mais n'est pas branchée au gameplay).
+
+### Synchronisation des joueurs (`MultiplayerManager`)
+
+- Chaque client diffuse son état (position, cap, animation courante) **~20×/s** à tous les membres du lobby.
+- Les joueurs distants sont représentés par un modèle de personnage (`Megan`, mêmes animations Mixamo que le joueur local), créé paresseusement à la réception du premier paquet.
+- **Interpolation** entre deux checkpoints consécutifs pour un rendu fluide ; au-delà de ~5 s de silence P2P, le pair est considéré déconnecté.
+- Les positions des joueurs distants sont transmises à la créature : **fropy peut chasser n'importe qui**, visible ou non.
+- Le monde continue de tourner quand un menu est ouvert (le personnage ne se fige plus en l'air et reste visible chez les autres).
+
+### Chat textuel (`LobbyChat`)
+
+- `Entrée` ouvre la saisie, `Entrée` envoie, `Echap` annule. Historique des messages joueurs + logs système (lobby créé, arrivée/départ des joueurs), pseudo Steam affiché.
+- Diffusé à tous les membres du lobby via le même canal P2P fiable.
+
+### Chat vocal (`VoiceChat`)
+
+- **Capture** OpenAL (`alcCaptureOpenDevice`), 16 kHz mono 16 bits, traitée par blocs de 20 ms sur le thread principal (aucun thread supplémentaire).
+- **Compression IMA ADPCM** (4:1) avec état de codeur transporté par bloc : chaque paquet se décode indépendamment, les pertes/désordres du réseau non-fiable ne corrompent pas la suite.
+- **Transmission** en paquets NON-fiables (175 octets, magic `MPGV`) sur le canal P2P ; réception et lecture par **une source OpenAL par joueur distant** (file de buffers, ~160 ms de latence max).
+- **Activation** : détection vocale (VAD, seuil réglable) **ou** push-to-talk (touche `V`). Micro coupable individuellement.
+- Réglages (activation, mode, sensibilité, volume des voix, **périphérique de capture**) dans Options → Audio, persistés dans `res/options.json` (section `"voice"`).
+- Les pseudos des joueurs qui parlent s'affichent au-dessus du chat (icône haut-parleur) — y compris en solo pour le micro local.
+
+**Boucle de gameplay liée au vocal** : parler émet un `NoiseEvent` autour de votre position (`Constants::Player::PLAYER_VOICE_NOISE_RADIUS`) que fropy peut entendre — **parler peut vous trahir**.
+
+---
+
+## Fonctionnalités du moteur
 
 ### Rendu
 - Chargement OpenGL via **GLAD** (spécification `gl=4.5`, profil *compatibility*, contexte créé en 3.3 core par GLFW).
 - Rendu **instancié** des cubes (`CubeRenderer` / `glDrawElementsInstanced`) : un seul cube unitaire partagé, matrices modèle + couleur envoyées par instance.
-- Chargement de modèles 3D via **Assimp** (`.obj`, `.fbx`, `.glb`/`.gltf`) avec extraction de bones, textures embarquées (PNG/JPEG compressées ou pixels bruts BGRA), et dédoublonnage des meshes partagés entre plusieurs nœuds.
-- Skinning GPU (jusqu'à `SHADER_MAX_BONES = 100` os envoyés par `glUniformMatrix4fv` groupé).
-- **Skybox** cubemap (6 faces `px/nx/py/ny/pz/nz`), rendue en profondeur `GL_LEQUAL` sans écriture du depth buffer.
-- Passe d'**outline** (silhouette) réutilisable pour les shapes 2D, les meshes 3D et les modèles riggés (`Outlineable` / `OutlinePass.cpp`).
-- Éclairage : jusqu'à `MAX_LIGHTS_SOURCES = 10` lumières ponctuelles, une lumière directionnelle, et une **lampe torche** (spotlight) avec scintillement lissé.
-- Effet de **fondu de proximité** (near-fade) en vue première personne pour éviter l'effet de découpe du corps du joueur trop près de la caméra.
-- Rendu de texte batché (un seul `glDrawArrays` par frame) via un atlas de glyphes `stb_truetype`, support UTF-8 (icônes manette/clavier de la police Kenney en zone privée Unicode).
-- Écran de chargement animé (shader plein écran, barre de progression par étapes, fondu de sortie).
+- Chargement de modèles 3D via **Assimp** (`.obj`, `.fbx`, `.glb`/`.gltf`) avec extraction de bones, textures embarquées, et dédoublonnage des meshes partagés. Chargeur **OBJ maison** (`ObjLoader`) pour les exports Blender des cartes (UV, matériaux `.mtl`, couleurs, opacité/vitres).
+- Skinning GPU (jusqu'à `SHADER_MAX_BONES = 100` os), 4 influences par sommet.
+- **Skybox** cubemap par carte (dossier de 6 faces déclaré dans le JSON), rendue en profondeur `GL_LEQUAL`.
+- Passe d'**outline** (silhouette) réutilisable : shapes 2D, meshes 3D, modèles riggés et **contours pulsés des portes interactives**.
+- Éclairage : jusqu'à `MAX_LIGHTS_SOURCES = 10` lumières ponctuelles (restreintes à une pièce via les `"rooms"` des cartes), une lumière directionnelle (le soleil de la carte), la **lampe torche** du joueur (spotlight à l'os de tête), et le **spot de la tête-fropy** céleste qui éclaire la créature.
+- **Normal mapping** sur les murs de briques (shader `cube/wall`, TBN reconstruit par dérivées dans le fragment shader).
+- **Brouillard** : fog exponentiel par carte (`"fog"`) + **brume volumétrique en particules** (`FogParticles` : ~300 billboards autour du joueur, texture procédurale, tri arrière→avant).
+- Effet de **fondu de proximité** (near-fade) en vue première personne.
+- Rendu de texte batché (un seul `glDrawArrays` par frame) via un atlas de glyphes `stb_truetype`, UTF-8 (icônes manette/clavier de la police Kenney).
+- Écran de chargement animé (barre de progression par étapes, fondu de sortie).
 
 ### Animation
-- `Animator` : lecture d'animations Assimp avec interpolation position/rotation, gestion des animations en boucle ou "one-shot".
-- **Crossfade** entre deux animations basé sur le blend des transformées *locales* (translation lerp + rotation slerp), pas sur les matrices finales, pour éviter les artefacts (overshoot des doigts, etc.).
-- Réparation automatique des clés de rotation corrompues par Assimp 5.4.x sur certains GLB (`GlbAnimationRepair.cpp`, relecture directe du binaire glTF).
-- Compatible rigs **Mixamo** : gestion des préfixes `mixamorig:`/`mixamorig2:`, des suffixes FBX `_$AssimpFbx$_Rotation` (décomposition RrTt), et des squelettes multiples partageant les mêmes noms de bones dans un seul fichier.
-- Machine à états d'animation du personnage 3P (`CharacterAnimationController`) : idle/marche/course, strafes, virages, saut/course-saut, chute libre, atterrissage, avec hystérésis anti-clignotement et orientation dynamique du modèle selon la trajectoire.
-- Bras 1P (`FirstPersonArms`) : détection automatique des animations (`finger_gun_idle`, `finger_gun_fire`, `push`, `grab`, `relax`), offsets de pose procéduraux par bone (élévation/écartement des bras), filtrage des bones visibles (bras/coudes/mains uniquement) en 1P et 3P.
+- `Animator` : lecture d'animations Assimp avec interpolation position/rotation, boucle ou "one-shot", **crossfade** sur les transformées *locales* (lerp + slerp).
+- Réparation automatique des clés de rotation corrompues par Assimp 5.4.x sur certains GLB (`GlbAnimationRepair`).
+- Compatible rigs **Mixamo** : préfixes `mixamorig:`, suffixes FBX `_$AssimpFbx$_Rotation`, squelettes multiples, `AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS=false`.
+- Machine à états du personnage 3P (`CharacterAnimationController`) : idle/marche/course, strafes, virages, saut, chute, atterrissage (hystérésis anti-clignotement).
+- Bras 1P (`FirstPersonArms`) + **caméra et lampe torche attachées à l'os de tête** (`HeadCameraRig`, avec limite du lean de la tête contre les murs).
+- Animations synchronisées aux joueurs distants (l'animation jouée est transmise avec l'état P2P).
 
 ### Collisions & physique
-- `CollisionManager` : AABB pour les objets statiques, **BVH** (arbre englobant) pour les requêtes sphère/AABB en O(log n).
-- OBB (boîtes orientées) pour les objets dynamiques rotatifs, avec normale de collision fidèle à l'orientation.
-- Résolution de mouvement joueur par **sweep de sphère** avec glissement (sliding) itératif et sub-stepping anti-tunneling.
-- Détection sol/plafond indépendante du mouvement, gestion du saut, de la chute et du ralenti post-atterrissage.
-- Gravité configurable, mode no-clip (vol libre) désactivant la gravité et les collisions verticales.
+- `CollisionManager` : AABB statiques, **BVH** pour les requêtes sphère/AABB en O(log n), **collisions triangles** (`addStaticTriangleSoup`, grille de cellules de 4 m) pour les modèles OBJ et les toits en pente.
+- OBB pour les objets dynamiques rotatifs ; colliders de **portes** mis à jour à la rotation.
+- Résolution de mouvement joueur par **sweep de sphère** avec glissement itératif et sub-stepping anti-tunneling ; la créature utilise le même sweep.
+- Gravité, saut, ralenti post-atterrissage, mode **no-clip** (vol libre).
 
 ### Audio
-- **OpenAL** + extension **EFX** (si disponible) : sons positionnels 3D, atténuation par distance, effet Doppler.
-- Presets de réverbération EAX (`ROOM`, `HALLWAY`, `CAVE`, `ARENA`, `OUTDOORS`, `UNDERWATER`, `NONE`) appliqués globalement selon l'état du jeu (ex. réverb "underwater" dans les menus).
-- Filtre passe-bas par son (`AL_EXT_EFX`).
-- Pause/reprise automatique de tous les sons à la perte/reprise du focus de la fenêtre.
-- Chargement de fichiers **WAV PCM** (8/16 bits, mono/stéréo) fait à la main (parsing RIFF/WAVE).
+- **OpenAL** + **EFX** : sons positionnels 3D, atténuation par distance, Doppler, réverbération par presets (`ROOM`, `CAVE`, `UNDERWATER`...), filtre passe-bas (occlusion des voicelines de fropy).
+- **Musique de fond en streaming** (`MusicStream`, Ogg Vorbis via stb_vorbis) : décodage par morceaux, jamais le PCM complet en mémoire.
+- Pause/reprise automatique des sons à la perte/reprise du focus fenêtre.
+- Chargement WAV PCM (8/16 bits) fait à la main ; cache par nom dans `SoundManager`.
+- Voix des joueurs (chat vocal) et voicelines de fropy spatialisées (cf. ci-dessus).
 
 ### Entrées
-- Abstraction `Controller` avec deux implémentations interchangeables : `GlfwController` (XInput via GLFW) et `SteamInputController` (API Steam Input, **actuellement désactivée**, voir [Points d'attention](#points-dattention--pièges-connus)).
-- Bascule automatique et notification à l'écran entre clavier/souris et manette selon la dernière source d'entrée active.
-- Rebinding complet des touches clavier et des boutons manette, persistant dans `res/keys.json`.
-- Navigation manette dans les menus (stick gauche + croix directionnelle, répétition avec délai/fréquence configurables).
+- Abstraction `Controller` : `GlfwController` (XInput via GLFW) et `SteamInputController` (**désactivé**, voir [Points d'attention](#points-dattention--pièges-connus)).
+- Bascule automatique clavier/souris ↔ manette avec notification à l'écran.
+- Rebinding complet (clavier + manette), persisté dans `res/keys.json` ; sensibilités séparées souris/stick.
+- Navigation manette dans les menus (stick + croix, répétition configurable).
 
 ### Menus / UI
-- Menu principal avec logo DVD rebondissant (easter egg) déclenché après un délai d'inactivité (AFK), sons d'ambiance aléatoires.
-- Menu pause, menu options (audio), sous-menus de rebinding clavier/souris et manette.
-- Widgets : boutons, sliders (`RangeInput`), cases à cocher (`CheckboxInput`), listes déroulantes (`SelectInput`).
-- Curseurs personnalisés animés (`CursorManager`), y compris un curseur "attente" à 8 frames de rotation.
-
-### Réseau (expérimental)
-- Client **TCP** brut (Winsock2), connexion asynchrone, boucle réseau non-bloquante sur un thread dédié.
-- Protocole binaire maison : en-tête 8 octets (magic number `0xABCD`, type, longueur) + payload JSON (`nlohmann::json`).
-- Types de paquets définis (`Ping`, `Login`, `PlayerMove`, `ChatMessage`, etc.) mais l'intégration gameplay (synchronisation multijoueur) n'est pas encore branchée dans la boucle `Game::update()`.
-
-### Steam
-- Initialisation Steamworks **bloquante puis asynchrone**, avec relance automatique du client Steam si absent (`steam://open/main`) et tentatives répétées.
-- Gestion de lobbies (création, join, invitation via overlay), callbacks d'entrée/sortie/changement de membres.
-- Mode hors-ligne forçable en ligne de commande (voir [Lancement](#lancement-et-arguments)).
+- Menu principal (logo DVD rebondissant après inactivité, sons d'ambiance aléatoires), menu pause, options (volume général, musique), **sous-menu Audio** (chat vocal : micro, VAD/PTT, sensibilité, volume des voix, périphérique de capture), rebinding clavier/souris et manette.
+- Widgets : boutons, sliders, cases à cocher, listes déroulantes ; curseurs personnalisés animés (dont un curseur "attente" 8 frames).
+- HUD de partie : tâches, vies, invites d'interaction, chat, indicateurs vocaux (cf. [Multijoueur](#multijoueur)).
 
 ---
 
 ## Architecture du projet
 
 ```
-Game                       orchestration globale (fenêtre, boucle, états, menus, son, réseau)
+Game                       orchestration uniquement (fenêtre, boucle, états, menus, son, réseau, loading)
  ├─ Window                 fenêtre GLFW + contexte OpenGL + contexte partagé (loading thread)
  ├─ Renderer                timing des frames, delta time, cap FPS optionnel
- ├─ Scene                   monde 3D : cubes, lumières, skybox, entités riggées
+ ├─ Scene                   monde 3D : carte, lumières, entités, créature, ciel
+ │   ├─ MapLoader            carte JSON (boîtes, toits, portes, arbres, OBJ, boutons, lumières...)
  │   ├─ CubeRenderer         rendu instancié des cubes
- │   ├─ LightManager         lumières ponctuelles + directionnelle + flashlight
- │   └─ ModelEntity(s)       backpack, fropy, personnage humain riggé
- ├─ Camera                  vue 1P / 3P, collision de caméra en 3P, offsets de marche en 1P
- ├─ Player : Entity         déplacement, saut, sprint, no-clip, direction (yaw/pitch)
- ├─ CollisionManager         AABB/OBB + BVH, résolution de mouvement, saut/chute
- ├─ ModelLoader              chargement asynchrone des modèles 3D (thread + contexte GL partagé)
- ├─ FirstPersonArms          viewmodel bras 1P/3P, animations, offsets de pose
- ├─ InputManager             clavier, souris, manette (XInput/Steam Input), rebinding, notifications
- ├─ MenuManager               machine à états des menus (Menu/Pause/Options/...)
- ├─ SoundManager              OpenAL, EFX, réverbération, volume, mute
- ├─ ShaderManager / TextureManager   arborescence de shaders/textures chargée depuis res/
- ├─ Socket                   client réseau TCP (Winsock)
- └─ SteamManager              Steamworks : init, lobbies, invitations, overlay
+ │   ├─ LightManager         lumières ponctuelles par pièce + DirLight + flashlight + spot céleste
+ │   ├─ Creature + CreatureVoice   fropy : A*, perception, poursuite, voicelines spatialisées
+ │   ├─ SkySystem             tête-fropy soleil/lune + éblouissement
+ │   ├─ FogParticles          brume volumétrique
+ │   ├─ Door / TvScreen       portes interactives, écrans DVD
+ │   └─ ModelEntity(s)        personnage joueur (Megan), fropy articulé, boutons fropy
+ ├─ Camera + HeadCameraRig   vue 1P/3P, caméra/lampe sur l'os de tête
+ ├─ Player : Entity          déplacement, saut, sprint, no-clip
+ ├─ CollisionManager         AABB/OBB/BVH + collisions triangles, sweep de sphère
+ ├─ ModelLoader              chargement asynchrone des modèles (thread + contexte GL partagé)
+ ├─ FirstPersonArms          viewmodel bras 1P/3P
+ ├─ InputManager             clavier, souris, manette, rebinding
+ ├─ MenuManager              machine à états des menus (Menu/Pause/Options/Audio/Bindings)
+ ├─ QuestManager + MiniGames tâches de la partie (mini-jeux, HUD)
+ ├─ LobbyManager             salle du lobby, options d'hôte, vies, victoire/défaite
+ ├─ MultiplayerManager       synchro P2P des joueurs (20 Hz, interpolation), chat
+ ├─ LobbyChat / VoiceChat    chat textuel et chat vocal
+ ├─ SoundManager + MusicStream   OpenAL, EFX, musique streaming
+ ├─ ShaderManager / TextureManager / ResourceTree   ressources auto-découvertes dans res/
+ ├─ Socket                   client TCP Winsock (historique, non branché au gameplay)
+ └─ SteamManager              Steamworks : init, lobbies, invitations, P2P, overlay
 ```
 
 ### Boucle de jeu (`Game::run`)
 
-1. **Phase `LOADING`** : écran de chargement animé pendant que `ModelLoader` charge les modèles 3D sur un thread séparé (contexte GL partagé). Une fois terminé : recréation des VAO dans le contexte principal (non partageables entre contextes), destruction du contexte partagé, fondu de sortie.
+1. **Phase `LOADING`** : écran de chargement animé pendant que `ModelLoader` charge les modèles 3D sur un thread séparé (contexte GL partagé). Une fois terminé : recréation des VAO dans le contexte principal, destruction du contexte partagé, fondu de sortie.
 2. **Phase `READY`**, selon l'état courant (`GameState`) :
-   - `STATE_MENU` / `STATE_OPTIONS` / `STATE_PAUSED` : mise à jour des entrées + du menu courant, rendu 2D.
-   - `STATE_PLAYING` : `Game::update()` (scène 3D, caméra, son, réseau) puis `Game::draw()` (skybox, opaques, transparences, HUD debug, notifications).
+   - `STATE_MENU` / `STATE_OPTIONS` / `STATE_PAUSED` : entrées + menu courant, rendu 2D.
+   - `STATE_PLAYING` : `Game::update()` (scène, quêtes, lobby, multijoueur, chat, voix, son) puis `Game::draw()` (skybox, opaques, transparences, créature, HUD, chat).
 
 ---
 
@@ -142,7 +251,7 @@ Game                       orchestration globale (fenêtre, boucle, états, menu
 ```
 OpenGLProject/
 ├── main.cpp, Game.{h,cpp}, Scene.{h,cpp}, Window.{h,cpp}, Renderer.{h,cpp}
-├── Camera.{h,cpp}, ModelLoader.{h,cpp}, FirstPersonArms.{h,cpp}
+├── Camera.{h,cpp}, HeadCameraRig.{h,cpp}, ModelLoader.{h,cpp}, FirstPersonArms.{h,cpp}
 │
 ├── Entity.{h,cpp}, Player.{h,cpp}, Direction.{h,cpp}, Transformation.h
 │
@@ -152,7 +261,8 @@ OpenGLProject/
 ├── Mouse.{h,cpp}, LeftClick.{h,cpp}, Escape.{h,cpp}, Push.{h,cpp}, Grab.{h,cpp}
 │
 ├── Shader.{h,cpp}, ShaderManager.h, ShaderType.h, Vertex.h
-├── Mesh.{h,cpp}, Model.{h,cpp}, Texture.{h,cpp}, TextureManager.{h,cpp}, ImageLoader.{h,cpp}
+├── Mesh.{h,cpp}, Model.{h,cpp}, ObjLoader.{h,cpp}, Texture.{h,cpp}, TextureManager.{h,cpp}
+├── ImageLoader.{h,cpp}, ResourceTree.h
 ├── Animator.{h,cpp}, SkinningData.h, GlbAnimationRepair.{h,cpp}
 ├── LoadingScreen.{h,cpp}
 │
@@ -160,35 +270,50 @@ OpenGLProject/
 ├── DVDShape.{h,cpp}, SharedQuad.h
 ├── Cube.{h,cpp}, CubeRenderer.{h,cpp}
 │
+├── MapLoader.{h,cpp}, MapGeometry.{h,cpp}, Door.{h,cpp}, TvScreen.{h,cpp}
+├── Creature.{h,cpp}, CreatureVoice.{h,cpp}, SkySystem.{h,cpp}, Skybox.{h,cpp}
+├── FogParticles.{h,cpp}, Spotlight.{h,cpp}
+│
+├── QuestManager.{h,cpp}, MiniGames.{h,cpp}
+├── LobbyManager.{h,cpp}, LobbyChat.{h,cpp}
+├── MultiplayerManager.{h,cpp}, VoiceChat.{h,cpp}
+│
 ├── Menu.{h,cpp}, MenuManager.{h,cpp}
-├── MainMenu.{h,cpp}, PauseMenu.{h,cpp}, OptionsMenu.{h,cpp}
+├── MainMenu.{h,cpp}, PauseMenu.{h,cpp}, OptionsMenu.{h,cpp}, AudioSettingsMenu.{h,cpp}
 ├── KeyBindingsMenu.{h,cpp}, ControllerBindingsMenu.{h,cpp}
 ├── TextRenderer.{h,cpp}, CursorManager.{h,cpp}
 ├── RangeInput.{h,cpp}, CheckboxInput.{h,cpp}, SelectInput.{h,cpp}
 │
-├── LightSource.{h,cpp}, LightManager.{h,cpp}, Spotlight.{h,cpp}
-├── Sound.{h,cpp}, SoundManager.{h,cpp}
+├── LightSource.{h,cpp}, LightManager.{h,cpp}
+├── Sound.{h,cpp}, SoundManager.{h,cpp}, MusicStream.{h,cpp}
 ├── CollisionManager.{h,cpp}, AABB.h, BVHNode.h, Outlineable.h, OutlinePass.cpp
 │
 ├── Socket.{h,cpp}, Packet.{h,cpp}, PacketBuilder.h, ReceiveBuffer.{h,cpp}
-├── SteamManager.{h,cpp}
+├── SteamManager.{h,cpp}, SelfTest.{h,cpp}
 │
 ├── constants/               window, player, camera, physics, renderer, shader, texture,
-│                             material, color, network, menu, file, firstPersonArms
+│                             material, color, network, menu, file, firstPersonArms,
+│                             creature, door, resource
 │
 ├── glad.c, win_compat.h, gamestate.h, Log.h, File.h, config.h
 │
 ├── res/
-│   ├── shaders/              cube/, model/, skinned/, shape/, image/, skybox/, outline/, text/
-│   ├── textures/              crate/, glass/, menu/ (curseurs, dvd_logo.png, cursor assets)
-│   ├── models/                 backpack/, fropy/
-│   ├── rigging/                 arm/ (bras 1P riggés), mixamo/models + mixamo/animation (clips)
-│   ├── skybox/night/            6 faces du cubemap nocturne
-│   ├── sounds/                   menu/, on&on.wav, ...
-│   ├── fonts/                    armana/, Gnocchi.ttf, kenney/ (icônes manette + clavier/souris)
-│   ├── keys.json                 bindings clavier/manette + sensibilités (généré/persisté)
-│   ├── options.json               mute + volume (généré/persisté)
-│   └── steam_input_manifest.vdf   manifest d'actions Steam Input
+│   ├── shaders/              cube/ (dont cube/wall : normal mapping), model/, skinned/,
+│   │                          shape/, image/, skybox/, outline/, text/, leaves/, door/,
+│   │                          glare/, fogparticles/, common/, wallhack/ (X-ray, non branché)...
+│   ├── textures/              brickwall (+ normal map), container, parquet, leaf, grey_roof,
+│   │                          riet, trees/, menu/ (curseurs, dvd_logo.png), quests/ (HUD quêtes)
+│   ├── models/                backpack/, fropy/ (fropy_player.glb, fropy_low_poly, tête),
+│   │                          trees/
+│   ├── rigging/               arm/ (bras 1P), mixamo/models + mixamo/animation (clips)
+│   ├── maps/                  lobby/lobby.json, village/ (day, night, common, house),
+│   │                          batiment/ (json + obj + mtl + textures/)
+│   ├── skybox/                night/, day/ (cubemaps)
+│   ├── sounds/                menu/, fropy/voicelines/, on&on.ogg, ...
+│   ├── fonts/                 armana/, Gnocchi.ttf, kenney/ (icônes manette + clavier)
+│   ├── keys.json              bindings + sensibilités (généré/persisté)
+│   ├── options.json           volumes + réglages chat vocal (généré/persisté)
+│   └── steam_input_manifest.vdf
 │
 ├── OpenGLProject.vcxproj
 └── OpenGLProject.vcxproj.filters
@@ -200,55 +325,63 @@ OpenGLProject/
 
 | Bibliothèque | Rôle | Notes |
 |---|---|---|
-| **GLFW3** | Fenêtrage, contexte OpenGL, entrées clavier/souris/manette | Contexte OpenGL 3.3 core, vsync désactivée par défaut |
+| **GLFW3** | Fenêtrage, contexte OpenGL, entrées clavier/souris/manette | Contexte OpenGL 3.3 core |
 | **GLAD** | Chargement des fonctions OpenGL | Généré pour `gl=4.5`, profil *compatibility* |
-| **GLM** | Mathématiques (vecteurs, matrices, quaternions) | `GLM_ENABLE_EXPERIMENTAL` requis pour `glm/gtx/norm.hpp` |
-| **Assimp** | Import de modèles 3D et d'animations | `.obj`, `.fbx`, `.glb`/`.gltf` ; lié via `assimp-vc143-mtd.lib` |
-| **stb_image** | Décodage d'images (PNG/JPEG) | Implémentation compilée une seule fois dans `Texture.cpp` |
-| **stb_truetype** | Rendu de police (atlas de glyphes) | Implémentation compilée dans `TextRenderer.cpp` |
-| **OpenAL (+ EFX)** | Audio 3D, réverbération, filtres | Lié via `OpenAL32.lib` |
-| **nlohmann/json** | Sérialisation JSON | Options, bindings, propriétés de matériaux, paquets réseau |
-| **Steamworks SDK** | Lobbies, overlay, Steam Input | Lié via `steam_api64.lib` ; AppID de test `480` (Spacewar) |
-| **Winsock2** | Sockets réseau TCP | Windows uniquement |
+| **GLM** | Mathématiques (vecteurs, matrices, quaternions) | `GLM_ENABLE_EXPERIMENTAL` requis |
+| **Assimp** | Import de modèles 3D et d'animations | `.obj`, `.fbx`, `.glb`/`.gltf` ; `assimp-vc143-mtd.lib` / `-mt.lib` |
+| **stb_image** | Décodage d'images (PNG/JPEG) | Compilé dans `Texture.cpp` |
+| **stb_truetype** | Rendu de police (atlas de glyphes) | Compilé dans `TextRenderer.cpp` |
+| **stb_vorbis** | Décodage Ogg Vorbis (musique streaming) | Compilé dans `MusicStream.cpp` |
+| **OpenAL (+ EFX)** | Audio 3D, capture micro, réverbération, filtres | `OpenAL32.lib` |
+| **nlohmann/json** | Sérialisation JSON | Options, bindings, cartes, matériaux |
+| **Steamworks SDK** | Lobbies, P2P (Networking Messages), overlay, Steam Input | `steam_api64.lib` ; AppID de test `480` (Spacewar) |
+| **Winsock2** | Sockets réseau TCP (historique) | Windows uniquement |
 
-Toutes les DLL nécessaires (`dependencies/bin/*.dll`) sont copiées automatiquement dans le dossier de sortie après build (`xcopy` en post-build event).
+Toutes les DLL nécessaires (`dependencies/bin/*.dll`) sont copiées dans le dossier de sortie après build (`xcopy` en post-build event).
 
 ---
 
 ## Compilation
 
-Le projet est un projet **Visual Studio** (`.vcxproj`), testé avec le toolset **v143** (Visual Studio 2022).
+Projet **Visual Studio** (`.vcxproj`), toolset **v143** (Visual Studio 2022 ou ultérieur).
 
 ### Prérequis
 - Windows 10/11
-- Visual Studio 2022 avec le workload "Développement Desktop en C++"
-- Steamworks SDK placé dans `dependencies/` (headers dans `dependencies/steam/`, libs dans `dependencies/lib/`, DLL dans `dependencies/bin/`)
+- Visual Studio avec le workload "Développement Desktop en C++"
+- Steamworks SDK placé dans `dependencies/` (headers, libs, DLL) — **le dossier `dependencies/` n'est pas dans le dépôt**, il faut le fournir séparément
 - Un fichier `steam_appid.txt` à côté de l'exécutable si Steam n'est pas déjà informé de l'AppID
 
 ### Étapes
 
-1. Ouvrir `OpenGLProject.sln` (ou générer/ouvrir le `.vcxproj` directement) dans Visual Studio.
-2. Choisir la configuration `Debug` ou `Release`, la plateforme `x64` (recommandé) ou `Win32`.
-3. Compiler (`Ctrl+Shift+B`). Le standard **C++20** est requis (`LanguageStandard=stdcpp20`, x64 uniquement — la configuration Win32 n'active pas ce standard explicitement).
+1. Ouvrir `OpenGLProject.sln` (ou le `.vcxproj`) dans Visual Studio.
+2. Choisir `Debug` ou `Release`, plateforme `x64` (recommandé).
+3. Compiler (`Ctrl+Shift+B`). Standard **C++20** (`stdcpp20`, configuration x64).
 4. L'exécutable et les DLL dépendantes sont copiés dans `$(OutDir)`.
 
 ### Points de compilation à connaître
-- `_CRT_SECURE_NO_WARNINGS` est défini globalement (usage de fonctions C non "sécurisées" comme `sscanf`).
-- `/utf-8` est passé au compilateur pour les sources contenant des caractères accentués.
-- `LIBCMT`/`LIBCPMT` sont explicitement ignorées à l'édition de liens (`IgnoreSpecificDefaultLibraries`) — probablement pour éviter un conflit de runtime avec les libs tierces (Steamworks/Assimp).
-- **`win_compat.h` doit être inclus en premier** dans toute unité de compilation touchant au rendu qui inclut aussi `<windows.h>` indirectement, sinon collision `APIENTRY` entre `glad.h` et `minwindef.h` (voir le commentaire en tête du fichier).
+- `_CRT_SECURE_NO_WARNINGS` est défini globalement ; `/utf-8` est passé au compilateur.
+- `LIBCMT`/`LIBCPMT` sont ignorées à l'édition de liens (conflit de runtime avec les libs tierces).
+- **`win_compat.h` doit être inclus en premier** dans toute unité touchant au rendu qui inclut `<windows.h>` (collision `APIENTRY` entre `glad.h` et `minwindef.h`).
+- Toute ressource ajoutée doit être **ajoutée à git dans la même session** (`.gitignore` ignore tous les `*.obj` sauf exceptions) — sinon le jeu marche chez le dev mais pas chez les autres (cf. [`agent.md`](agent.md)).
 
 ---
 
 ## Lancement et arguments
 
 ```
-OpenGLProject.exe [-offline | --offline | -nosteam | --nosteam]
+OpenGLProject.exe [options]
 ```
 
-- Sans argument : le jeu tente d'initialiser Steamworks (bloquant, avec relance automatique du client Steam si nécessaire, jusqu'à ~20 tentatives).
-- Avec `-offline`/`-nosteam` : Steam est **entièrement ignoré** (ni initialisé, ni lancé) ; la manette passe par XInput/GLFW sans interférence de Steam Input.
-- `+connect_lobby <SteamID>` : rejoint automatiquement un lobby Steam au démarrage (utilisé pour les invitations reçues jeu fermé).
+| Argument | Effet |
+|---|---|
+| *(aucun)* | Tentative d'init Steamworks (avec relance du client Steam si absent) |
+| `-offline` / `--offline` / `-nosteam` / `--nosteam` | Steam entièrement ignoré ; manette en XInput/GLFW pur |
+| `+connect_lobby <SteamID>` | Rejoint un lobby Steam au démarrage (invitation reçue jeu fermé) — ajouté par Steam |
+| `-day` / `-night` / `-batiment` | Charge directement la carte correspondante (debug), sans passer par le lobby |
+| `-selftest` | Lance les auto-tests de logique pure (sans fenêtre), code retour 0 = OK |
+| `-dumprig <entrée> <sortie.json>` | Outil de contenu : exporte la hiérarchie de squelette Assimp en JSON |
+
+Un raccourci `OpenGLProject - Release - Offline.lnk` est fourni pour le mode hors-ligne.
 
 ---
 
@@ -258,16 +391,18 @@ OpenGLProject.exe [-offline | --offline | -nosteam | --nosteam]
 
 | Action | Touche |
 |---|---|
-| Avancer / Reculer / Gauche / Droite | `Z`/`W` `S` `Q`/`A` `D` *(AZERTY/QWERTY selon `GLFW_KEY_*`)* |
+| Avancer / Reculer / Gauche / Droite | `Z`/`W` `S` `Q`/`A` `D` *(selon `GLFW_KEY_*`)* |
 | Sauter (jeu) / Voler vers le haut (no-clip) | `Espace` |
 | S'accroupir (jeu) / Voler vers le bas (no-clip) | `Ctrl gauche` |
 | Sprinter (maintenu) | `Maj gauche` |
 | Lampe torche | `T` |
 | Vue 1ère / 3ème personne | `C` |
 | Pousser (bras 1P) | `R` |
-| Attraper (bras 1P) | `E` |
-| No-clip (vol libre, désactive la gravité) | `N` |
-| Menu / Pause | `Échap` |
+| **Interagir** (portes, boutons du lobby, postes de quête, attraper) | `E` |
+| No-clip (vol libre) | `N` |
+| Menu / Pause (et retour dans les menus) | `Échap` |
+| **Chat textuel** (ouvrir / envoyer) | `Entrée` |
+| **Push-to-talk** (chat vocal, si mode PTT) | `V` |
 | HUD debug animations (3P uniquement) | `F3` |
 | Tirer (animation bras) | Clic gauche |
 
@@ -275,19 +410,18 @@ OpenGLProject.exe [-offline | --offline | -nosteam | --nosteam]
 
 | Action | Bouton |
 |---|---|
-| Déplacement | Stick gauche |
-| Regard | Stick droit |
+| Déplacement / Regard | Stick gauche / Stick droit |
 | Sprint | Gâchette droite (RT), seuil configurable |
-| Sauter | `A` |
-| S'accroupir | `B` (maintenu) |
-| Pousser | `X` |
-| Vue 1P/3P | `Y` |
-| Lampe torche | `LB` |
-| Attraper | `RB` |
+| Sauter / S'accroupir | `A` / `B` (maintenu) |
+| Pousser / Interagir | `X` / `RB` |
+| Vue 1P/3P / Lampe torche | `Y` / `LB` |
 | No-clip | `Back` |
 | Menu / Reprendre | `Start` |
 | Retour (dans les menus) | `B` |
-| Navigation menus | Stick gauche ou croix directionnelle + `A` pour valider |
+| Navigation menus | Stick gauche ou croix + `A` pour valider |
+
+### Mini-jeux (quêtes)
+Flèches / `ZQSD` + `Entrée` / `Espace` au clavier ; croix directionnelle + `A` à la manette.
 
 > Le clavier/souris et la manette restent **tous deux actifs en permanence** ; seule la "source active" affichée par la notification à l'écran bascule selon la dernière entrée détectée.
 
@@ -298,7 +432,7 @@ OpenGLProject.exe [-offline | --offline | -nosteam | --nosteam]
 ### `res/keys.json`
 ```json
 {
-  "bindings": { "Forward": 87, "Jump": 32, "...": "..." },
+  "bindings": { "Forward": 87, "Jump": 32, "Grab": 69, "...": "..." },
   "controller_bindings": { "Jump": 0, "...": "..." },
   "mouse_sensitivity": 0.05,
   "controller_sensitivity": 3.0
@@ -308,113 +442,125 @@ Généré avec les valeurs par défaut de `configKeys.h` si absent ; réécrit �
 
 ### `res/options.json`
 ```json
-{ "muted": false, "volume": 1.0 }
+{
+  "muted": false,
+  "volume": 0.2,
+  "musicVolume": 0.5,
+  "voice": {
+    "enabled": true,
+    "micMuted": false,
+    "voiceActivation": true,
+    "sensitivity": 0.15,
+    "volume": 1.0,
+    "device": ""
+  }
+}
 ```
-Généré avec les valeurs par défaut (volume maître par défaut effectif au démarrage : `0.2`, voir `constants/window.h`) ; réécrit à la sortie du menu Options.
+Volumes (maître + musique indépendants) et réglages du chat vocal ; réécrit à la sortie des menus Options/Audio.
 
 ---
 
-## Système de rendu
+## Cartes JSON (MapLoader)
 
-- **Cubes** : un seul mesh unitaire (arête 1, centré à l'origine) partagé par toutes les instances ; position/rotation/échelle portées par une matrice modèle par instance, couleur par instance pour les cubes-lumière.
-- **Modèles riggés** : squelette extrait via `Model::extractBoneDataFromMesh`, jusqu'à 4 influences de bones par sommet (`MAX_BONE_INFLUENCE = 4`), matrices finales envoyées groupées au shader `skinned`.
-- **Layout de vertex compact** : `Mesh::setupMesh` n'envoie au GPU que les attributs réellement utilisés par le masque (`VertexAttribute::POSITION|NORMAL|COLOR|TEXCOORD|SKINNING`), pas systématiquement les 76 octets complets de la classe `Vertex`.
-- **Shaders** organisés en arborescence sous `res/shaders/`, résolus par chemin relatif via `ShaderManager::getShader("cube/severallights")`, etc. Chaque shader connaît son "type" (`ShaderType`) résolu une seule fois à la création pour éviter les comparaisons de chaînes à chaque frame de rendu.
-- **Uniform locations mises en cache** systématiquement (patron répété dans `LightManager`, `Spotlight`, `Shape`, `Shader::getUniformLocation`) pour éviter les hachages de chaînes dans le chemin chaud du rendu.
+Une carte est un fichier JSON décrivant la géométrie et l'ambiance (unités en mètres, Y vers le haut). Schéma résumé :
+
+- `"includes"` : instancie d'autres cartes (ex. N fois la même maison) avec position/yaw ; récursif, détection de cycles.
+- `"boxes"` : pavés droits (sols, murs, linteaux) avec rotation Euler, matériaux (`brickwall`, `container`, `parquet`, `leaf`, `grey_roof`, `riet`), UV projetés en repère monde.
+- `"roof"` : toit à deux pentes avec pignons, collision `"mesh"` (triangles) possible.
+- `"models"` : modèles **OBJ** (export Blender) avec matériaux `.mtl` (textures, couleurs, opacité/vitres) ; collision précise par cellules de 4 m.
+- `"trees"` / `"leaves"` : arbres (mesh partagé, collision triangles) et feuilles mortes au sol générées depuis une **seed** (reproductible).
+- `"doors"` : portes interactives (charnière, yaw, dimensions) — cf. `Door`.
+- `"tvs"` : écrans de télévision (easter egg DVD) — cf. `TvScreen`.
+- `"buttons"` : fropys tournants interactifs (`name`, `label`, `center`, `scale`) : options du lobby et postes de quête (`quest:<type>:<id>`).
+- `"lights"` / `"rooms"` : lumières ponctuelles, optionnellement restreintes à une pièce (AABB nommée).
+- `"spawns"` : points d'apparition nommés (`player`, `creature`, ...).
+- `"sun"` : direction et couleurs (ambiante/diffuse/speculaire) de la lumière directionnelle — **le réglage d'ambiance par carte**.
+- `"fog"` : couleur et densité du brouillard (0 = aucun).
+- `"skybox"` : dossier du cubemap ("" = pas de ciel).
+- `"sunHead"` : tête-fropy céleste (couleur jaune le jour / blanc-gris la nuit, distance, échelle, intensité du spot).
+- `"creature"` : activation (`false` pour le lobby), portée de vue, zone de rondes (`patrol`).
+
+Les collisions statiques sont enregistrées dans le `CollisionManager` et le **BVH est construit à la fin du chargement**. `Scene::loadMap` vide les collisions et lumières de la carte précédente avant de charger la nouvelle.
 
 ---
 
 ## Animation squelettique
 
-- Format d'os : `BoneInfo { int id; glm::mat4 offsetMatrix; }`, stocké dans une map nom → info par modèle.
-- Deux sources d'animations possibles par modèle : celles embarquées dans le fichier, et des animations **externes** chargées séparément (`Model::loadExternalAnimations`, utilisé pour les clips Mixamo du personnage 3P : idle, walking, running, jump, strafes, turns, falling, etc.).
-- `Animator::computeBoneTransform` calcule récursivement les transformées globales, applique le crossfade sur les transformées locales, et propage les offsets manuels (`addBoneOffset`) aux enfants — essentiel pour que le pli du coude suive l'élévation de l'épaule sur les bras 1P.
-- Garde-fous anti-NaN à plusieurs niveaux (quaternions dégénérés, temps non finis, longueurs de vecteur nulles) pour éviter qu'une keyframe corrompue ne rende un personnage invisible (matrices non finies envoyées au GPU).
+- Format d'os : `BoneInfo { int id; glm::mat4 offsetMatrix; }`, map nom → info par modèle.
+- Animations embarquées **ou externes** (`Model::loadExternalAnimations`, clips Mixamo du personnage 3P : idle, walking, running, jump, strafes, turns, falling...).
+- `Animator::computeBoneTransform` : transformées globales récursives, crossfade sur les transformées locales, propagation des offsets manuels de bones (élévation des bras 1P).
+- Garde-fous anti-NaN à plusieurs niveaux (quaternions dégénérés, temps non finis...) pour éviter qu'une keyframe corrompue ne rende un personnage invisible.
 
 ---
 
 ## Collisions et physique
 
-- `Constants::Physics::GRAVITY = -9.81f`, `PLAYER_JUMP_VELOCITY = 6.0f` (~2.45 s en l'air).
-- Le joueur est modélisé comme une **capsule** (2 sphères, pieds + tête) pour gérer marches et pentes.
-- `sweepSphere` : déplacement en sous-étapes (`radius * 0.4` par sous-étape max) avec glissement le long des normales de collision et sécurité anti-rebond infini dans les coins.
-- Distinction statique/dynamique : les objets statiques passent par le BVH (construit une fois au chargement du niveau), les objets dynamiques (cube tournant, joueur poussé) sont testés en O(n) linéaire (nombre d'objets mobiles généralement faible).
-- Ralenti de vitesse configurable après un saut ou une chute (`POST_LAND_SPEED_FACTOR`, `FALL_SLOWDOWN_FACTOR`), avec seuil de hauteur de chute minimum pour déclencher l'animation d'atterrissage.
+- `Constants::Physics::GRAVITY = -9.81f` ; saut configurable (`PLAYER_JUMP_VELOCITY`).
+- Joueur modélisé en **capsule** (sphères pieds/milieu/tête) pour marches et pentes.
+- `sweepSphere` : sous-étapes (`radius * 0.4` max), glissement le long des normales, anti-rebond dans les coins.
+- Statiques via BVH O(log n) ; dynamiques (portes, objets mobiles) en O(m) linéaire.
+- Collisions **triangles** (grille de cellules) pour les modèles OBJ et les toits : la hitbox suit la géométrie réelle.
+- Ralenti post-chute/atterrissage configurable ; détection sol/plafond indépendante du mouvement.
 
 ---
 
 ## Audio
 
 - Modèle de distance OpenAL : `AL_INVERSE_DISTANCE_CLAMPED` par défaut.
-- `SoundManager::load` met en cache par nom : un même nom n'est chargé (et décodé) qu'une seule fois par session — **attention à charger les sons lourds pendant l'écran de chargement plutôt qu'à la volée** (voir [Points d'attention](#points-dattention--pièges-connus)).
-- Réverbération appliquée globalement (`applyReverbToAll`) : `UNDERWATER` dans les menus/pause, `NONE` en jeu.
-
----
-
-## Entrées (clavier / souris / manette)
-
-- `Key` est la classe de base commune (clavier **et** manette y compris) : actions `onPress`/`onRelease`/`ifPressed` enregistrées par `InputContext` (`GAME`, `MENU`, `INVENTORY`, `PAUSED`).
-- `PlayerKey` et `ControllerKey` sont des spécialisations génériques prenant des lambdas au constructeur, remplaçant d'anciennes classes dédiées par touche (`Forward`, `Jump`, etc.).
-- Détection de branchement/débranchement à chaud de la manette avec **délai de grâce** (~30 frames) pour filtrer le clignotement de ré-énumération USB.
-- `SteamController` traduit les actions du manifest `res/steam_input_manifest.vdf` vers les mêmes index `GLFW_GAMEPAD_BUTTON_*`/`GLFW_GAMEPAD_AXIS_*` que le mode XInput, pour que le reste du code (`ControllerKey`, `InputManager`) soit agnostique de la source réelle.
-
----
-
-## Menus et UI
-
-- `Menu` gère à la fois le rendu (texte centré/aligné, formes, sliders, checkboxes, listes) et la navigation manette (liste de cibles focalisables triées verticalement, reconstruite à la demande via un flag `m_focusDirty`).
-- `MenuManager` fait la liaison entre `GameState` et l'instance de `Menu` à afficher, sauvegarde/restaure la position de sélection manette par menu (utile en particulier pour revenir dans un sous-menu de bindings sans repartir du premier élément).
-- Le rendu de texte est **batché par frame** : `TextRenderer::beginFrame()` / `renderText()` (accumulation, aucun appel GL) / `flush()` (un seul `glDrawArrays` pour tout le texte de la frame).
-
----
-
-## Réseau
-
-État actuel : **fonctionnel au niveau transport, non branché au gameplay**. Le client se connecte de façon asynchrone au démarrage (`Constants::Network::SERVER_IP`/`SERVER_PORT`, `127.0.0.1:3333` par défaut), et les événements reçus sont simplement loggés dans `Game::update()`. La structure de paquets (`PacketBuilder`) couvre déjà l'authentification, le chat et le mouvement joueur, prête à être exploitée pour une synchronisation multijoueur.
-
----
-
-## Intégration Steam
-
-- AppID de test : `480` (Spacewar) — **à remplacer par un véritable AppID Steamworks avant toute distribution**.
-- `SteamManager::initAsyncStart()`/`initAsyncPoll()` permettent une init non-bloquante (utile pour ne pas geler la fenêtre pendant que Steam se lance) ; `init()` reste disponible en variante bloquante.
-- Un lobby créé déclenche automatiquement l'ouverture de la boîte de dialogue d'invitation Steam (overlay).
+- `SoundManager::load` met en cache par nom ; **charger les sons lourds pendant l'écran de chargement** plutôt qu'à la volée.
+- Réverbération globale (`applyReverbToAll`) : `UNDERWATER` dans les menus/pause, `NONE` en jeu.
+- Musique de fond : `MusicStream` (Ogg Vorbis en streaming, volume indépendant `musicVolume`).
+- Voix distantes : source OpenAL par joueur, `AL_SOURCE_RELATIVE` (non affectées par l'atténuation 3D) ; voicelines de fropy au contraire spatialisées avec occlusion passe-bas.
 
 ---
 
 ## Écran de chargement et threading
 
-- `ModelLoader::load()` s'exécute sur un thread séparé avec un **contexte OpenGL partagé** (`Window::createSharedContext`), permettant de charger les modèles 3D (upload VBO/EBO/textures) pendant que l'écran de chargement continue de s'afficher sur le contexte principal.
-- Les **VAO ne sont pas partagés entre contextes** OpenGL : chaque `Mesh` doit donc appeler `reloadGPUResources()` dans le contexte principal une fois le thread de chargement terminé (voir `Game::run`, phase `LOADING`).
+- `ModelLoader::load()` sur thread séparé avec **contexte OpenGL partagé** (chargement pendant l'écran de chargement).
+- Les **VAO ne sont pas partagés** entre contextes : `reloadGPUResources()` est rappelé dans le contexte principal à la fin du chargement.
 - Repli synchrone automatique si la création du contexte partagé échoue.
+- Le chat vocal est traité sur le **thread principal** par blocs de 20 ms (aucun thread dédié).
+
+---
+
+## Outils et auto-tests
+
+- **`OpenGLProject.exe -selftest`** : tests de logique pure sans fenêtre (collisions, grille de triangles, A* de fropy, options de partie `MatchSettings`, mini-jeux). Code retour 0 = tout passe. **À relancer après toute modification de `CollisionManager`, `Creature`, `MiniGames` ou `MatchSettings`.**
+- **`-dumprig <entrée> <sortie.json>`** : exporte la hiérarchie de squelette lue par Assimp en JSON (transformations locales de repos), utilisé par `res/models/fropy/make_fropy_player.py`.
+- **Scripts Python de contenu** : `res/models/fropy/make_fropy_player.py` (assemblage du modèle articulé de fropy), `res/sounds/fropy/make_voicelines.py` (voicelines bitcrushées), `res/textures/quests/make_quest_ui.py` (visuels du HUD des quêtes).
 
 ---
 
 ## Points d'attention / pièges connus
 
-- **Steam Input est désactivé** (`kUseSteamInput = false` dans `InputManager.cpp`) : avec l'AppID placeholder 480, la configuration Steam Input du jeu n'est jamais chargée par le client Steam, ce qui laissait la manette dans un état inutilisable. Le jeu utilise donc XInput (GLFW) même quand Steam est initialisé. Réactiver ce flag nécessite un véritable AppID Steamworks avec une configuration Steam Input associée.
-- **`win_compat.h` doit être le tout premier `#include`** dans les fichiers touchant au rendu qui incluent indirectement `<windows.h>`, sous peine de warning/erreur `C4005` (redéfinition de `APIENTRY` entre `glad.h` et `minwindef.h`).
-- **Premier lancement en jeu plus lent** : le premier passage en `STATE_PLAYING` charge et décode `res/sounds/on&on.wav` de façon synchrone (`SoundManager::load` avec cache par nom) et construit le sous-ensemble de triangles "bras/jambes" pour la vue 1P (`Model::buildCulledIndices`), ce qui peut provoquer un court freeze visible une seule fois par session.
-- Le layout de `Vertex` est verrouillé par `static_assert` (76 octets = 11 floats + 4 ints + 4 floats) : toute modification de la classe doit être répercutée avec soin pour ne pas désynchroniser CPU/GPU.
-- `Vertex::m_boneIDs`/`m_weights` sont publics par exception (contrainte de layout), documenté dans `Vertex.h`.
-- Le dossier `dependencies/` (Steamworks SDK, DLL tierces) n'est **pas inclus** dans ce dépôt et doit être fourni séparément pour compiler.
+- **Steam Input est désactivé** (`kUseSteamInput = false` dans `InputManager.cpp`) : avec l'AppID placeholder 480, la configuration Steam Input n'est jamais chargée par le client Steam, ce qui laissait la manette inutilisable. Le jeu utilise XInput (GLFW) même quand Steam est initialisé. Réactiver ce flag nécessite un véritable AppID avec une configuration Steam Input associée.
+- **`win_compat.h` en tout premier `#include`** dans les fichiers de rendu touchant à `<windows.h>`, sinon `C4005` (redéfinition de `APIENTRY`).
+- Le layout de `Vertex` est verrouillé par `static_assert` (76 octets) : toute modification doit être répercutée avec soin CPU/GPU. `m_boneIDs`/`m_weights` sont publics par exception (contrainte de layout, documenté dans `Vertex.h`).
+- **Animations Assimp** : ne pas modifier "à l'intuition" le wrapper `_$AssimpFbx$_PreRotation` ni `repairRotationKeys` (symptômes : jambes en l'air, bras à 90°). Vérifier avec le log `[DIAG POSE]` en Debug **et** Release (`AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS=false` doit rester).
+- **Encodage** : aucun accent ni caractère hors ASCII dans les `printf`/`renderText()`/textes in-game (console Windows non-UTF-8) ; les commentaires restent en français accentué.
+- Bugs connus suivis dans [`todo.md`](todo.md) : tête qui avance dans un mur en marchant contre lui, keyframes manquantes au strafe droit, premier son rejoué en boucle dans le chat vocal, saisie du chat textuel parfois bloquée, caméra 1P qui rentre dans le modèle après un no-clip, modèles des autres joueurs invisibles si l'hôte quitte puis revient, clics à travers les listes déroulantes ouvertes.
+- Le dossier `dependencies/` (Steamworks SDK, DLL tierces) **n'est pas inclus** dans le dépôt.
 
 ---
 
 ## Pistes d'amélioration
 
-- Brancher la couche réseau existante à une vraie synchronisation multijoueur (positions, animations, chat).
-- Remplacer l'AppID Steamworks placeholder et réactiver Steam Input avec un manifest d'actions correctement enregistré.
-- Précharger ou streamer les sons volumineux (musique de fond) pendant l'écran de chargement plutôt qu'au premier accès.
-- Ajouter un vrai fichier `.sln`/scripts de build multi-plateforme si un portage Linux/macOS est envisagé (actuellement fortement couplé à Win32/XInput/Winsock).
-- Compresser/streamer les fichiers audio plutôt que de les charger intégralement en RAM au format WAV non compressé.
+*(extrait de [`todo.md`](todo.md))*
+
+- Finaliser le multijoueur (corrections de synchro, chat par session, robustesse lobby).
+- **Map Editor** pour créer des cartes sans écrire le JSON à la main.
+- PNJ avec dialogues (sous-titres / bulles).
+- Personnalisation visuelle des personnages (torche, sac à dos, holster & pistolet...).
+- Normal mapping étendu (cf. [LearnOpenGL – Normal Mapping](https://learnopengl.com/Advanced-Lighting/Normal-Mapping)).
+- Hitboxes plus fidèles aux modèles 3D (notamment en 3P).
+- Skybox libre de droit ; DA : sons bitcrushés, modèles low-poly.
+- Support de **modding** pour la communauté.
+- Ménage dans l'organisation du `.vcxproj` ; portage multi-plateforme (actuellement fortement couplé à Win32/XInput/Winsock).
 
 ---
 
 ## Licence
 
-*(à compléter selon les intentions du projet — aucune licence n'est actuellement spécifiée dans le dépôt)*
+Copyright (c) 2026 Elliot Defurne - Tous droits réservés.
 
-## Demarrage
-
-Au clic sur **Jouer** (ou a l'arrivee dans un lobby multijoueur), on apparait dans la carte du lobby : **"Lobby"** (`res/maps/lobby/lobby.json`), une maison geante ou l'hote choisit la difficulte, la carte (Village jour, Village nuit, Batiment) et le mode de jeu en visant les fropys qui tournent (touche E), puis lance la partie.
+Voir le fichier [`LICENSE`](LICENSE).
